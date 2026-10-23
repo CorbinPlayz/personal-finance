@@ -37,6 +37,29 @@ body{background:radial-gradient(ellipse at 86% 3%,#eaf1ff 0,transparent 36%),#f5
 @media(max-width:560px){.welcome-screen{align-items:flex-start;padding:23px 19px 27px}.welcome-content{margin:auto 0}.welcome-wordmark{margin-bottom:10px}.welcome-version{font-size:7px;padding:7px 8px;letter-spacing:1px}.welcome-art{min-height:204px}.welcome-orbit-outer{width:190px;height:190px}.welcome-orbit-inner{width:154px;height:154px}.welcome-orbit-tilt{width:204px;height:101px}.welcome-hero-logo{width:112px;height:112px}.welcome-art:before{width:175px;height:175px}.welcome-cross-star.star-a{top:20px;right:19%}.welcome-cross-star.star-b{bottom:31px;left:17%}.welcome-cross-star.star-c{top:33px;left:22%}.welcome-kicker{font-size:8px;letter-spacing:1.55px;margin-bottom:12px}.welcome-copy h1{font-size:clamp(34px,10.2vw,49px);letter-spacing:-1.5px}.welcome-copy>p{font-size:12px;line-height:1.7;margin:13px auto 17px}.welcome-continue{padding:12px 14px 12px 17px;gap:27px}.welcome-privacy{font-size:9px;flex-wrap:wrap}.welcome-benefits{gap:7px;padding-top:14px;margin-top:16px}.welcome-benefits>div{flex-direction:column;align-items:center;text-align:center;gap:7px;padding:3px 0}.welcome-benefit-icon{width:30px;height:30px;flex-basis:30px}.welcome-benefits b{font-size:9px}.welcome-benefits small{font-size:8px}.welcome-bottomline{font-size:7px;letter-spacing:.7px;margin-top:15px}.welcome-bottomline span:last-child{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.welcome-screen:before,.welcome-glow,.welcome-content,.welcome-wordmark,.welcome-orbit,.welcome-hero-logo,.welcome-cross-star,.welcome-benefits>div,.welcome-kicker-dot{animation:none!important}.welcome-continue,.welcome-continue span{transition:none!important}}
 
+
+/* Total-balance allocation chart: light blue = set aside, deep blue = available */
+.funds-panel{margin:0 0 17px;overflow:hidden}
+.funds-panel .panel-head{align-items:center;margin-bottom:17px}
+.funds-total{font-family:Manrope,sans-serif;font-size:23px;letter-spacing:-.7px;color:#142b4d;white-space:nowrap}
+.funds-bar-track{height:22px;display:flex;width:100%;overflow:hidden;border-radius:8px;background:#edf2fa;box-shadow:inset 0 0 0 1px #e3eaf5}
+.funds-bar-segment{height:100%;min-width:0;transition:width .45s cubic-bezier(.2,.7,.2,1)}
+.funds-bar-segment.reserved{background:#8bcaff}
+.funds-bar-segment.available{background:#2455b5}
+.funds-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:17px}
+.funds-legend-item{display:flex;align-items:flex-start;gap:9px;min-width:0}
+.funds-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;margin-top:3px}
+.funds-dot.reserved{background:#8bcaff;box-shadow:0 0 0 3px #e8f5ff}
+.funds-dot.available{background:#2455b5;box-shadow:0 0 0 3px #e9efff}
+.funds-legend-copy{display:grid;gap:4px;min-width:0}
+.funds-legend-copy span{font-size:11px;color:#738198}
+.funds-legend-copy strong{font-family:Manrope,sans-serif;font-size:17px;letter-spacing:-.3px;color:#22334c;overflow-wrap:anywhere}
+.funds-footnote{font-size:10px;line-height:1.55;color:#93a0b2;margin:15px 0 0}
+.funds-warning{margin:13px 0 0;border:1px solid #f1d6a8;background:#fff8e9;color:#8e601c;border-radius:8px;padding:10px 12px;font-size:11px;line-height:1.55}
+.funds-empty{margin-top:12px;font-size:11px;line-height:1.5;color:#8291a6}
+@media(max-width:560px){.funds-panel{padding:17px}.funds-panel .panel-head{align-items:flex-start}.funds-total{font-size:19px}.funds-legend{gap:9px}.funds-legend-copy strong{font-size:15px}.funds-bar-track{height:19px}}
+@media(prefers-reduced-motion:reduce){.funds-bar-segment{transition:none}}
+
 </style>
 </head>
 <body>
@@ -117,6 +140,11 @@ function sortedTransactions(list=data.transactions){return [...list].sort((a,b)=
 function thisMonthTx(type){return data.transactions.filter(t=>t.date?.startsWith(monthNow())&&(!type||t.type===type))}
 function monthSpend(category){return thisMonthTx('Expense').filter(t=>t.category===category).reduce((s,t)=>s+Number(t.amount||0),0)}
 function totalBalance(){return data.accounts.reduce((s,a)=>s+Number(a.balance||0),0)}
+function reservedFunds(){
+ const goalSaved=data.goals.reduce((sum,g)=>sum+Math.max(0,Number(g.saved)||0),0);
+ const purchaseSaved=data.purchases.filter(p=>!['Purchased','Cancelled'].includes(p.status)).reduce((sum,p)=>sum+Math.max(0,Number(p.saved)||0),0);
+ return roundMoney(goalSaved+purchaseSaved);
+}
 function reminderDaysLeft(p){return Math.ceil((new Date(`${p.date}T12:00:00`).getTime()-new Date(`${today()}T12:00:00`).getTime())/86400000)}
 function getReminders(){return data.purchases.filter(p=>['Planning','Saving','Ready'].includes(p.status)&&p.date&&Array.isArray(p.reminderDays)&&p.reminderDays.includes(reminderDaysLeft(p)))}
 function showToast(text){const root=$('toastRoot');root.innerHTML=`<div class="toast"><span>✓</span><span>${esc(text)}</span><button data-action="dismiss-toast" aria-label="Dismiss">×</button></div>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>root.replaceChildren(),3500)}
@@ -137,6 +165,28 @@ function render(){
  const main=$('content');main.innerHTML=page==='Overview'?renderOverview():page==='Transactions'?renderTransactions():page==='Accounts'?renderAccounts():page==='Budgets'?renderBudgets():page==='Goals'?renderGoals():page==='Purchases'?renderPurchases():renderSettings();
  renderModal();
 }
+function renderFundsAllocation(){
+ const total=roundMoney(totalBalance());
+ const setAside=reservedFunds();
+ const bankableTotal=Math.max(0,total);
+ const countedReserved=Math.min(bankableTotal,setAside);
+ const available=roundMoney(Math.max(0,bankableTotal-countedReserved));
+ const reservedPct=bankableTotal>0?Math.min(100,countedReserved/bankableTotal*100):0;
+ const availablePct=bankableTotal>0?Math.max(0,100-reservedPct):0;
+ const over=roundMoney(Math.max(0,setAside-bankableTotal));
+ const accessibleTotal=money(total);
+ const aria=`Total tracked balance ${accessibleTotal}. Set aside ${money(setAside)}. Available ${money(available)}.`;
+ return `<section class="panel funds-panel" aria-labelledby="fundsAllocationTitle">
+  <div class="panel-head"><div><h2 id="fundsAllocationTitle">Total bankings</h2><p>Every account balance, split between money set aside and money left available.</p></div><strong class="funds-total">${esc(accessibleTotal)}</strong></div>
+  <div class="funds-bar-track" role="img" aria-label="${esc(aria)}"><span class="funds-bar-segment reserved" style="width:${reservedPct.toFixed(4)}%"></span><span class="funds-bar-segment available" style="width:${availablePct.toFixed(4)}%"></span></div>
+  <div class="funds-legend">
+   <div class="funds-legend-item"><span class="funds-dot reserved" aria-hidden="true"></span><div class="funds-legend-copy"><span>Money set aside</span><strong>${esc(money(setAside))}</strong></div></div>
+   <div class="funds-legend-item"><span class="funds-dot available" aria-hidden="true"></span><div class="funds-legend-copy"><span>Money left available</span><strong>${esc(money(available))}</strong></div></div>
+  </div>
+  ${over>0?`<p class="funds-warning">Your goals and active purchase plans mark ${esc(money(setAside))} as set aside, which is ${esc(money(over))} more than your positive tracked balances. The graph caps the light-blue section at the full tracked balance until the amounts are adjusted.</p>`:total<=0?`<p class="funds-empty">Add a positive tracked account balance to see how your money is split.</p>`:''}
+  <p class="funds-footnote">Set aside combines the saved amounts entered for savings goals and active purchase plans. Avoid counting the same dollars in both places. The bar always represents your total tracked account balance.</p>
+ </section>`;
+}
 function renderOverview(){
  const income=thisMonthTx('Income').reduce((s,t)=>s+t.amount,0),spending=thisMonthTx('Expense').reduce((s,t)=>s+t.amount,0),rate=income>0?Math.round((income-spending)/income*100):null;
  const sums=EXPENSE_CATEGORIES.map(category=>({category,amount:monthSpend(category)})).filter(x=>x.amount>0).sort((a,b)=>b.amount-a.amount).slice(0,6),max=Math.max(1,...sums.map(x=>x.amount));
@@ -144,6 +194,7 @@ function renderOverview(){
  return `${pageHeading('Overview',`<button class="primary-btn" data-action="add-transaction">＋ New transaction</button>`)}
  <div class="welcome-strip"><div class="welcome-icon">↗</div><div><strong>Build your financial picture, one entry at a time.</strong><span>Add accounts and record transactions to turn your activity into useful insights.</span></div><button class="text-btn" data-action="page" data-page="Settings">Data & privacy ↗</button></div>
  <div class="metric-grid">${metric('Total tracked balance',money(totalBalance()),'▣',`${data.accounts.length} accounts tracked`,'navy')}${metric('Income this month',money(income),'↓',monthName(monthNow()),'green')}${metric('Spending this month',money(spending),'↗',monthName(monthNow()),'orange')}${metric('Savings rate',rate===null?'—':`${rate}%`,'◎',income>0?'Based on recorded income and expenses':'Add income to calculate','purple')}</div>
+ ${renderFundsAllocation()}
  <div class="overview-grid"><section class="panel"><div class="panel-head"><div><h2>Recent transactions</h2><p>Your latest recorded activity</p></div><button class="text-btn" data-action="page" data-page="Transactions">View all ↗</button></div>${recent.length?`<div class="recent-list">${recent.map(t=>`<div class="recent-item"><div class="tx-icon ${t.type.toLowerCase()}">${t.type==='Income'?'↓':t.type==='Transfer'?'⇄':'↗'}</div><div class="recent-description"><strong>${esc(t.description)}</strong><span>${esc(t.category)} · ${esc(accountName(t.accountId))}</span></div><div class="recent-amount"><strong class="${t.type==='Income'?'positive':t.type==='Expense'?'negative':''}">${t.type==='Expense'?'−':t.type==='Income'?'+':''}${esc(money(t.amount))}</strong><span>${esc(fmtDate(t.date))}</span></div></div>`).join('')}</div>`:emptyState('Your activity starts here','Transactions you enter will show up here.','Add transaction','add-transaction')}</section>
  <section class="panel"><div class="panel-head"><div><h2>Spending by category</h2><p>${esc(monthName(monthNow()))}</p></div><span class="muted">▤</span></div>${sums.length?`<div class="category-chart">${sums.map(x=>`<div><div class="category-bar-label"><span>${esc(x.category)}</span><strong>${esc(money(x.amount))}</strong></div><div class="progress-track"><div class="category-fill" style="width:${Math.min(100,x.amount/max*100)}%"></div></div></div>`).join('')}</div>`:`<div class="chart-empty"><div class="empty-chart-icon">▤</div><strong>No spending recorded yet</strong><span>Your category breakdown will appear here.</span><button class="text-btn" data-action="add-transaction" data-prefill="expense">Record an expense ↗</button></div>`}</section></div>
  <div class="overview-grid lower-grid"><section class="panel"><div class="panel-head"><div><h2>Your accounts</h2><p>Current tracked balances</p></div><button class="text-btn" data-action="page" data-page="Accounts">Manage ↗</button></div>${data.accounts.length?`<div class="mini-accounts">${data.accounts.slice(0,5).map(a=>`<div class="mini-account"><div class="mini-account-icon">▣</div><div><strong>${esc(a.name)}</strong><span>${esc(a.type)}</span></div><b class="${a.minimumBalance!=null&&a.balance<a.minimumBalance?'negative':''}">${esc(money(a.balance))}</b></div>`).join('')}</div>`:emptyState('No accounts added','Start with an account and a balance you enter yourself.','Add account','add-account')}</section>
