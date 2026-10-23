@@ -500,7 +500,28 @@ async function deleteItem(section,itemId){if(section==='accounts'){if(data.trans
 function exportBackup(){const payload={...data,exportedAt:new Date().toISOString(),app:'Northstar Personal Finance'};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`northstar-backup-${today()}.json`;document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);showToast('Backup exported')}
 function validateImport(input){if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('This is not a valid Northstar backup.');if(!Array.isArray(input.accounts)&&!Array.isArray(input.transactions)&&!Array.isArray(input.data?.accounts)&&!Array.isArray(input.data?.transactions))throw new Error('This file does not contain Northstar finance data.');const x=normalizeData(input);if(!Array.isArray(x.accounts)||!Array.isArray(x.transactions)||!Array.isArray(x.budgets)||!Array.isArray(x.goals)||!Array.isArray(x.purchases))throw new Error('Backup is missing one or more sections.');if(!x.accounts.every(a=>typeof a.id==='string'&&typeof a.name==='string'&&Number.isFinite(Number(a.balance))))throw new Error('One or more accounts have invalid data.');if(!x.transactions.every(t=>typeof t.id==='string'&&Number.isFinite(Number(t.amount))&&Number(t.amount)>0&&['Income','Expense','Transfer'].includes(t.type)))throw new Error('One or more transactions have invalid data.');return x}
 async function importBackup(file){if(!file)return;try{const imported=validateImport(JSON.parse(await file.text()));if(await showNorthstarDialog({title:'Restore this backup?',message:'Restoring replaces the finance data currently open in Northstar.',detail:'Export a backup of the current data first if you may need it later.',icon:'↻',confirmText:'Restore backup',cancelText:'Cancel',danger:true,label:'REPLACE CURRENT DATA'})!==true)return;data=imported;persist();showToast('Backup restored')}catch(e){showToast(e.message||'Could not read that backup')}finally{$('backupFile').value=''}}
-function setPurchaseStatus(purchaseId,status){data={...data,purchases:data.purchases.map(p=>p.id===purchaseId?{...p,status}:p)};persist();showToast(`Purchase marked ${status.toLowerCase()}`)}
+function setPurchaseStatus(purchaseId,status){
+ const purchase=data.purchases.find(p=>p.id===purchaseId);
+ if(!purchase){showToast('This planned purchase could not be found.');return}
+ if(status==='Purchased'){
+  const existing=data.transactions.find(t=>t.purchaseId===purchaseId||(purchase.transactionId&&t.id===purchase.transactionId));
+  if(existing){
+   data={...data,purchases:data.purchases.map(p=>p.id===purchaseId?{...p,status:'Purchased',transactionId:existing.id}:p)};
+   persist();showToast('This purchase already has an expense recorded. No duplicate was added.');return;
+  }
+  const account=data.accounts.find(a=>a.id===purchase.accountId);
+  if(!account){showToast('Choose a valid funding account before recording this purchase.');return}
+  const amount=Number(purchase.price);
+  if(!Number.isFinite(amount)||amount<=0){showToast('This purchase needs a valid price before it can be recorded.');return}
+  const allowed=maxPurchaseAllocation(account.id,purchase.id);
+  if(amount>allowed+0.005){showToast('This purchase would take '+account.name+' below its minimum balance or use money reserved for other purchases. The maximum safe purchase amount is '+money(allowed)+'. Update the account balance or purchase plan first.');return}
+  const transaction={id:id(),description:'Purchase: '+purchase.name,amount:roundMoney(amount),type:'Expense',category:purchase.category||'Other',date:today(),accountId:account.id,purchaseId:purchase.id};
+  data={...data,accounts:applyTransaction(data.accounts,transaction),transactions:[transaction,...data.transactions],purchases:data.purchases.map(p=>p.id===purchaseId?{...p,status:'Purchased',transactionId:transaction.id}:p)};
+  persist();showToast('Purchase marked bought and expense added to '+account.name+'.');return;
+ }
+ data={...data,purchases:data.purchases.map(p=>p.id===purchaseId?{...p,status}:p)};
+ persist();showToast(`Purchase marked ${status.toLowerCase()}`);
+}
 function navigate(nextPage){page=nextPage;$('sidebar').classList.remove('sidebar-open');$('scrim').classList.add('hidden');render();window.scrollTo({top:0,behavior:'smooth'})}
 function dismissWelcome(){const screen=$("welcomeScreen");if(!screen||screen.classList.contains("hidden"))return;screen.classList.add("welcome-leaving");try{localStorage.setItem("northstar-welcome-seen-v1","1")}catch(e){};window.setTimeout(()=>{screen.classList.add("hidden");screen.classList.remove("welcome-leaving");screen.setAttribute("aria-hidden","true");document.documentElement.classList.add("northstar-seen")},390)}
 function showWelcome(){const screen=$("welcomeScreen");if(!screen)return;document.documentElement.classList.remove("northstar-seen");screen.classList.remove("hidden","welcome-leaving");screen.setAttribute("aria-hidden","false");screen.scrollTop=0;updateWelcomeProgress();try{localStorage.removeItem("northstar-welcome-seen-v1")}catch(e){};window.setTimeout(()=>$('welcomeContinue')?.focus(),60)}
