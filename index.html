@@ -243,10 +243,12 @@ function accountBalanceParts(account){
  const minimumConfigured=Math.max(0,Number(account.minimumBalance)||0);
  const minimum=Math.min(total,minimumConfigured);
  const allocatedTotal=roundMoney(data.purchases.filter(p=>p.accountId===account.id&&!['Purchased','Cancelled'].includes(p.status)).reduce((sum,p)=>sum+Math.max(0,Number(p.saved)||0),0));
- const allocated=Math.min(allocatedTotal,Math.max(0,total-minimum));
- const available=Math.max(0,total-minimum-allocated);
+ // The visual bar represents the full account balance: available + allocated always equals total.
+ // The minimum balance remains enforced by purchase-allocation validation, not by leaving a blank bar segment.
+ const allocated=Math.min(allocatedTotal,total);
+ const available=Math.max(0,total-allocated);
  const pct=value=>total>0?Math.min(100,Math.max(0,value/total*100)):0;
- return {total,minimum,minimumConfigured,allocated,allocatedTotal,available,availablePct:pct(available),allocatedPct:pct(allocated),minimumPct:pct(minimum),minimumMarkerPct:total>0?Math.max(0,Math.min(100,100-minimumConfigured/total*100)):0,overAllocated:allocatedTotal+minimumConfigured>total+0.005};
+ return {total,minimum,minimumConfigured,allocated,allocatedTotal,available,availablePct:pct(available),allocatedPct:pct(allocated),minimumPct:pct(minimum),overAllocated:allocatedTotal+minimumConfigured>total+0.005};
 }
 function renderAccountBalanceBar(account,showLegend=true){
  const p=accountBalanceParts(account);
