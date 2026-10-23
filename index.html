@@ -76,7 +76,7 @@
 .account-balance-fill{display:block;height:100%;width:0;flex:0 0 auto}
 .account-balance-fill.available{background:#83d1ff}
 .account-balance-fill.purchase-allocated{background:#3f77c7}
-.account-balance-fill.minimum{background:#dc4b55}
+.account-balance-minimum-marker{position:absolute;top:0;bottom:0;width:2px;background:#dc4b55;border-radius:2px;transform:translateX(-50%);z-index:2;pointer-events:none}
 .account-balance-legend{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:10px}
 .account-balance-legend>span{display:grid;grid-template-columns:7px auto;column-gap:5px;row-gap:3px;align-items:center;min-width:0;font-size:9px;color:#75869d}
 .account-balance-legend i{width:7px;height:7px;border-radius:2px;display:block;grid-row:1;grid-column:1}
@@ -248,15 +248,15 @@ function accountBalanceParts(account){
  const allocated=Math.min(allocatedTotal,Math.max(0,total-minimum));
  const available=Math.max(0,total-minimum-allocated);
  const pct=value=>total>0?Math.min(100,Math.max(0,value/total*100)):0;
- return {total,minimum,minimumConfigured,allocated,allocatedTotal,available,availablePct:pct(available),allocatedPct:pct(allocated),minimumPct:pct(minimum),overAllocated:allocatedTotal+minimumConfigured>total+0.005};
+ return {total,minimum,minimumConfigured,allocated,allocatedTotal,available,availablePct:pct(available),allocatedPct:pct(allocated),minimumPct:pct(minimum),minimumMarkerPct:total>0?Math.min(100,minimumConfigured/total*100):100,overAllocated:allocatedTotal+minimumConfigured>total+0.005};
 }
 function renderAccountBalanceBar(account,showLegend=true){
  const p=accountBalanceParts(account);
  const aria=account.name+' total '+money(p.total)+', remaining after purchase allocations and minimum '+money(p.available)+', allocated to purchases '+money(p.allocatedTotal)+', minimum balance '+money(p.minimumConfigured)+'.';
  const segments=(p.available>0?'<span class="account-balance-fill available" style="width:'+p.availablePct.toFixed(4)+'%"></span>':'')+
-  (p.allocated>0?'<span class="account-balance-fill purchase-allocated" style="width:'+p.allocatedPct.toFixed(4)+'%"></span>':'')+
-  (p.minimum>0?'<span class="account-balance-fill minimum" style="width:'+p.minimumPct.toFixed(4)+'%"></span>':'');
- let html='<div class="account-balance-meter" role="img" aria-label="'+esc(aria)+'">'+segments+'</div>';
+  (p.allocated>0?'<span class="account-balance-fill purchase-allocated" style="width:'+p.allocatedPct.toFixed(4)+'%"></span>':'');
+ const minimumMarker=p.minimumConfigured>0?'<span class="account-balance-minimum-marker" style="left:'+p.minimumMarkerPct.toFixed(4)+'%"></span>':'';
+ let html='<div class="account-balance-meter" role="img" aria-label="'+esc(aria)+'">'+segments+minimumMarker+'</div>';
  if(showLegend){
   html+='<div class="account-balance-legend"><span><i class="available"></i><span>Available</span><strong>'+esc(money(p.available))+'</strong></span><span><i class="purchase-allocated"></i><span>Purchase allocated</span><strong>'+esc(money(p.allocatedTotal))+'</strong></span>';
   if(p.minimumConfigured>0)html+='<span><i class="minimum"></i><span>Minimum balance</span><strong>'+esc(money(p.minimumConfigured))+'</strong></span>';
@@ -265,6 +265,13 @@ function renderAccountBalanceBar(account,showLegend=true){
  if(p.overAllocated)html+='<p class="account-balance-warning">Purchase allocations plus the minimum balance exceed this account’s current balance. The bar caps segments at the balance shown above.</p>';
  if(p.total<=0&&p.minimumConfigured>0)html+='<p class="account-balance-warning">This account has no positive tracked balance, so its minimum balance cannot fit on the bar.</p>';
  return html;
+}
+function maxPurchaseAllocation(accountId,excludePurchaseId=''){
+ const account=data.accounts.find(a=>a.id===accountId);
+ if(!account)return 0;
+ const minimum=Math.max(0,Number(account.minimumBalance)||0);
+ const otherAllocated=data.purchases.filter(p=>p.id!==excludePurchaseId&&p.accountId===accountId&&!['Purchased','Cancelled'].includes(p.status)).reduce((sum,p)=>sum+Math.max(0,Number(p.saved)||0),0);
+ return roundMoney(Math.max(0,(Number(account.balance)||0)-minimum-otherAllocated));
 }
 function reminderDaysLeft(p){return Math.ceil((new Date(`${p.date}T12:00:00`).getTime()-new Date(`${today()}T12:00:00`).getTime())/86400000)}
 function getReminders(){return data.purchases.filter(p=>['Planning','Saving','Ready'].includes(p.status)&&p.date&&Array.isArray(p.reminderDays)&&p.reminderDays.includes(reminderDaysLeft(p)))}
@@ -439,6 +446,10 @@ function savePurchaseAllocation(e){
  if(!item){showToast('This planned purchase could not be found.');return}
  if(raw===''||!Number.isFinite(amount)||amount<0){showToast('Enter an allocation amount of zero or more.');return}
  if(amount>Number(item.price)){showToast('The allocated amount cannot exceed this purchase price.');return}
+ if(!['Purchased','Cancelled'].includes(item.status)){
+  const limit=maxPurchaseAllocation(item.accountId,item.id);
+  if(amount>limit+0.005){showToast('That allocation would bring '+accountName(item.accountId)+' below its minimum balance. The most you can allocate to this purchase while protecting the minimum is '+money(limit)+'.');return}
+ }
  data={...data,purchases:data.purchases.map(p=>p.id===id?{...p,saved:roundMoney(amount)}:p)};
  persist();showToast('Purchase allocation updated')
 }
@@ -481,7 +492,7 @@ function submitModal(e){e.preventDefault();const form=e.target;if(!modalState||!
  }else if(kind==='goal'){
   const target=num('target'),saved=num('saved');if(!v.name?.trim()||!validMoney(target)||v.saved==null||String(v.saved).trim()===''||!Number.isFinite(saved)||saved<0){formError('Enter a name, positive target, and non-negative saved amount.');return}const item={id:oldId||id(),name:v.name.trim(),target:Math.round(target*100)/100,saved:Math.round(saved*100)/100,dueDate:v.dueDate||undefined};next={...next,goals:oldId?next.goals.map(g=>g.id===oldId?item:g):[...next.goals,item]};
  }else if(kind==='purchase'){
-  const price=num('price'),saved=num('saved');if(!v.name?.trim()||!validMoney(price)||v.saved==null||String(v.saved).trim()===''||!Number.isFinite(saved)||saved<0||!v.date||!v.accountId||!next.accounts.some(a=>a.id===v.accountId)){formError('Enter a name, positive price, valid saved amount, target date, and funding account.');return}const item={id:oldId||id(),name:v.name.trim(),price:Math.round(price*100)/100,date:v.date,priority:v.priority||'Medium',category:v.category||'Other',accountId:v.accountId,saved:Math.round(saved*100)/100,status:v.status||'Planning',reminderDays:fd.getAll('reminderDays').map(Number).filter(n=>[30,7,1,0].includes(n)),notes:v.notes||''};next={...next,purchases:oldId?next.purchases.map(p=>p.id===oldId?item:p):[...next.purchases,item]};
+  const price=num('price'),saved=num('saved');if(!v.name?.trim()||!validMoney(price)||v.saved==null||String(v.saved).trim()===''||!Number.isFinite(saved)||saved<0||!v.date||!v.accountId||!next.accounts.some(a=>a.id===v.accountId)){formError('Enter a name, positive price, valid saved amount, target date, and funding account.');return}const status=v.status||'Planning';if(!['Purchased','Cancelled'].includes(status)){const limit=maxPurchaseAllocation(v.accountId,oldId||'');if(saved>limit+0.005){formError('This allocation would bring '+accountName(v.accountId)+' below its minimum balance. You can allocate up to '+money(limit)+' to this purchase while protecting the minimum.');return}}const item={id:oldId||id(),name:v.name.trim(),price:Math.round(price*100)/100,date:v.date,priority:v.priority||'Medium',category:v.category||'Other',accountId:v.accountId,saved:Math.round(saved*100)/100,status,reminderDays:fd.getAll('reminderDays').map(Number).filter(n=>[30,7,1,0].includes(n)),notes:v.notes||''};next={...next,purchases:oldId?next.purchases.map(p=>p.id===oldId?item:p):[...next.purchases,item]};
  }
  const newGoal=kind==='goal'?next.goals.find(g=>g.id===(oldId||next.goals[next.goals.length-1]?.id)):null;const priorGoal=kind==='goal'?data.goals.find(g=>g.id===newGoal?.id):null;const reachedNow=!!newGoal&&Number(newGoal.target)>0&&Number(newGoal.saved)>=Number(newGoal.target)&&(!priorGoal||Number(priorGoal.saved)<Number(priorGoal.target));data=next;persist();modalState=null;render();showToast(kind==='transaction'?(oldId?'Transaction updated':'Transaction saved'):kind==='account'?(oldId?'Account updated':'Account created'):kind==='budget'?'Budget saved':kind==='goal'?(oldId?'Goal updated':'Goal created'):(oldId?'Purchase updated':'Purchase planned'));if(reachedNow)celebrateGoal(newGoal);
 }
