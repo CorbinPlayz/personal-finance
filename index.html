@@ -14,10 +14,10 @@
 <section class="panel"><h3>Recent transactions</h3><div id="transactionList" class="list"><div class="empty">Loading…</div></div><p class="hint">Manual tracking only; this app does not connect to bank accounts.</p></section></div></section>
 <footer class="footer"><span>Northstar Personal Finance</span><span id="userLabel">Your data stays yours.</span></footer></main>
 <script type="module">
-import {initializeApp,getApps} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
-import {getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
-import {getFirestore,doc,getDoc,setDoc} from "https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js";
-const firebaseConfig={apiKey:"AIzaSyC8f5T4LzZRuhii3SwgFDrf8tpLZNEqnKw",authDomain:"northstar-personal-finan-ca543.firebaseapp.com",projectId:"northstar-personal-finan-ca543",storageBucket:"northstar-personal-finan-ca543.firebasestorage.app",messagingSenderId:"1009926915952",appId:"1:1009926915952:web:391a8f33b69cf5870971b5"};
+import {initializeApp,getApps} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+import {getAuth,GoogleAuthProvider,signInWithPopup,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+import {getFirestore,doc,getDoc,setDoc} from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+const firebaseConfig={apiKey:"AIzaSyC8f5T4LzZRuhii3SwgFDrf8tpLZNEqnKw",authDomain:"northstar-personal-finan-ca543.firebaseapp.com",projectId:"northstar-personal-finan-ca543",storageBucket:"northstar-personal-finan-ca543.firebasestorage.app",messagingSenderId:"1009926915952",appId:"1:1009926915952:web:4c0027a0b1082c770971b5",measurementId:"G-S3DTKY24TP"};
 const $=id=>document.getElementById(id),money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(n)||0);
 const localKeyFor=uid=>"northstar-finance-v1:"+uid;
 let auth,db,user=null,transactions=[],saveTimer=null,loading=false;
