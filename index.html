@@ -149,6 +149,26 @@ function reminderDaysLeft(p){return Math.ceil((new Date(`${p.date}T12:00:00`).ge
 function getReminders(){return data.purchases.filter(p=>['Planning','Saving','Ready'].includes(p.status)&&p.date&&Array.isArray(p.reminderDays)&&p.reminderDays.includes(reminderDaysLeft(p)))}
 function showToast(text){const root=$('toastRoot');root.innerHTML=`<div class="toast"><span>✓</span><span>${esc(text)}</span><button data-action="dismiss-toast" aria-label="Dismiss">×</button></div>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>root.replaceChildren(),3500)}
 function setSync(text,kind=''){const el=$('syncStatus');el.textContent=text;el.className='sync-state'+(kind?' '+kind:'')}
+function firebaseErrorCode(error){return String(error?.code||'unknown-error')}
+function firebaseErrorDetails(error,stage='Cloud sync'){
+ const code=firebaseErrorCode(error);
+ const hints={
+  'auth/unauthorized-domain':'Google sign-in is blocked for this site. In Firebase Console → Authentication → Settings → Authorized domains, add corbinplayz.github.io.',
+  'auth/operation-not-allowed':'Google sign-in is disabled. In Firebase Console → Authentication → Sign-in method, enable Google.',
+  'auth/network-request-failed':'The browser could not reach Firebase Authentication. Check your connection, VPN, or browser extensions.',
+  'auth/api-key-not-valid.-please-pass-a-valid-api-key.':'Firebase rejected the web API key. Check that index.html has the web app config from the correct Firebase project.',
+  'permission-denied':'Firestore denied access. Confirm the database exists and publish firestore.rules in Firebase Console. Keep the rules restricted to your own user ID.',
+  'firestore/permission-denied':'Firestore denied access. Confirm the database exists and publish firestore.rules in Firebase Console. Keep the rules restricted to your own user ID.',
+  'not-found':'The Firestore database was not found. Open Firebase Console and create Cloud Firestore for this project if it has not been created.',
+  'unavailable':'Firebase is temporarily unavailable or the network request is blocked. Check the connection and retry.',
+  'deadline-exceeded':'Firebase did not respond in time. Check the connection and retry.',
+  'failed-precondition':'Firestore is not ready or has a project configuration issue. Check the Firestore database in Firebase Console.',
+  'resource-exhausted':'Firebase rejected the request due to a quota or rate limit. Check Firebase usage and quotas.'
+ };
+ const hint=hints[code]||`${stage} failed. Check Firebase project setup and the browser console for details.`;
+ const detail=error?.message&& !hints[code]?` Details: ${error.message}`:'';
+ return `${hint} [${code}]${detail}`
+}
 function setCloudLoading(loading){const content=$('content');if(content){content.inert=loading;content.setAttribute('aria-busy',String(loading))}const signOut=$('signOutBtn');if(signOut)signOut.disabled=loading;}
 function update(mutator,toastText){data=mutator(data);persist();if(toastText)showToast(toastText)}
 function options(items,current){return items.map(v=>`<option value="${esc(v)}" ${String(v)===String(current)?'selected':''}>${esc(v)}</option>`).join('')}
@@ -261,7 +281,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');
 document.addEventListener('submit',e=>{if(e.target?.id==='modalForm')submitModal(e)});
 document.addEventListener('input',e=>{if(e.target?.id==='txSearch'){query=e.target.value;const pos=e.target.selectionStart;render();const next=$('txSearch');next?.focus();next?.setSelectionRange(pos,pos)}});
 document.addEventListener('change',e=>{if(e.target?.id==='txTypeFilter'){txTypeFilter=e.target.value;render()}if(e.target?.id==='txMonthFilter'){txMonthFilter=e.target.value;render()}if(e.target?.id==='currencySelect'){data={...data,settings:{...data.settings,currency:e.target.value}};persist();showToast('Display currency updated')}if(e.target?.id==='backupFile'){importBackup(e.target.files?.[0])}if(e.target?.dataset?.action==='purchase-status'){setPurchaseStatus(e.target.dataset.id,e.target.value)}});
-async function initFirebase(){try{const [appSdk,authSdk,storeSdk]=await Promise.all([import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`)]);const app=(appSdk.getApps().length?appSdk.getApps()[0]:appSdk.initializeApp(firebaseConfig));const auth=authSdk.getAuth(app),db=storeSdk.getFirestore(app);fb={...appSdk,...authSdk,...storeSdk,app,auth,db};authSdk.onAuthStateChanged(auth,async current=>{await onAuthChanged(current)});authReady=true}catch(e){console.warn('Firebase SDK could not initialize; local mode remains available.',e);authReady=true;setSync('Local only · Firebase unavailable');render()}}
+async function initFirebase(){try{const [appSdk,authSdk,storeSdk]=await Promise.all([import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`)]);const app=(appSdk.getApps().length?appSdk.getApps()[0]:appSdk.initializeApp(firebaseConfig));const auth=authSdk.getAuth(app),db=storeSdk.getFirestore(app);fb={...appSdk,...authSdk,...storeSdk,app,auth,db};authSdk.onAuthStateChanged(auth,async current=>{await onAuthChanged(current)});authReady=true}catch(e){console.warn('Firebase SDK could not initialize; local mode remains available.',e);authReady=true;setSync(`Firebase unavailable · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Firebase SDK initialization'))}}
 function docRef(){return fb.doc(fb.db,'users',user.uid,'northstar','financeData')}
 async function onAuthChanged(current){
  if(!current){const wasSignedIn=!!user;user=null;cloudLoaded=false;setCloudLoading(false);if(wasSignedIn)data=loadLocal('local');setSync('Local only','');render();return}
@@ -280,12 +300,12 @@ async function onAuthChanged(current){
  }catch(e){
   console.error('Northstar cloud load failed',e);data=hasRecords(userLocal)?userLocal:anonymousData;
   try{localStorage.setItem(localKey(current.uid),JSON.stringify(data))}catch(storageError){console.warn('Could not save a local copy after the cloud load failed.',storageError)}
-  cloudLoaded=false;setSync('Cloud sync error','err');setCloudLoading(false);render();showToast('Could not load cloud data. Check Firebase Authentication, Firestore, and security rules.')
+  cloudLoaded=false;setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');setCloudLoading(false);render();showToast(firebaseErrorDetails(e,'Cloud load'))
  }
 }
 async function writeCloudNow(){if(!user||!fb)return;await fb.setDoc(docRef(),{data,updatedAt:Date.now(),schemaVersion:1},{merge:true})}
-function queueCloudSave(){clearTimeout(saveTimer);setSync('Saving…');saveTimer=setTimeout(async()=>{try{await writeCloudNow();setSync('Cloud sync on','ok')}catch(e){console.error('Northstar cloud save failed',e);setSync('Sync error','err');showToast('Cloud save failed. Your browser backup is still available.')}},700)}
-async function handleGoogleSignIn(){if(!fb){showToast('Firebase is still initializing. Wait a moment and try again.');return}if(signingIn)return;signingIn=true;try{await fb.signInWithPopup(fb.auth,new fb.GoogleAuthProvider())}catch(e){console.error(e);showToast(e?.code==='auth/unauthorized-domain'?'Add corbinplayz.github.io to Firebase authorized domains.':'Google sign-in failed. Check the Google provider and authorized domains.')}finally{signingIn=false}}
+function queueCloudSave(){clearTimeout(saveTimer);setSync('Saving…');saveTimer=setTimeout(async()=>{try{await writeCloudNow();setSync('Cloud sync on','ok')}catch(e){console.error('Northstar cloud save failed',e);setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');showToast(firebaseErrorDetails(e,'Cloud save')+' Your browser copy is still available.')}},700)}
+async function handleGoogleSignIn(){if(!fb){showToast('Firebase has not initialized. Check the Firebase unavailable status and reload the page.');return}if(signingIn)return;signingIn=true;try{await fb.signInWithPopup(fb.auth,new fb.GoogleAuthProvider())}catch(e){console.error('Northstar Google sign-in failed',e);showToast(firebaseErrorDetails(e,'Google sign-in'))}finally{signingIn=false}}
 async function handleGoogleSignOut(){if(!fb)return;try{await fb.signOut(fb.auth);showToast('Signed out. This browser copy remains available.')}catch(e){showToast('Could not sign out. Try again.')}}
 render();initFirebase();if(!document.documentElement.classList.contains('northstar-seen'))window.setTimeout(()=>$('welcomeContinue')?.focus(),140);
 </script>
