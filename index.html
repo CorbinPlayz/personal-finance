@@ -303,7 +303,16 @@ async function onAuthChanged(current){
   cloudLoaded=false;lastSyncError=e;setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');setCloudLoading(false);render();showToast(firebaseErrorDetails(e,'Cloud load'))
  }
 }
-async function writeCloudNow(){if(!user||!fb)return;await fb.setDoc(docRef(),{data,updatedAt:Date.now(),schemaVersion:1},{merge:true})}
+function removeUndefinedValues(value){
+ if(Array.isArray(value))return value.map(item=>item===undefined?null:removeUndefinedValues(item));
+ if(value&&typeof value==='object'){
+  const clean={};
+  for(const [key,item] of Object.entries(value)){if(item!==undefined)clean[key]=removeUndefinedValues(item)}
+  return clean
+ }
+ return value
+}
+async function writeCloudNow(){if(!user||!fb)return;const safeData=removeUndefinedValues(data);await fb.setDoc(docRef(),{data:safeData,updatedAt:Date.now(),schemaVersion:1},{merge:true})}
 async function retryCloudSync(){if(!fb){showToast(firebaseErrorDetails(lastSyncError||new Error('Firebase SDK not initialized'),'Cloud sync'));return}const current=fb.auth.currentUser;if(!current){showToast('Connect Google before retrying cloud sync.');return}if(!cloudLoaded){await onAuthChanged(current);return}setSync('Retrying save…');try{await writeCloudNow();lastSyncError=null;setSync('Cloud sync on','ok');render();showToast('Cloud save succeeded.')}catch(e){lastSyncError=e;console.error('Northstar cloud retry failed',e);setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Cloud save')+' Your browser copy is still available.')}}
 function queueCloudSave(){clearTimeout(saveTimer);setSync('Saving…');saveTimer=setTimeout(async()=>{try{await writeCloudNow();lastSyncError=null;setSync('Cloud sync on','ok');render()}catch(e){lastSyncError=e;console.error('Northstar cloud save failed',e);setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Cloud save')+' Your browser copy is still available.')}},700)}
 async function handleGoogleSignIn(){if(!fb){showToast('Firebase has not initialized. Check the Firebase unavailable status and reload the page.');return}if(signingIn)return;signingIn=true;try{await fb.signInWithPopup(fb.auth,new fb.GoogleAuthProvider())}catch(e){console.error('Northstar Google sign-in failed',e);showToast(firebaseErrorDetails(e,'Google sign-in'))}finally{signingIn=false}}
