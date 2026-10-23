@@ -76,13 +76,11 @@
 .account-balance-fill{display:block;height:100%;width:0;flex:0 0 auto}
 .account-balance-fill.available{background:#83d1ff}
 .account-balance-fill.purchase-allocated{background:#3f77c7}
-.account-balance-minimum-marker{position:absolute;top:0;bottom:0;width:2px;background:#dc4b55;border-radius:2px;transform:translateX(-50%);z-index:2;pointer-events:none}
 .account-balance-legend{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:10px}
 .account-balance-legend>span{display:grid;grid-template-columns:7px auto;column-gap:5px;row-gap:3px;align-items:center;min-width:0;font-size:9px;color:#75869d}
 .account-balance-legend i{width:7px;height:7px;border-radius:2px;display:block;grid-row:1;grid-column:1}
 .account-balance-legend i.available{background:#83d1ff}
 .account-balance-legend i.purchase-allocated{background:#3f77c7}
-.account-balance-legend i.minimum{background:#dc4b55}
 .account-balance-legend>span>span{grid-row:1;grid-column:2}
 .account-balance-legend strong{font-size:10px;color:#30445f;grid-row:2;grid-column:2;font-weight:700;overflow-wrap:anywhere}
 .account-balance-warning{font-size:10px;line-height:1.45;color:#a5473d;background:#fff2f0;border:1px solid #f4d3d0;border-radius:7px;padding:8px 9px;margin:10px 0 0}
@@ -253,13 +251,11 @@ function accountBalanceParts(account){
 function renderAccountBalanceBar(account,showLegend=true){
  const p=accountBalanceParts(account);
  const aria=account.name+' total '+money(p.total)+', remaining after purchase allocations and minimum '+money(p.available)+', allocated to purchases '+money(p.allocatedTotal)+', minimum balance '+money(p.minimumConfigured)+'.';
- const segments=(p.allocated>0?'<span class="account-balance-fill purchase-allocated" style="width:'+p.allocatedPct.toFixed(4)+'%"></span>':'')+
-  (p.available>0?'<span class="account-balance-fill available" style="width:'+p.availablePct.toFixed(4)+'%"></span>':'');
- const minimumMarker=p.minimumConfigured>0?'<span class="account-balance-minimum-marker" style="left:'+p.minimumMarkerPct.toFixed(4)+'%"></span>':'';
- let html='<div class="account-balance-meter" role="img" aria-label="'+esc(aria)+'">'+segments+minimumMarker+'</div>';
+ const segments=(p.available>0?'<span class="account-balance-fill available" style="width:'+p.availablePct.toFixed(4)+'%"></span>':'')+
+  (p.allocated>0?'<span class="account-balance-fill purchase-allocated" style="width:'+p.allocatedPct.toFixed(4)+'%"></span>':'');
+ let html='<div class="account-balance-meter" role="img" aria-label="'+esc(aria)+'">'+segments+'</div>';
  if(showLegend){
   html+='<div class="account-balance-legend"><span><i class="available"></i><span>Available</span><strong>'+esc(money(p.available))+'</strong></span><span><i class="purchase-allocated"></i><span>Purchase allocated</span><strong>'+esc(money(p.allocatedTotal))+'</strong></span>';
-  if(p.minimumConfigured>0)html+='<span><i class="minimum"></i><span>Minimum balance</span><strong>'+esc(money(p.minimumConfigured))+'</strong></span>';
   html+='</div>';
  }
  if(p.overAllocated)html+='<p class="account-balance-warning">Purchase allocations plus the minimum balance exceed this account’s current balance. The bar caps segments at the balance shown above.</p>';
