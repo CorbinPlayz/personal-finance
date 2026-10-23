@@ -187,6 +187,16 @@ const fmtDate=d=>{if(!d)return 'No date';const p=d.split('-').map(Number);return
 const hasRecords=d=>!!d&&(d.accounts?.length+d.transactions?.length+d.budgets?.length+d.goals?.length+d.purchases?.length)>0;
 let data=loadLocal('local'),page='Overview',query='',txTypeFilter='All',txMonthFilter='All',modalState=null,toastTimer=null,saveTimer=null,user=null,fb=null,cloudLoaded=false,authReady=false,signingIn=false,lastSyncError=null,confirmResolver=null,confirmChoices=[];
 function localKey(key){return `northstar-finance-v1:${key}`}
+function stableDataValue(value){
+ if(Array.isArray(value))return value.map(stableDataValue);
+ if(value&&typeof value==='object'){
+  const stable={};
+  Object.keys(value).sort().forEach(key=>{if(value[key]!==undefined)stable[key]=stableDataValue(value[key])});
+  return stable;
+ }
+ return value;
+}
+function dataSignature(value){return JSON.stringify(stableDataValue(normalizeData(value)))}
 function normalizeData(input){
  if(Array.isArray(input)){return migrateSimpleTransactions(input)}
  if(!input||typeof input!=='object')return blankData();
@@ -461,7 +471,7 @@ async function onAuthChanged(current){
   const snap=await fb.getDoc(docRef());let chosen=userLocal;if(!hasRecords(chosen)&&hasRecords(anonymousData))chosen=anonymousData;
   if(snap.exists()){
    const cloud=normalizeData(snap.data().data||snap.data());
-   if(hasRecords(chosen)&&JSON.stringify(chosen)!==JSON.stringify(cloud)){
+   if(hasRecords(chosen)&&dataSignature(chosen)!==dataSignature(cloud)){
     const choice=await showNorthstarDialog({title:'Choose which data to keep',message:'Northstar found different finance data in your Google account and this browser.',detail:'Using the cloud copy replaces what’s currently shown on this device. Keeping this device uploads the browser copy and replaces the cloud document.',icon:'☁',label:'SYNC CONFLICT',choices:[{value:'cloud',label:'Use cloud copy',style:'primary'},{value:'local',label:'Keep this device',style:'secondary'},{value:'cancel',label:'Decide later',style:'quiet'}]});
     if(choice==='cloud')data=cloud;else if(choice==='local'){data=chosen;await writeCloudNow()}else{data=chosen;try{localStorage.setItem(localKey(current.uid),JSON.stringify(data))}catch(storageError){}cloudLoaded=false;lastSyncError=new Error('Choose which data to keep to resume cloud sync.');setSync('Sync conflict · action needed','err');setCloudLoading(false);render();return}
    }else data=cloud;
