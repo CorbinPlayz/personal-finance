@@ -72,7 +72,7 @@
 .account-balance-tile-amount{display:block;font-family:Manrope,sans-serif;font-size:25px;letter-spacing:-.5px;color:#223752;overflow-wrap:anywhere}
 .account-balance-tile-amount.negative{color:#bd3949}
 .account-balance-meter{height:8px;width:100%;margin-top:13px;background:#edf2fa;border-radius:999px;overflow:hidden}
-.account-balance-meter{display:flex;flex-direction:row-reverse;align-items:stretch;height:11px;width:100%;margin-top:13px;background:#edf2fa;border-radius:999px;overflow:hidden;position:relative}
+.account-balance-meter{display:flex;flex-direction:row;align-items:stretch;height:11px;width:100%;margin-top:13px;background:#edf2fa;border-radius:999px;overflow:hidden;position:relative}
 .account-balance-fill{display:block;height:100%;width:0;flex:0 0 auto}
 .account-balance-fill.available{background:#83d1ff}
 .account-balance-fill.purchase-allocated{background:#3f77c7}
@@ -248,13 +248,13 @@ function accountBalanceParts(account){
  const allocated=Math.min(allocatedTotal,Math.max(0,total-minimum));
  const available=Math.max(0,total-minimum-allocated);
  const pct=value=>total>0?Math.min(100,Math.max(0,value/total*100)):0;
- return {total,minimum,minimumConfigured,allocated,allocatedTotal,available,availablePct:pct(available),allocatedPct:pct(allocated),minimumPct:pct(minimum),minimumMarkerPct:total>0?Math.min(100,minimumConfigured/total*100):100,overAllocated:allocatedTotal+minimumConfigured>total+0.005};
+ return {total,minimum,minimumConfigured,allocated,allocatedTotal,available,availablePct:pct(available),allocatedPct:pct(allocated),minimumPct:pct(minimum),minimumMarkerPct:total>0?Math.max(0,Math.min(100,100-minimumConfigured/total*100)):0,overAllocated:allocatedTotal+minimumConfigured>total+0.005};
 }
 function renderAccountBalanceBar(account,showLegend=true){
  const p=accountBalanceParts(account);
  const aria=account.name+' total '+money(p.total)+', remaining after purchase allocations and minimum '+money(p.available)+', allocated to purchases '+money(p.allocatedTotal)+', minimum balance '+money(p.minimumConfigured)+'.';
- const segments=(p.available>0?'<span class="account-balance-fill available" style="width:'+p.availablePct.toFixed(4)+'%"></span>':'')+
-  (p.allocated>0?'<span class="account-balance-fill purchase-allocated" style="width:'+p.allocatedPct.toFixed(4)+'%"></span>':'');
+ const segments=(p.allocated>0?'<span class="account-balance-fill purchase-allocated" style="width:'+p.allocatedPct.toFixed(4)+'%"></span>':'')+
+  (p.available>0?'<span class="account-balance-fill available" style="width:'+p.availablePct.toFixed(4)+'%"></span>':'');
  const minimumMarker=p.minimumConfigured>0?'<span class="account-balance-minimum-marker" style="left:'+p.minimumMarkerPct.toFixed(4)+'%"></span>':'';
  let html='<div class="account-balance-meter" role="img" aria-label="'+esc(aria)+'">'+segments+minimumMarker+'</div>';
  if(showLegend){
