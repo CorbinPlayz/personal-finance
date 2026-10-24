@@ -139,6 +139,71 @@
 .guide-hero{position:relative;overflow:hidden;border:1px solid #213d69;border-radius:20px;padding:26px;background:radial-gradient(ellipse at 90% -20%,#4f7fff3b,transparent 54%),linear-gradient(130deg,#0b1931,#172d50 62%,#1d2954);color:#eff7ff;margin-bottom:16px}.guide-hero:after{content:"✦";position:absolute;right:24px;top:16px;color:#80eaff55;font-size:68px;line-height:1;animation:nsLogoBreath 5s ease-in-out infinite;pointer-events:none}.guide-hero .eyebrow{color:#91b9ff}.guide-hero h2{font-family:Manrope,sans-serif;font-size:clamp(22px,3vw,32px);letter-spacing:-.8px;margin:9px 0 10px;max-width:650px;line-height:1.2}.guide-hero p{color:#bdcce4;font-size:12px;line-height:1.8;max-width:720px;margin:0}.guide-hero-statrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:22px}.guide-hero-stat{padding:12px;border:1px solid #c5dfff1e;border-radius:12px;background:#ffffff08;min-width:0}.guide-hero-stat span{font-size:9px;letter-spacing:.7px;text-transform:uppercase;color:#9fb4d6;display:block}.guide-hero-stat strong{font-family:Manrope,sans-serif;font-size:clamp(15px,2vw,20px);margin-top:7px;display:block;overflow-wrap:anywhere;color:#f2f9ff}.guide-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:16px;align-items:start}.guide-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 13px}.guide-response{margin-top:14px;border:1px solid #dce9ff;border-radius:12px;padding:15px;background:linear-gradient(145deg,#f7faff,#eef7ff);color:#465b79;font-size:12px;line-height:1.8}.guide-response strong{display:block;color:#263d61;margin-bottom:5px}.guide-plan-list{display:grid;gap:11px}.guide-plan-item{padding:13px;border:1px solid #e5ebf5;border-radius:12px;background:#fff;min-width:0}.guide-plan-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.guide-plan-item strong{font-size:12px;color:#33445b}.guide-plan-item p{font-size:10px;color:#7f8fa6;line-height:1.65;margin:6px 0 0}.purchase-research-link{font-size:10px;color:#3567d6;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:4px;margin-top:10px}.purchase-research-link:hover{text-decoration:underline}.purchase-research{border-top:1px solid #eef2f8;margin-top:4px;padding-top:7px}.price-check-form{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;margin-top:9px}.price-check-form .field-label{flex:1;min-width:120px;margin:0}.price-check-form .field-label input{display:block;width:100%;min-height:36px;border:1px solid #dbe4f2;border-radius:8px;padding:8px 10px;margin-top:5px}.price-estimate{border:1px solid #dce9ff;background:#f5f9ff;border-radius:10px;padding:11px;margin-top:12px}.price-estimate strong{display:block;color:#304e82;font-size:12px;margin-top:7px}.price-estimate p{font-size:10px;color:#8091aa;line-height:1.65;margin:5px 0 0}.price-trend{display:inline-flex;align-items:center;border-radius:7px;padding:4px 7px;background:#edf6ff;color:#4368a0;font-size:9px;font-weight:700}.price-trend.down{background:#e8f8f0;color:#247f61}.price-trend.up{background:#fff0e9;color:#b45e42}
 @media(max-width:760px){.guide-grid{grid-template-columns:1fr}.guide-profile-grid{grid-template-columns:1fr}.guide-hero{padding:21px}.guide-hero-statrow{gap:7px}.guide-hero-stat{padding:10px}.guide-hero-stat span{font-size:8px}.guide-plan-top{flex-wrap:wrap}.price-check-form{align-items:stretch}.price-check-form .field-label{min-width:100%}.price-check-form button{width:100%;min-height:42px}.guide-grid .panel{padding:16px}.guide-plan-item{padding:12px}.guide-hero:after{right:15px;font-size:45px}}
 @media(prefers-reduced-motion:reduce){.guide-hero:after{animation:none!important}}
+
+/* Northstar mobile layout hardening */
+@media(max-width:600px){
+  html,body{width:100%;max-width:100%;overflow-x:hidden}
+  .app-shell,.main-area,.content{min-width:0;width:100%;max-width:100%}
+  .topbar{gap:6px;padding:0 10px;min-width:0}
+  .breadcrumb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .breadcrumb span{padding:0 4px}
+  .top-actions{flex:0 1 auto;min-width:0;gap:4px}
+  .sync-state{max-width:74px;white-space:nowrap;font-size:9px}
+  .content{padding:18px 12px 28px}
+  .page-heading{flex-wrap:wrap;align-items:flex-start;gap:12px}
+  .page-heading>div{min-width:0;flex:1 1 180px}
+  .page-heading>.primary-btn,.page-heading>.secondary-btn{max-width:100%;white-space:normal}
+  .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .metric-card{padding:12px;min-width:0}
+  .metric-top{gap:5px;overflow-wrap:anywhere}
+  .metric-value{font-size:clamp(17px,5vw,21px);letter-spacing:-.6px}
+  .overview-grid,.lower-grid,.guide-grid{grid-template-columns:minmax(0,1fr);min-width:0}
+  .panel,.account-card,.goal-card,.purchase-card{min-width:0;padding:14px}
+  .account-grid,.goal-grid,.purchase-grid{grid-template-columns:minmax(0,1fr)}
+  .purchase-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .purchase-summary>div{padding:10px 8px;min-width:0}
+  .purchase-summary strong{font-size:clamp(14px,4.2vw,19px);overflow-wrap:anywhere}
+  .purchase-summary span{font-size:8px;letter-spacing:.2px;overflow-wrap:anywhere}
+  .field-grid,.guide-profile-grid{grid-template-columns:minmax(0,1fr)}
+  .inline-tools{width:100%;align-items:stretch}
+  .inline-tools>*{max-width:100%;min-width:0}
+  .search-box{min-width:0;width:100%}
+  .search-box input{min-width:0;width:100%}
+  .filter-select{max-width:100%;flex:1 1 130px}
+  .table-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tx-table{min-width:620px}
+  .modal-backdrop,.confirm-backdrop{padding:10px;align-items:flex-end}
+  .modal,.confirm-dialog{width:100%;max-width:100%;max-height:calc(100dvh - 20px);overflow-y:auto;border-radius:16px;padding:18px}
+  .modal-actions,.form-actions{display:flex;flex-wrap:wrap;gap:8px}
+  .modal-actions button,.form-actions button{flex:1 1 120px;min-height:42px}
+  .recent-amount{min-width:0;max-width:100px}
+  .recent-item{gap:8px}
+  .recent-description{min-width:0}
+  .recent-amount strong,.recent-description strong{overflow-wrap:anywhere}
+  .welcome-strip{align-items:flex-start;gap:9px}
+  .welcome-strip>div:nth-child(2){min-width:0}
+  .guide-hero{padding:17px}
+  .guide-hero-statrow{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .price-check-form{display:grid;grid-template-columns:minmax(0,1fr)}
+  .price-check-form .field-label{min-width:0;width:100%}
+  .purchase-actions{flex-wrap:wrap}
+  .purchase-actions select{flex:1 1 100%;width:100%}
+  .purchase-actions button{flex:1 1 auto;min-height:40px}
+  .settings-layout .panel{padding:15px}
+  input,select,textarea{max-width:100%}
+}
+@media(max-width:380px){
+  .content{padding-left:9px;padding-right:9px}
+  .metric-card{padding:10px}
+  .metric-top{font-size:9px}
+  .metric-icon{width:25px;height:25px}
+  .purchase-summary{grid-template-columns:1fr}
+  .purchase-summary>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .purchase-summary strong{margin-top:0;text-align:right}
+  .top-actions .sync-state{display:none}
+  .page-heading h1{font-size:22px}
+}
+
 </style>
 </head>
 <body>
