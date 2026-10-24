@@ -140,6 +140,20 @@
 @media(max-width:760px){.guide-grid{grid-template-columns:1fr}.guide-profile-grid{grid-template-columns:1fr}.guide-hero{padding:21px}.guide-hero-statrow{gap:7px}.guide-hero-stat{padding:10px}.guide-hero-stat span{font-size:8px}.guide-plan-top{flex-wrap:wrap}.price-check-form{align-items:stretch}.price-check-form .field-label{min-width:100%}.price-check-form button{width:100%;min-height:42px}.guide-grid .panel{padding:16px}.guide-plan-item{padding:12px}.guide-hero:after{right:15px;font-size:45px}}
 @media(prefers-reduced-motion:reduce){.guide-hero:after{animation:none!important}}
 
+/* Ensure the document, not a nested panel, owns vertical scrolling on phones */
+html{height:auto!important;min-height:100%;overflow-x:hidden;overflow-y:auto!important;scrollbar-gutter:auto}
+body{height:auto!important;min-height:100%;overflow-x:hidden;overflow-y:auto!important;overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
+.app-shell{height:auto!important;min-height:100vh;overflow:visible!important}
+.main-area{height:auto!important;min-height:100vh;overflow:visible!important}
+.content{height:auto!important;overflow:visible!important}
+.page-footer{flex-shrink:0}
+@media(max-width:600px){
+  html,body{height:auto!important;min-height:100%;overflow-x:hidden!important;overflow-y:auto!important}
+  .app-shell,.main-area{height:auto!important;min-height:100vh;overflow:visible!important}
+  .content{height:auto!important;min-height:0;overflow:visible!important;flex:0 0 auto;padding-bottom:calc(110px + env(safe-area-inset-bottom))}
+  .page-footer{margin-bottom:calc(90px + env(safe-area-inset-bottom))}
+  #welcomeScreen{position:fixed;inset:0;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+}
 /* Northstar mobile layout hardening */
 @media(max-width:600px){
   html,body{width:100%;max-width:100%;overflow-x:hidden}
