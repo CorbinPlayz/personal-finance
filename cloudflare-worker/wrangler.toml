@@ -1,0 +1,6 @@
+name = "northstar-finance-ai"
+main = "src/index.js"
+compatibility_date = "2026-10-24"
+
+[ai]
+binding = "AI"
