@@ -154,6 +154,16 @@ body{height:auto!important;min-height:100%;overflow-x:hidden;overflow-y:auto!imp
   .page-footer{margin-bottom:calc(90px + env(safe-area-inset-bottom))}
   #welcomeScreen{position:fixed;inset:0;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y}
 }
+/* iOS Chrome/Safari document scrolling fix */
+html,body{overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:900px){
+  html{height:auto!important;min-height:100%;overflow-y:visible!important}
+  body{position:relative!important;height:auto!important;min-height:100%;overflow-y:visible!important;touch-action:pan-y}
+  .app-shell,.main-area,.content{overflow:visible!important;touch-action:pan-y}
+  .main-area{display:block!important;min-height:100vh;min-height:100dvh}
+  .content{display:block!important;height:auto!important;min-height:0!important}
+  .page-footer{display:flex}
+}
 /* Northstar mobile layout hardening */
 @media(max-width:600px){
   html,body{width:100%;max-width:100%;overflow-x:hidden}
