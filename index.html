@@ -269,27 +269,26 @@ html,body{overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
 }
 
 
-/* Signature purchased mark: an ink-like, two-stage cross with a restrained center impact. */
+/* Signature purchase completion mark: two strokes that physically intersect, followed by a contact ring. */
 .purchase-tile-purchased:after{content:none!important}
 .purchase-tile-purchased .purchase-cross-art{position:absolute;inset:0;z-index:3;width:100%;height:100%;overflow:visible;pointer-events:none}
-.purchase-cross-halo,.purchase-cross-ink{fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;stroke-dasharray:100;stroke-dashoffset:100}
-.purchase-cross-halo{stroke:#d84945;stroke-width:6.5;stroke-opacity:.2}
-.purchase-cross-ink{stroke:#c94440;stroke-width:2.45;stroke-opacity:.9;filter:drop-shadow(0 1px 1px #9e28251a)}
-.purchase-tile-purchased .purchase-cross-pulse{fill:none;stroke:#d94b47;stroke-width:1.1;stroke-opacity:.72;vector-effect:non-scaling-stroke;opacity:0;transform-box:fill-box;transform-origin:center}
-.purchase-tile-purchased .purchase-cross-center{fill:#d94b47;opacity:0;transform-box:fill-box;transform-origin:center}
-.purchase-tile-purchased.purchase-x-visible .purchase-cross-halo.purchase-cross-a{animation:purchaseCrossDraw .68s cubic-bezier(.18,.72,.22,1) var(--purchase-x-delay,0ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-cross-ink.purchase-cross-a{animation:purchaseCrossDraw .59s cubic-bezier(.18,.72,.22,1) var(--purchase-x-delay,0ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-cross-halo.purchase-cross-b{animation:purchaseCrossDraw .67s cubic-bezier(.18,.72,.22,1) calc(var(--purchase-x-delay,0ms) + 315ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-cross-ink.purchase-cross-b{animation:purchaseCrossDraw .58s cubic-bezier(.18,.72,.22,1) calc(var(--purchase-x-delay,0ms) + 315ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-cross-pulse{animation:purchaseCrossPulse .48s cubic-bezier(.16,.72,.25,1) calc(var(--purchase-x-delay,0ms) + 610ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-cross-center{animation:purchaseCrossCenter .34s cubic-bezier(.16,.72,.25,1) calc(var(--purchase-x-delay,0ms) + 620ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-tile-cross{animation:purchaseXBadge .46s cubic-bezier(.18,.82,.25,1) calc(var(--purchase-x-delay,0ms) + 520ms) both}
-@keyframes purchaseCrossDraw{0%{stroke-dashoffset:100;opacity:0}12%{opacity:1}74%{stroke-dashoffset:13;opacity:.96}100%{stroke-dashoffset:0;opacity:.76}}
-@keyframes purchaseCrossPulse{0%{opacity:0;transform:scale(.48)}24%{opacity:.36;transform:scale(1)}100%{opacity:0;transform:scale(2.45)}}
-@keyframes purchaseCrossCenter{0%{opacity:0;transform:scale(.2)}38%{opacity:.68;transform:scale(1.25)}100%{opacity:0;transform:scale(.7)}}
+.purchase-cross-halo,.purchase-cross-ink{fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;stroke-dasharray:1;stroke-dashoffset:1}
+.purchase-cross-halo{stroke:#d84945;stroke-width:7;stroke-opacity:.22}
+.purchase-cross-ink{stroke:#c94440;stroke-width:2.8;stroke-opacity:.94;filter:drop-shadow(0 1px 1px #9e28251a)}
+.purchase-tile-purchased .purchase-cross-pulse{fill:none;stroke:#dc4a46;stroke-width:1.7;stroke-opacity:.9;vector-effect:non-scaling-stroke;opacity:0;transform-box:fill-box;transform-origin:center}
+.purchase-tile-purchased .purchase-cross-center{fill:#e14c47;opacity:0;transform-box:fill-box;transform-origin:center}
+.purchase-tile-purchased.purchase-x-visible .purchase-cross-halo.purchase-cross-a{animation:purchaseCrossDraw .66s cubic-bezier(.19,.76,.25,1) var(--purchase-x-delay,0ms) both}
+.purchase-tile-purchased.purchase-x-visible .purchase-cross-ink.purchase-cross-a{animation:purchaseCrossDraw .58s cubic-bezier(.19,.76,.25,1) var(--purchase-x-delay,0ms) both}
+.purchase-tile-purchased.purchase-x-visible .purchase-cross-halo.purchase-cross-b{animation:purchaseCrossDraw .64s cubic-bezier(.19,.76,.25,1) calc(var(--purchase-x-delay,0ms) + 340ms) both}
+.purchase-tile-purchased.purchase-x-visible .purchase-cross-ink.purchase-cross-b{animation:purchaseCrossDraw .56s cubic-bezier(.19,.76,.25,1) calc(var(--purchase-x-delay,0ms) + 340ms) both}
+.purchase-tile-purchased.purchase-x-visible .purchase-cross-pulse{animation:purchaseCrossPulse .68s cubic-bezier(.16,.72,.25,1) calc(var(--purchase-x-delay,0ms) + 900ms) both}
+.purchase-tile-purchased.purchase-x-visible .purchase-cross-center{animation:purchaseCrossCenter .32s cubic-bezier(.16,.72,.25,1) calc(var(--purchase-x-delay,0ms) + 910ms) both}
+.purchase-tile-purchased.purchase-x-visible .purchase-tile-cross{animation:purchaseXBadge .46s cubic-bezier(.18,.82,.25,1) calc(var(--purchase-x-delay,0ms) + 560ms) both}
+@keyframes purchaseCrossDraw{0%{stroke-dashoffset:1;opacity:0}10%{opacity:1}72%{stroke-dashoffset:.12;opacity:1}100%{stroke-dashoffset:0;opacity:.82}}
+@keyframes purchaseCrossPulse{0%{opacity:0;transform:scale(.12)}14%{opacity:.85;transform:scale(.65)}52%{opacity:.58;transform:scale(1.8)}100%{opacity:0;transform:scale(3.15)}}
+@keyframes purchaseCrossCenter{0%{opacity:0;transform:scale(.2)}34%{opacity:.9;transform:scale(1.5)}100%{opacity:0;transform:scale(.5)}}
 @keyframes purchaseXBadge{0%{opacity:0;transform:translateY(-7px) scale(.72) rotate(-13deg)}68%{opacity:1;transform:translateY(1px) scale(1.08) rotate(2deg)}86%{transform:translateY(-1px) scale(.98) rotate(-1deg)}100%{opacity:1;transform:translateY(0) scale(1) rotate(0)}}
-@media(prefers-reduced-motion:reduce){.purchase-tile-purchased.purchase-x-visible .purchase-cross-halo,.purchase-tile-purchased.purchase-x-visible .purchase-cross-ink{animation:none!important;stroke-dashoffset:0;opacity:.76}.purchase-tile-purchased.purchase-x-visible .purchase-cross-pulse,.purchase-tile-purchased.purchase-x-visible .purchase-cross-center{animation:none!important;opacity:0}.purchase-tile-purchased.purchase-x-visible .purchase-tile-cross{animation:none!important;opacity:1;transform:none}}
-
+@media(prefers-reduced-motion:reduce){.purchase-tile-purchased.purchase-x-visible .purchase-cross-halo,.purchase-tile-purchased.purchase-x-visible .purchase-cross-ink{animation:none!important;stroke-dashoffset:0;opacity:.82}.purchase-tile-purchased.purchase-x-visible .purchase-cross-pulse,.purchase-tile-purchased.purchase-x-visible .purchase-cross-center{animation:none!important;opacity:0}.purchase-tile-purchased.purchase-x-visible .purchase-tile-cross{animation:none!important;opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -608,12 +607,12 @@ function renderPurchaseTile(p){
   <div class="purchase-tile-meta"><span>${purchased?'Purchased':'Target'}</span><strong>${esc(fmtDate(p.date))}</strong></div>
   <div class="purchase-tile-progress"><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div><span>${purchased?'Completed':Math.round(pct)+'% saved'}</span></div></div>
   ${purchased?`<svg class="purchase-cross-art" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-   <path class="purchase-cross-halo purchase-cross-a" d="M 9 10 C 24 28, 36 41, 50 51 C 64 62, 78 78, 91 90" pathLength="100"/>
+   <path class="purchase-cross-halo purchase-cross-a" d="M 8 8 L 92 92" pathLength="1"/>
    <path class="purchase-cross-ink purchase-cross-a" d="M 9 10 C 24 28, 36 41, 50 51 C 64 62, 78 78, 91 90" pathLength="100"/>
-   <path class="purchase-cross-halo purchase-cross-b" d="M 91 10 C 77 27, 64 39, 50 51 C 36 63, 22 78, 9 90" pathLength="100"/>
+   <path class="purchase-cross-halo purchase-cross-b" d="M 92 8 L 8 92" pathLength="1"/>
    <path class="purchase-cross-ink purchase-cross-b" d="M 91 10 C 77 27, 64 39, 50 51 C 36 63, 22 78, 9 90" pathLength="100"/>
-   <circle class="purchase-cross-pulse" cx="50" cy="51" r="5"/>
-   <circle class="purchase-cross-center" cx="50" cy="51" r="1.25"/>
+   <circle class="purchase-cross-pulse" cx="50" cy="50" r="4.5"/>
+   <circle class="purchase-cross-center" cx="50" cy="50" r="1.5"/>
   </svg>`:""}
  </article>`;
 }
