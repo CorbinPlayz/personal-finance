@@ -608,9 +608,9 @@ function renderPurchaseTile(p){
   <div class="purchase-tile-progress"><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div><span>${purchased?'Completed':Math.round(pct)+'% saved'}</span></div></div>
   ${purchased?`<svg class="purchase-cross-art" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
    <path class="purchase-cross-halo purchase-cross-a" d="M 8 8 L 92 92" pathLength="1"/>
-   <path class="purchase-cross-ink purchase-cross-a" d="M 9 10 C 24 28, 36 41, 50 51 C 64 62, 78 78, 91 90" pathLength="100"/>
+   <path class="purchase-cross-ink purchase-cross-a" d="M 8 8 L 92 92" pathLength="1"/>
    <path class="purchase-cross-halo purchase-cross-b" d="M 92 8 L 8 92" pathLength="1"/>
-   <path class="purchase-cross-ink purchase-cross-b" d="M 91 10 C 77 27, 64 39, 50 51 C 36 63, 22 78, 9 90" pathLength="100"/>
+   <path class="purchase-cross-ink purchase-cross-b" d="M 92 8 L 8 92" pathLength="1"/>
    <circle class="purchase-cross-pulse" cx="50" cy="50" r="4.5"/>
    <circle class="purchase-cross-center" cx="50" cy="50" r="1.5"/>
   </svg>`:""}
