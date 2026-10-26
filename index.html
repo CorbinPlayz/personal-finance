@@ -388,18 +388,39 @@ function showNorthstarDialog(config={}){
  })
 }
 function settleNorthstarDialog(value){if(!confirmResolver)return;const resolve=confirmResolver;confirmResolver=null;confirmChoices=[];$('confirmRoot').innerHTML='';resolve(value)}
-async function clearAllFinancialData(){
- const user=fb?.auth?.currentUser;
- if(!user){showToast('Sign in with Google first to unlock Clear data.');return}
- try{
-  const provider=new fb.GoogleAuthProvider();
-  await fb.reauthenticateWithPopup(user,provider);
- }catch(error){
-  console.warn('Google reauthentication was cancelled or failed.',error);
-  showToast(error?.code==='auth/popup-closed-by-user'?'Unlock cancelled. Your data was not changed.':'Google verification failed. Your data was not changed.');
-  return;
+const CLEAR_PASSWORD_KEY='northstar-clear-password-v1';
+async function clearPasswordHash(password,salt){
+ const bytes=new TextEncoder().encode(salt+'|'+password);
+ const digest=await crypto.subtle.digest('SHA-256',bytes);
+ return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function verifyClearPassword(){
+ let saved;
+ try{saved=JSON.parse(localStorage.getItem(CLEAR_PASSWORD_KEY)||'null')}catch{}
+ if(!saved?.salt||!saved?.hash){
+  const first=window.prompt('Create a Northstar password for Clear data. Use a password different from your Google password.');
+  if(first===null)return false;
+  if(first.length<8){showToast('Use at least 8 characters for the Northstar password.');return false}
+  const again=window.prompt('Confirm your new Northstar password.');
+  if(again===null)return false;
+  if(first!==again){showToast('Passwords did not match. No data was changed.');return false}
+  const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
+  const hash=await clearPasswordHash(first,salt);
+  localStorage.setItem(CLEAR_PASSWORD_KEY,JSON.stringify({salt,hash}));
+  showToast('Northstar Clear data password created. Select Clear data again to continue.');
+  return false;
  }
- const result=await showNorthstarDialog({title:'Clear all financial data?',message:'Google verification succeeded. This removes all accounts, transactions, budgets, savings goals, and planned purchases from the active dataset.',detail:'This can’t be undone. Export a backup first if you might need these records later.',icon:'⌫',confirmText:'Clear all data',cancelText:'Keep my data',danger:true,label:'GOOGLE VERIFIED · DESTRUCTIVE ACTION'});
+ const entered=window.prompt('Enter your Northstar password to unlock Clear data.');
+ if(entered===null)return false;
+ const hash=await clearPasswordHash(entered,saved.salt);
+ if(hash!==saved.hash){showToast('Incorrect password. Your data was not changed.');return false}
+ return true;
+}
+async function clearAllFinancialData(){
+ let unlocked=false;
+ try{unlocked=await verifyClearPassword()}catch(error){console.error('Clear data password verification failed.',error);showToast('Could not verify the password in this browser. Your data was not changed.');return}
+ if(!unlocked)return;
+ const result=await showNorthstarDialog({title:'Clear all financial data?',message:'This removes all accounts, transactions, budgets, savings goals, and planned purchases from the active dataset.',detail:'This can’t be undone. Export a backup first if you might need these records later.',icon:'⌫',confirmText:'Clear all data',cancelText:'Keep my data',danger:true,label:'PASSWORD VERIFIED · DESTRUCTIVE ACTION'});
  if(result===true){data=blankData();persist();showToast('Financial data cleared')}
 }
 function updateWelcomeProgress(){const screen=$('welcomeScreen'),bar=$('welcomeProgressBar');if(!screen||!bar)return;const distance=screen.scrollHeight-screen.clientHeight;bar.style.width=(distance>0?Math.min(100,screen.scrollTop/distance*100):100).toFixed(1)+'%'}
