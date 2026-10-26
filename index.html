@@ -394,27 +394,49 @@ async function clearPasswordHash(password,salt){
  const digest=await crypto.subtle.digest('SHA-256',bytes);
  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
 }
+function showClearPasswordDialog({setup=false}={}){
+ const root=$('confirmRoot');
+ if(!root)return Promise.resolve(null);
+ if(confirmResolver){const previous=confirmResolver;confirmResolver=null;previous(null)}
+ return new Promise(resolve=>{
+  const title=setup?'Create your Clear data password':'Unlock Clear data';
+  const message=setup?'Create a separate password to protect your financial data. Use at least 8 characters and do not reuse your Google password.':'Enter your Northstar password to continue. Your financial data will not change unless you confirm deletion afterward.';
+  root.innerHTML='<div class="confirm-backdrop" role="presentation"><section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="clearPasswordTitle"><div class="confirm-dialog-head"><div class="confirm-dialog-icon" aria-hidden="true">⌑</div><div><div class="eyebrow">NORTHSTAR SECURITY</div><h2 id="clearPasswordTitle">'+title+'</h2></div></div><p class="confirm-dialog-message">'+message+'</p><form id="clearPasswordForm" style="margin-top:18px;display:grid;gap:12px"><label style="display:grid;gap:6px;color:#526176;font-size:11px;font-weight:600"> '+(setup?'New password':'Northstar password')+'<input id="clearPasswordInput" type="password" autocomplete="'+(setup?'new-password':'current-password')+'" minlength="'+(setup?'8':'1')+'" required style="width:100%;min-width:0;border:1px solid #dfe5ed;border-radius:9px;padding:12px 13px;background:#fff;color:#202b3b;font:inherit" placeholder="Enter password"></label>'+(setup?'<label style="display:grid;gap:6px;color:#526176;font-size:11px;font-weight:600">Confirm password<input id="clearPasswordConfirm" type="password" autocomplete="new-password" minlength="8" required style="width:100%;min-width:0;border:1px solid #dfe5ed;border-radius:9px;padding:12px 13px;background:#fff;color:#202b3b;font:inherit" placeholder="Re-enter password"></label>':'')+'<p id="clearPasswordError" role="alert" style="display:none;color:#b7493e;font-size:11px;margin:0"></p><div class="confirm-dialog-actions"><button type="button" class="secondary-btn" id="clearPasswordCancel">Cancel</button><button type="submit" class="primary-btn">'+(setup?'Save password':'Unlock')+'</button></div></form></section></div>';
+  const form=$('clearPasswordForm'),input=$('clearPasswordInput'),error=$('clearPasswordError');
+  const finish=value=>{root.innerHTML='';resolve(value)};
+  $('clearPasswordCancel').addEventListener('click',()=>finish(null));
+  form.addEventListener('submit',async e=>{
+   e.preventDefault();
+   const password=input.value;
+   if(setup&&password.length<8){error.textContent='Use at least 8 characters.';error.style.display='block';return}
+   if(setup&&password!==$('clearPasswordConfirm').value){error.textContent='Passwords do not match.';error.style.display='block';return}
+   const submit=form.querySelector('button[type="submit"]');submit.disabled=true;
+   try{
+    if(setup){
+     const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
+     const hash=await clearPasswordHash(password,salt);
+     localStorage.setItem(CLEAR_PASSWORD_KEY,JSON.stringify({salt,hash}));
+     finish(true);
+    }else{
+     const saved=JSON.parse(localStorage.getItem(CLEAR_PASSWORD_KEY)||'null');
+     const hash=await clearPasswordHash(password,saved.salt);
+     if(hash!==saved.hash){error.textContent='That password is incorrect. Your data has not been changed.';error.style.display='block';submit.disabled=false;input.value='';input.focus();return}
+     finish(true);
+    }
+   }catch(err){error.textContent='Could not verify the password in this browser.';error.style.display='block';submit.disabled=false}
+  });
+  setTimeout(()=>input.focus(),20);
+ });
+}
 async function verifyClearPassword(){
  let saved;
  try{saved=JSON.parse(localStorage.getItem(CLEAR_PASSWORD_KEY)||'null')}catch{}
  if(!saved?.salt||!saved?.hash){
-  const first=window.prompt('Create a Northstar password for Clear data. Use a password different from your Google password.');
-  if(first===null)return false;
-  if(first.length<8){showToast('Use at least 8 characters for the Northstar password.');return false}
-  const again=window.prompt('Confirm your new Northstar password.');
-  if(again===null)return false;
-  if(first!==again){showToast('Passwords did not match. No data was changed.');return false}
-  const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
-  const hash=await clearPasswordHash(first,salt);
-  localStorage.setItem(CLEAR_PASSWORD_KEY,JSON.stringify({salt,hash}));
-  showToast('Northstar Clear data password created. Select Clear data again to continue.');
+  const created=await showClearPasswordDialog({setup:true});
+  if(created===true)showToast('Northstar password saved. Select Clear data again when you are ready.');
   return false;
  }
- const entered=window.prompt('Enter your Northstar password to unlock Clear data.');
- if(entered===null)return false;
- const hash=await clearPasswordHash(entered,saved.salt);
- if(hash!==saved.hash){showToast('Incorrect password. Your data was not changed.');return false}
- return true;
+ return (await showClearPasswordDialog())===true;
 }
 async function clearAllFinancialData(){
  let unlocked=false;
