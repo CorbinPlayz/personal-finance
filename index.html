@@ -389,7 +389,17 @@ function showNorthstarDialog(config={}){
 }
 function settleNorthstarDialog(value){if(!confirmResolver)return;const resolve=confirmResolver;confirmResolver=null;confirmChoices=[];$('confirmRoot').innerHTML='';resolve(value)}
 async function clearAllFinancialData(){
- const result=await showNorthstarDialog({title:'Clear all financial data?',message:'This removes all accounts, transactions, budgets, savings goals, and planned purchases from the active dataset.',detail:'This can’t be undone. Export a backup first if you might need these records later.',icon:'⌫',confirmText:'Clear all data',cancelText:'Keep my data',danger:true,label:'DESTRUCTIVE ACTION'});
+ const user=fb?.auth?.currentUser;
+ if(!user){showToast('Sign in with Google first to unlock Clear data.');return}
+ try{
+  const provider=new fb.GoogleAuthProvider();
+  await fb.reauthenticateWithPopup(user,provider);
+ }catch(error){
+  console.warn('Google reauthentication was cancelled or failed.',error);
+  showToast(error?.code==='auth/popup-closed-by-user'?'Unlock cancelled. Your data was not changed.':'Google verification failed. Your data was not changed.');
+  return;
+ }
+ const result=await showNorthstarDialog({title:'Clear all financial data?',message:'Google verification succeeded. This removes all accounts, transactions, budgets, savings goals, and planned purchases from the active dataset.',detail:'This can’t be undone. Export a backup first if you might need these records later.',icon:'⌫',confirmText:'Clear all data',cancelText:'Keep my data',danger:true,label:'GOOGLE VERIFIED · DESTRUCTIVE ACTION'});
  if(result===true){data=blankData();persist();showToast('Financial data cleared')}
 }
 function updateWelcomeProgress(){const screen=$('welcomeScreen'),bar=$('welcomeProgressBar');if(!screen||!bar)return;const distance=screen.scrollHeight-screen.clientHeight;bar.style.width=(distance>0?Math.min(100,screen.scrollTop/distance*100):100).toFixed(1)+'%'}
