@@ -134,6 +134,20 @@ On top of the monochrome system there is a third additive layer: `<style id="liq
 - **Easter egg:** press and hold the sidebar logo ~700 ms — the mark melts, needle-drop plays, small toast appears.
 - **Verification:** `parse5` 0 errors, `css-tree` 0 errors across all three style blocks, 0 low-contrast rule pairs, `node --check` on the runtime, and a jsdom boot harness that asserts the layers mount, the palette opens with 17 items, overlays close, mute toggles, and 40 synthetic `pointermove` events raise no errors. **Audio was never actually heard and the visual result was never seen** — no browser or output device exists here. Treat sound design and motion feel as unverified until the user confirms.
 
+## 4c. Jarvis — local assistant (2026-11-03)
+
+A floating assistant orb (bottom-right) opens a glass chat panel. It is **entirely local**: `<style id="jarvis-design">` + `<script id="jarvis-runtime">`, no network calls of any kind, no API key, no third party. It reads the same `localStorage` ledger the app writes (`northstar-finance-v1:local`, falling back to `northstar-finance-v1`) and talks to the UI only by reading that data — it never mutates state.
+
+- **What it can answer:** greeting/status, `roast me` (a candid, numbers-driven assessment), `can I afford <amount>`, spending by month + top categories, income, savings rate, budget status (and overruns), goal progress, total balance minus account minimums, open purchase plans, `what should I do next` (three ranked moves), plus a capability list.
+- **Tone modes:** Playful (default), Ruthless, Coach — chosen with chips in the header, persisted. The roast is generated from real figures (over-budget categories, negative savings rate, unfunded purchases), not canned filler, though it is a rules engine rather than a language model.
+- **Voice (optional, off by default):** `speechSynthesis` replies, preferring a British male voice for the Jarvis feel; `SpeechRecognition` mic input where the browser supports it.
+- **Persistence:** assistant preferences live under `northstar-jarvis-v1`; chat history is intentionally not persisted.
+- **Shortcuts:** `J` toggles the panel, `Esc` closes it.
+- **Stacking:** orb z-1500, panel z-1600 — above the mobile dock, below the command palette.
+- **Why not an LLM:** an API key in a static page is public, and the repo's Cloudflare Worker (`cloudflare-worker/`) is not deployed or wired. The local engine was chosen deliberately so the feature works offline with no cost and no financial data leaving the device. Upgrading to a real model means deploying that Worker (or another backend) and sending only the minimum context the user opts into — do not add a client-side API key.
+
+**Verification:** `parse5` 0 errors, `css-tree` 0 errors across four style blocks, 0 low-contrast pairs, `node --check` clean, and a jsdom harness with a seeded ledger asserting arithmetic (spend 2300, income 5200, 56% savings rate, two over-budget categories), the roast/affordability/advice/balance/goals answers, panel opening via `J`, and no runtime errors. **Spoken replies and the mic were never exercised** — no audio device or real browser here.
+
 ## 5. User requirements and non-negotiable design constraints
 
 These requirements come from prior Northstar discussions and should guide future work.
@@ -249,6 +263,7 @@ Latest code-focused commits visible during this review were on 2026-10-26. The c
 
 - 2026-11-03: Re-reviewed the prior Northstar project context available in this conversation, the current repository inventory, root README, Firestore rules, Worker source/configuration, current `index.html`, and recent Git commit history. Rewrote this handoff to reflect the current static-site architecture and implemented functionality.
 - 2026-11-03: Corrected the mobile-scrolling status. The user confirmed scrolling was already fixed; repository commits from 2026-10-24 and 2026-10-26 and the current responsive CSS corroborate that status. No new scrolling code was changed.
+- 2026-11-03: Added Jarvis — a local, offline, data-aware assistant with tone modes, optional speech output/input, and a glass panel. Reads the ledger read-only; no network, no API keys.
 - 2026-11-03: Added the Liquid Black layer — glass shell, iridescent accents, drifting ambient fields, ink-in-water cursor, staggered motion + count-ups, a synthesized sound system with a topbar mute, a ⌘K command palette, keyboard shortcuts, a grain toggle and a logo easter egg. All additive (+790/-0); core app logic untouched.
 - 2026-11-03: Full visual redesign to a monochrome design language. Added the `#mono-design` style layer, remapped every colour literal to a neutral ramp with a single oxblood danger accent, replaced Unicode glyphs with inline SVG line icons (nav, dock, metrics, transactions, accounts, goals, empty states, welcome benefits), rebuilt the monochrome brand marks, and added tabular numerals. Structure, data logic, persistence, sync, and the documented mobile scroll fixes were not changed; the only JS edits are icon/colour values plus the new `ICON` set.
 - 2026-11-03: Documented the important Cloudflare integration gap: a Worker backend exists, but the current Guide remains local/rules-based and does not call the Worker.
