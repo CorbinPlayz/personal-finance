@@ -158,6 +158,24 @@ The design is **monochrome chrome with colour for money only**. The user explici
 - **Jarvis panel ink:** a canvas inside `.nsj-panel` (z 1, content at z 2, border ring at z 3) renders white/iridescent plumes behind the chat text — on pointer move, on tap, and one soft bloom per incoming message. Clipped by the panel's rounded corners, respects reduced motion, capped at 26 plumes.
 - **Verification:** `parse5` 0 errors, `css-tree` 0 errors across all five blocks, `node --check` clean, and a jsdom run asserting the ink canvas mounts as the panel's first child, synthetic pointer events raise nothing, and every colour rule is present.
 
+## 4e. Jarvis v2 — the "can't see anything" bug and the new brain (2026-11-03)
+
+**Critical bug that was fixed here (do not regress it):** Jarvis v1 read only `northstar-finance-v1:local`. The app actually persists to `localStorage` under **`northstar-finance-v1:<uid>` when signed in** (`localKey(user?user.uid:'local')` in `persist()`). So on any signed-in session Jarvis was reading an empty slot and reported it could see nothing. Two fixes, both required:
+
+1. **Live bridge (primary):** a read-only hook is defined **inside the module script**, immediately before the final `render();initFirebase();initWelcomeJourney();` line:
+   `window.NorthstarLedger = () => JSON.parse(JSON.stringify(data))`
+   This exposes the in-memory ledger, including cloud-synced data that hasn't been persisted locally yet. The hook MUST stay inside the module — `data` is module-scoped, and an earlier attempt that placed it after `</script>` silently fell back to storage because `data` was out of scope.
+2. **Storage scan (fallback):** `scanStorage()` enumerates every `northstar-finance-v1*` key and picks the one with the most records, so it also works if the bridge is unavailable.
+
+**Brain v2 (rules engine, still no network):**
+- Intent classifier with weighted keywords (17 intents) plus entity extraction: amounts (`400`, `1.5k`), any category name present in the data (canonical casing preserved), and month references (`last month`, `this month`, month names).
+- Month-over-month comparison per category, end-of-month projection from the current run rate, days remaining, and safe daily spend.
+- Multi-turn context: `last` holds intent/category/amount/month, so `and rent?`, `why?`, `what about 600` resolve against the previous answer. A bare number (`250`) is treated as an affordability question, not a follow-up.
+- New answers: "what can you see" (proves what it is reading), projections, comparisons, safe-to-spend, and richer advice that cites real figures.
+- Panel header shows a live status line: `Local · N acct · M tx`, or `No ledger found`.
+
+**Verification:** parse5 0 errors; css-tree 0 errors across five blocks; `node --check` clean; a jsdom suite **seeded under a UID-scoped key** (the exact failing case) with 25 assertions covering totals, current and previous month spend, category queries, prior-month queries, affordability both ways, projection, comparison, budgets, goals, balance, safe-daily, advice, roast, help, follow-ups (`and rent`, `why`), bare amount, greeting and zero runtime errors. The in-memory bridge itself cannot be exercised in jsdom (it does not run module scripts) — it was verified statically to sit inside the module where `data` is in scope.
+
 ## 5. User requirements and non-negotiable design constraints
 
 These requirements come from prior Northstar discussions and should guide future work.
@@ -273,6 +291,7 @@ Latest code-focused commits visible during this review were on 2026-10-26. The c
 
 - 2026-11-03: Re-reviewed the prior Northstar project context available in this conversation, the current repository inventory, root README, Firestore rules, Worker source/configuration, current `index.html`, and recent Git commit history. Rewrote this handoff to reflect the current static-site architecture and implemented functionality.
 - 2026-11-03: Corrected the mobile-scrolling status. The user confirmed scrolling was already fixed; repository commits from 2026-10-24 and 2026-10-26 and the current responsive CSS corroborate that status. No new scrolling code was changed.
+- 2026-11-03: Fixed Jarvis reading the wrong storage key when signed in (uid-scoped), added the in-module `NorthstarLedger` bridge, and rebuilt the brain with intent scoring, entity extraction, multi-turn context, projections and comparisons.
 - 2026-11-03: Restored semantic colour for money (income/expense/transfer, category palette) while keeping the chrome monochrome, and added the ink plume layer inside the Jarvis panel.
 - 2026-11-03: Added Jarvis — a local, offline, data-aware assistant with tone modes, optional speech output/input, and a glass panel. Reads the ledger read-only; no network, no API keys.
 - 2026-11-03: Added the Liquid Black layer — glass shell, iridescent accents, drifting ambient fields, ink-in-water cursor, staggered motion + count-ups, a synthesized sound system with a topbar mute, a ⌘K command palette, keyboard shortcuts, a grain toggle and a logo easter egg. All additive (+790/-0); core app logic untouched.
