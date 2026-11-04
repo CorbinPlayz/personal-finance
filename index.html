@@ -1144,6 +1144,90 @@ body.nsx-grain:after{
 .nsj-panel:after{z-index:3}
 
 </style>
+<style id="jarvis-conn">
+/* ============================================================
+   NORTHSTAR — JARVIS CONNECTIONS (bring your own key)
+   ============================================================ */
+.nsj-gear{border:0;background:transparent;color:#8f8f8f;cursor:pointer;padding:4px;border-radius:6px;display:grid;place-items:center}
+.nsj-gear:hover{color:#fff;background:rgba(255,255,255,.08)}
+.nsj-gear svg{width:16px;height:16px}
+
+.nsj-sheet{
+  position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;
+  background:linear-gradient(168deg,rgba(18,18,18,.985),rgba(6,6,6,.99));
+  border-radius:inherit;opacity:0;pointer-events:none;transform:translateY(10px);
+  transition:opacity .24s ease,transform .32s cubic-bezier(.16,1,.3,1);
+  overflow:hidden
+}
+.nsj-sheet.open{opacity:1;pointer-events:auto;transform:none}
+.nsj-sheet-head{display:flex;align-items:center;gap:8px;padding:13px 14px;border-bottom:1px solid rgba(255,255,255,.09)}
+.nsj-sheet-head b{font-size:12px;letter-spacing:.12em;font-weight:700}
+.nsj-sheet-head span{margin-left:auto;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7a7a7a}
+.nsj-sheet-body{flex:1;overflow:auto;padding:12px 14px 18px;display:flex;flex-direction:column;gap:12px}
+.nsj-field{display:flex;flex-direction:column;gap:5px}
+.nsj-field label{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#8a8a8a}
+.nsj-field input[type=text],.nsj-field input[type=password],.nsj-field select{
+  background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.14)!important;
+  border-radius:9px!important;color:#fff!important;font-size:12px!important;padding:8px 10px!important;
+  box-shadow:none!important;width:100%;min-width:0
+}
+.nsj-field input:focus,.nsj-field select:focus{border-color:rgba(255,255,255,.45)!important;outline:none}
+.nsj-field select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#8a8a8a 50%),linear-gradient(135deg,#8a8a8a 50%,transparent 50%);background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.nsj-hint{font-size:9.5px;line-height:1.55;color:#7a7a7a}
+.nsj-hint a{color:#cfcfcf;text-decoration:underline;text-underline-offset:2px}
+
+.nsj-row{display:flex;align-items:center;gap:9px;justify-content:space-between;padding:9px 10px;border:1px solid rgba(255,255,255,.10);border-radius:10px;background:rgba(255,255,255,.03)}
+.nsj-row .nsj-row-text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.nsj-row b{font-size:11.5px;font-weight:600;color:#ededed}
+.nsj-row small{font-size:9.5px;color:#7a7a7a;line-height:1.4}
+
+.nsj-switch{
+  position:relative;flex:0 0 38px;width:38px;height:22px;border-radius:99px;border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.08);cursor:pointer;transition:background .22s var(--spring),border-color .22s var(--spring)
+}
+.nsj-switch:after{
+  content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#cfcfcf;
+  transition:transform .26s var(--spring),background .22s
+}
+.nsj-switch[aria-checked="true"]{background:linear-gradient(120deg,#ff9ad5,#b79cff,#8be8ff);border-color:transparent}
+.nsj-switch[aria-checked="true"]:after{transform:translateX(16px);background:#080808}
+
+.nsj-actions{display:flex;gap:7px;flex-wrap:wrap}
+.nsj-mini{
+  border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#e6e6e6;
+  font:inherit;font-size:10.5px;font-weight:600;padding:8px 11px;border-radius:9px;cursor:pointer;
+  transition:background .2s,transform .2s,border-color .2s
+}
+.nsj-mini:hover{background:rgba(255,255,255,.15)}
+.nsj-mini:active{transform:scale(.97)}
+.nsj-mini.primary{background:#fff;color:#080808;border-color:#fff}
+.nsj-mini.primary:hover{background:#e8e8e8}
+.nsj-mini.danger{color:#ffb4a8;border-color:rgba(255,120,100,.35)}
+.nsj-mini.danger:hover{background:rgba(255,90,70,.14)}
+
+.nsj-status-line{font-size:10px;color:#8a8a8a;display:flex;align-items:center;gap:6px;min-height:14px}
+.nsj-status-line i{width:6px;height:6px;border-radius:50%;background:#6b6b6b;flex:0 0 6px}
+.nsj-status-line.ok i{background:#5ee0a8;box-shadow:0 0 8px rgba(94,224,168,.8)}
+.nsj-status-line.err i{background:#ff7b6b;box-shadow:0 0 8px rgba(255,123,107,.8)}
+
+.nsj-preview{
+  margin:0;padding:10px;border-radius:9px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.10);
+  color:#b8b8b8;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9.5px;line-height:1.55;
+  max-height:150px;overflow:auto;white-space:pre-wrap;word-break:break-word
+}
+.nsj-badge{
+  display:inline-flex;align-items:center;gap:5px;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 6px;border-radius:99px;background:rgba(255,255,255,.10);color:#cfcfcf;border:1px solid rgba(255,255,255,.12)
+}
+.nsj-badge.cloud{background:linear-gradient(105deg,rgba(255,154,213,.28),rgba(183,156,255,.26),rgba(139,232,255,.28));color:#fff;border-color:transparent}
+.nsj-msg .nsj-src{display:block;margin-top:6px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:#6f6f6f}
+
+@media(max-width:600px){
+  .nsj-sheet-body{padding:10px 12px 16px}
+  .nsj-preview{max-height:120px}
+}
+
+</style>
 </head>
 <body>
 <section class="welcome-screen" id="welcomeScreen" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
@@ -2424,6 +2508,212 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
   }
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+  /* ---------------- connections: bring your own key ---------------- */
+  var CONN_KEY = 'northstar-jarvis-conn-v1';
+  var PROVIDERS = {
+    gemini: { label: 'Google Gemini', model: 'gemini-2.0-flash', url: 'https://generativelanguage.googleapis.com/v1beta/models/', help: 'aistudio.google.com' },
+    openai: { label: 'OpenAI', model: 'gpt-4o-mini', url: 'https://api.openai.com/v1/chat/completions', help: 'platform.openai.com' },
+    anthropic: { label: 'Anthropic', model: 'claude-3-5-haiku-latest', url: 'https://api.anthropic.com/v1/messages', help: 'console.anthropic.com' },
+    groq: { label: 'Groq', model: 'llama-3.3-70b-versatile', url: 'https://api.groq.com/openai/v1/chat/completions', help: 'console.groq.com' },
+    openrouter: { label: 'OpenRouter', model: 'meta-llama/llama-3.3-70b-instruct:free', url: 'https://openrouter.ai/api/v1/chat/completions', help: 'openrouter.ai/keys' },
+    custom: { label: 'Custom (OpenAI-compatible)', model: '', url: '', help: 'your own endpoint' }
+  };
+  var CONN_DEFAULT = { provider: 'gemini', model: 'gemini-2.0-flash', key: '', base: '', remember: false, includeTx: false, enabled: false };
+  var conn = loadConn();
+  var history = [];
+
+  function loadConn() {
+    var c = Object.assign({}, CONN_DEFAULT), raw = null;
+    try { raw = localStorage.getItem(CONN_KEY) || sessionStorage.getItem(CONN_KEY); } catch (e) {}
+    if (raw) { try { Object.assign(c, JSON.parse(raw)); } catch (e) {} }
+    return c;
+  }
+  function saveConn() {
+    var serialised = JSON.stringify(conn);
+    try {
+      if (conn.remember) { localStorage.setItem(CONN_KEY, serialised); sessionStorage.removeItem(CONN_KEY); }
+      else { sessionStorage.setItem(CONN_KEY, serialised); localStorage.removeItem(CONN_KEY); }
+    } catch (e) {}
+  }
+  function providerLabel(id) { return (PROVIDERS[id] || PROVIDERS.custom).label; }
+  function connReady() {
+    if (!conn.enabled || !conn.key || !conn.model) return false;
+    if (conn.provider === 'custom' && !conn.base) return false;
+    return true;
+  }
+
+  function round(n) { return Math.round(num(n)); }
+  function brief(s, opts) {
+    opts = opts || {};
+    if (!s || !s.cur) s = snapshot();
+    if (!s || !s.cur) {
+      return {
+        month: null, currency: 'USD',
+        accounts: { count: 0, total: 0, afterMinimums: 0 },
+        thisMonth: { income: 0, spend: 0, savingsRatePct: null, topCategories: [] },
+        lastMonth: { income: 0, spend: 0 },
+        budgets: [], goals: [], plannedPurchases: [], daysLeftInMonth: 0, projectedSpend: 0
+      };
+    }
+    var d = s.d || {};
+    var out = {
+      month: s.thisKey,
+      currency: (d.settings && d.settings.currency) || 'USD',
+      accounts: { count: s.accounts.length, total: round(s.total), afterMinimums: round(s.available) },
+      thisMonth: {
+        income: round(s.cur.income), spend: round(s.cur.spend),
+        savingsRatePct: s.cur.rate === null ? null : Math.round(s.cur.rate),
+        topCategories: s.cur.catsList.slice(0, 6).map(function (c) { return { category: c.name, amount: round(c.amount) }; })
+      },
+      lastMonth: { income: round(s.prev.income), spend: round(s.prev.spend) },
+      budgets: s.budgets.slice(0, 8).map(function (b) {
+        return { category: b.category, limit: round(b.limit), spent: round(b.spent), pct: Math.round(b.pct) };
+      }),
+      goals: s.goals.slice(0, 6).map(function (g) {
+        return { name: g.name, target: round(g.target), saved: round(g.saved), pct: Math.round(g.pct) };
+      }),
+      plannedPurchases: s.purchases.slice(0, 6).map(function (p) {
+        return { name: p.name, price: round(p.price), saved: round(p.saved), priority: p.priority };
+      }),
+      daysLeftInMonth: s.daysLeft,
+      projectedSpend: round(s.projected)
+    };
+    if (opts.includeTx) {
+      out.recentTransactions = (d.transactions || []).slice().sort(function (a, b) {
+        return String(b.date || '').localeCompare(String(a.date || ''));
+      }).slice(0, 8).map(function (t) {
+        return { date: t.date, type: t.type, amount: round(t.amount), category: t.category, description: String(t.description || '').slice(0, 40) };
+      });
+    }
+    return out;
+  }
+
+  function systemPrompt(s) {
+    if (!s || !s.d) s = snapshot();
+    var toneLine = cfg.tone === 'ruthless'
+      ? 'Tone: blunt, deadpan, unimpressed. Mock bad decisions with precision, never insult the person.'
+      : cfg.tone === 'coach'
+        ? 'Tone: warm, practical, encouraging without being saccharine.'
+        : 'Tone: dry, playful, lightly teasing. You may roll your eyes at bad decisions.';
+    return 'You are Jarvis, the assistant inside Northstar, a manual personal-finance app.\n' +
+      toneLine + '\n' +
+      'Rules:\n' +
+      '- Use ONLY the figures in the FINANCE BRIEF. Never invent a balance, transaction or category.\n' +
+      '- If the brief lacks what you need, say exactly what is missing.\n' +
+      '- Be concise: under 90 words unless asked for depth. No markdown headings, no bullet spam.\n' +
+      '- Do the arithmetic you can do from the brief, and show the number.\n' +
+      '- Never present regulated financial advice as certainty; be direct and practical anyway.\n' +
+      '- Amounts are in ' + ((s.d && s.d.settings && s.d.settings.currency) || 'USD') + '.\n\n' +
+      'FINANCE BRIEF:\n' + JSON.stringify(brief(s, { includeTx: conn.includeTx }));
+  }
+
+  function errText(e) {
+    if (!e) return 'unknown error';
+    if (e.name === 'AbortError') return 'request timed out';
+    return String(e.message || e).slice(0, 120);
+  }
+
+  function extractGemini(j) {
+    var cand = j && j.candidates && j.candidates[0];
+    var parts = cand && cand.content && cand.content.parts;
+    if (!parts) return '';
+    return parts.map(function (p) { return p.text || ''; }).join('').trim();
+  }
+
+  async function callCloud(userText, pastTurns, s, opts) {
+    opts = opts || {};
+    var key = String(conn.key || '').trim();
+    var model = String(conn.model || '').trim();
+    if (!key) throw new Error('No API key saved');
+    if (!model) throw new Error('No model set');
+    if (conn.provider === 'custom' && !String(conn.base || '').trim()) throw new Error('Set a base URL for the custom provider');
+    if (!conn.provider || !PROVIDERS[conn.provider]) throw new Error('Pick a provider');
+    var sys = systemPrompt(s);
+    var turns = (pastTurns || []).slice(-6);
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 30000);
+    var maxTok = opts.maxTokens || 420;
+
+    try {
+      if (conn.provider === 'gemini') {
+        var gurl = PROVIDERS.gemini.url + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key);
+        var contents = turns.map(function (m) {
+          return { role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] };
+        }).concat([{ role: 'user', parts: [{ text: userText }] }]);
+        var gres = await fetch(gurl, {
+          method: 'POST', signal: ctrl.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: sys }] },
+            contents: contents,
+            generationConfig: { maxOutputTokens: maxTok, temperature: 0.75 }
+          })
+        });
+        var gj = await gres.json().catch(function () { return null; });
+        if (!gres.ok) throw new Error((gj && gj.error && gj.error.message) || ('HTTP ' + gres.status));
+        var gtext = extractGemini(gj);
+        if (!gtext) throw new Error('Empty response from Gemini');
+        return gtext;
+      }
+
+      if (conn.provider === 'anthropic') {
+        var ares = await fetch(PROVIDERS.anthropic.url, {
+          method: 'POST', signal: ctrl.signal,
+          headers: {
+            'content-type': 'application/json',
+            'x-api-key': key,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: model, max_tokens: maxTok, system: sys,
+            messages: turns.concat([{ role: 'user', content: userText }])
+          })
+        });
+        var aj = await ares.json().catch(function () { return null; });
+        if (!ares.ok) throw new Error((aj && aj.error && aj.error.message) || ('HTTP ' + ares.status));
+        var atext = (aj && aj.content ? aj.content.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('') : '').trim();
+        if (!atext) throw new Error('Empty response from Anthropic');
+        return atext;
+      }
+
+      /* OpenAI-compatible: openai, groq, openrouter, custom */
+      var url = conn.provider === 'custom'
+        ? String(conn.base || '').replace(/\/+$/, '') + '/chat/completions'
+        : PROVIDERS[conn.provider].url;
+      var headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key };
+      if (conn.provider === 'openrouter') {
+        headers['HTTP-Referer'] = location.origin;
+        headers['X-Title'] = 'Northstar';
+      }
+      var ores = await fetch(url, {
+        method: 'POST', signal: ctrl.signal, headers: headers,
+        body: JSON.stringify({
+          model: model,
+          messages: [{ role: 'system', content: sys }].concat(turns).concat([{ role: 'user', content: userText }]),
+          max_tokens: maxTok,
+          temperature: 0.75
+        })
+      });
+      var oj = await ores.json().catch(function () { return null; });
+      if (!ores.ok) throw new Error((oj && oj.error && (oj.error.message || oj.error)) || ('HTTP ' + ores.status));
+      var otext = oj && oj.choices && oj.choices[0] && oj.choices[0].message && oj.choices[0].message.content;
+      otext = String(otext || '').trim();
+      if (!otext) throw new Error('Empty response from provider');
+      return otext;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function testConnection() {
+    var s = snapshot();
+    if (!s.ok) s = { ok: false, d: { settings: {} }, accounts: [], cur: { income: 0, spend: 0, catsList: [], rate: null }, prev: { income: 0, spend: 0 }, budgets: [], goals: [], purchases: [], total: 0, available: 0, daysLeft: 0, projected: 0 };
+    var replyText = await callCloud('Reply with exactly: connected', [], s, { maxTokens: 24 });
+    return replyText;
+  }
+
+
   /* ---------------- language: entities + intents ---------------- */
   function pick(a) { return a[(Math.random() * a.length) | 0]; }
 
@@ -2485,7 +2775,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     { id: 'purchases', kw: ['purchase', 'purchases', 'wishlist', 'plan to buy', 'planned'] },
     { id: 'balance', kw: ['balance', 'net worth', 'how much do i have', 'total', 'cash', 'available'] },
     { id: 'advice', kw: ['advice', 'what should i', 'next step', 'next move', 'help me', 'decide', 'decision', 'plan for', 'recommend'] },
-    { id: 'safe', kw: ['safe to spend', 'how much can i spend', 'daily', 'per day', 'left to spend'] },
+    { id: 'safe', kw: ['safe to spend', 'safely spend', 'safe spend', 'safe daily', 'how much can i spend', 'daily', 'per day', 'left to spend'] },
     { id: 'help', kw: ['what can you do', 'commands', 'help', 'how do i use'] },
     { id: 'tone', kw: ['tone', 'ruthless', 'playful', 'coach', 'nicer', 'meaner'] },
     { id: 'greet', kw: ['hi', 'hey', 'hello', 'yo', 'sup', 'jarvis', 'good morning', 'good evening', 'how are you'] }
@@ -2844,6 +3134,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
           '<button type="button" class="nsj-tone" data-tone="ruthless" aria-pressed="' + (cfg.tone === 'ruthless') + '">Ruthless</button>' +
           '<button type="button" class="nsj-tone" data-tone="coach" aria-pressed="' + (cfg.tone === 'coach') + '">Coach</button>' +
         '</div>' +
+        '<button type="button" class="nsj-gear" id="nsjGear" aria-label="Connections">' + icon('<path d="M4 7h9M18 7h2M4 17h3M12 17h8"/><circle cx="15.5" cy="7" r="2"/><circle cx="9.5" cy="17" r="2"/>') + '</button>' +
         '<button type="button" class="nsj-close" aria-label="Close assistant">' + icon('<path d="M6 6l12 12M18 6 6 18"/>') + '</button>' +
       '</header>' +
       '<div class="nsj-log" id="nsjLog" role="log" aria-live="polite"></div>' +
@@ -2860,7 +3151,24 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
         '<button type="button" class="nsj-btn" id="nsjMic" aria-label="Voice input">' + icon('<path d="M12 4.5a2.6 2.6 0 0 0-2.6 2.6v4.4a2.6 2.6 0 0 0 5.2 0V7.1A2.6 2.6 0 0 0 12 4.5z"/><path d="M6.5 11a5.5 5.5 0 0 0 11 0"/><path d="M12 16.5V20"/>') + '</button>' +
         '<button type="button" class="nsj-btn send" id="nsjSend" aria-label="Send">' + icon('<path d="M5 12h13M13 6.5 18.5 12 13 17.5"/>') + '</button>' +
       '</div>' +
-      '<div class="nsj-footnote">Reads your ledger locally · nothing leaves this device</div>';
+      '<div class="nsj-footnote" id="nsjFootnote">Reads your ledger locally · nothing leaves this device</div>' +
+      '<div class="nsj-sheet" id="nsjSheet" aria-hidden="true">' +
+        '<div class="nsj-sheet-head"><b>CONNECTIONS</b><span>bring your own key</span></div>' +
+        '<div class="nsj-sheet-body">' +
+          '<div class="nsj-row"><div class="nsj-row-text"><b>Cloud brain</b><small>Off: local rules engine. On: questions go to your provider.</small></div><button type="button" class="nsj-switch" id="nsjEnabled" role="switch" aria-checked="false" aria-label="Enable cloud brain"></button></div>' +
+          '<div class="nsj-field"><label for="nsjProvider">Provider</label><select id="nsjProvider">' + providerOptions() + '</select></div>' +
+          '<div class="nsj-field"><label for="nsjKey">API key</label><input id="nsjKey" type="password" placeholder="paste your key here" autocomplete="off" spellcheck="false"><div class="nsj-hint">Stored in this browser only. Never in the page, the repo, or your JSON backup.</div></div>' +
+          '<div class="nsj-field"><label for="nsjModel">Model</label><input id="nsjModel" type="text" placeholder="model id" autocomplete="off" spellcheck="false"></div>' +
+          '<div class="nsj-field" id="nsjBaseWrap" hidden><label for="nsjBase">Base URL</label><input id="nsjBase" type="text" placeholder="https://your-endpoint/v1" autocomplete="off" spellcheck="false"></div>' +
+          '<div class="nsj-row"><div class="nsj-row-text"><b>Remember key</b><small>Off: cleared when this tab closes.</small></div><button type="button" class="nsj-switch" id="nsjRemember" role="switch" aria-checked="false" aria-label="Remember key"></button></div>' +
+          '<div class="nsj-row"><div class="nsj-row-text"><b>Include transactions</b><small>Sends 8 recent descriptions as well as the totals.</small></div><button type="button" class="nsj-switch" id="nsjTx" role="switch" aria-checked="false" aria-label="Include transactions"></button></div>' +
+          '<div class="nsj-actions"><button type="button" class="nsj-mini primary" id="nsjSave">Save &amp; test</button><button type="button" class="nsj-mini" id="nsjPreview">Preview payload</button><button type="button" class="nsj-mini danger" id="nsjClear">Clear key</button></div>' +
+          '<div class="nsj-status-line" id="nsjConnStatus"><i></i><span>Not connected</span></div>' +
+          '<pre class="nsj-preview" id="nsjPreviewBox" hidden></pre>' +
+          '<div class="nsj-hint">Free keys: <b>Gemini</b> (AI Studio), <b>Groq</b>, <b>OpenRouter</b>. Your key is sent only to the provider you choose.</div>' +
+        '</div>' +
+      '</div>';
+
 
     document.body.appendChild(orb);
     document.body.appendChild(panel);
@@ -2912,6 +3220,116 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
       } catch (e) { mic.classList.remove('rec'); rec = null; }
     });
 
+
+    /* ---------------- connections wiring ---------------- */
+    function providerOptions() {
+      return Object.keys(PROVIDERS).map(function (k) {
+        return '<option value="' + k + '">' + PROVIDERS[k].label + '</option>';
+      }).join('');
+    }
+    function setSwitch(el, on) { if (el) el.setAttribute('aria-checked', String(!!on)); }
+    function getSwitch(el) { return el && el.getAttribute('aria-checked') === 'true'; }
+    function setConnStatus(kind, text) {
+      var el = panel.querySelector('#nsjConnStatus');
+      if (!el) return;
+      el.className = 'nsj-status-line' + (kind ? ' ' + kind : '');
+      el.querySelector('span').textContent = text;
+    }
+    function paintSheet() {
+      var sel = panel.querySelector('#nsjProvider');
+      if (!sel) return;
+      sel.value = conn.provider;
+      var keyEl = panel.querySelector('#nsjKey');
+      if (keyEl && document.activeElement !== keyEl) keyEl.value = conn.key || '';
+      panel.querySelector('#nsjModel').value = conn.model || '';
+      panel.querySelector('#nsjBase').value = conn.base || '';
+      panel.querySelector('#nsjBaseWrap').hidden = conn.provider !== 'custom';
+      setSwitch(panel.querySelector('#nsjEnabled'), conn.enabled);
+      setSwitch(panel.querySelector('#nsjRemember'), conn.remember);
+      setSwitch(panel.querySelector('#nsjTx'), conn.includeTx);
+      setConnStatus(connReady() ? 'ok' : '', connReady()
+        ? 'Connected · ' + providerLabel(conn.provider) + ' · ' + (conn.model || 'no model')
+        : (conn.key ? 'Key saved — switch Cloud brain on' : 'Not connected'));
+    }
+
+    var gear = panel.querySelector('#nsjGear');
+    var sheet = panel.querySelector('#nsjSheet');
+    if (gear && sheet) {
+      gear.addEventListener('click', function () {
+        var open = !sheet.classList.contains('open');
+        sheet.classList.toggle('open', open);
+        sheet.setAttribute('aria-hidden', String(!open));
+        if (open) paintSheet();
+      });
+      panel.querySelector('#nsjProvider').addEventListener('change', function (e) {
+        var next = e.target.value;
+        var wasDefault = !conn.model || conn.model === (PROVIDERS[conn.provider] || {}).model;
+        conn.provider = next;
+        if (wasDefault) conn.model = (PROVIDERS[next] || {}).model || '';
+        saveConn(); paintSheet();
+      });
+      ['#nsjKey', '#nsjModel', '#nsjBase'].forEach(function (sel) {
+        var field = panel.querySelector(sel);
+        var sync = function (e) {
+          if (sel === '#nsjKey') conn.key = e.target.value.trim();
+          if (sel === '#nsjModel') conn.model = e.target.value.trim();
+          if (sel === '#nsjBase') conn.base = e.target.value.trim();
+          saveConn();
+        };
+        field.addEventListener('input', sync);
+        field.addEventListener('change', sync);
+      });
+      panel.querySelector('#nsjEnabled').addEventListener('click', function () {
+        conn.enabled = !conn.enabled;
+        if (conn.enabled && !conn.key) {
+          conn.enabled = false;
+          setConnStatus('err', 'Add a key first');
+          saveConn(); paintSheet();
+          setConnStatus('err', 'Add a key first');
+          return;
+        }
+        saveConn(); paintSheet(); refreshStatus();
+      });
+      panel.querySelector('#nsjRemember').addEventListener('click', function () {
+        conn.remember = !conn.remember; saveConn(); paintSheet();
+      });
+      panel.querySelector('#nsjTx').addEventListener('click', function () {
+        conn.includeTx = !conn.includeTx; saveConn(); paintSheet();
+      });
+      panel.querySelector('#nsjSave').addEventListener('click', function () {
+        conn.key = panel.querySelector('#nsjKey').value.trim();
+        conn.model = panel.querySelector('#nsjModel').value.trim();
+        conn.base = panel.querySelector('#nsjBase').value.trim();
+        saveConn();
+        setConnStatus('', 'Testing…');
+        testConnection().then(function (r) {
+          conn.enabled = true; saveConn();
+          setConnStatus('ok', 'Connected · ' + (r || 'ok').slice(0, 24));
+          refreshStatus(); paintSheet();
+        }).catch(function (err) {
+          setConnStatus('err', errText(err));
+        });
+      });
+      panel.querySelector('#nsjPreview').addEventListener('click', function () {
+        var box = panel.querySelector('#nsjPreviewBox');
+        var snap = snapshot();
+        var payload = {
+          provider: conn.provider,
+          model: conn.model || '(none)',
+          system: snap.ok ? systemPrompt(snap) : '(no ledger)',
+          messages: [{ role: 'user', content: '(your next question)' }],
+          max_tokens: 420,
+          includeTransactions: !!conn.includeTx
+        };
+        box.textContent = JSON.stringify(payload, null, 2);
+        box.hidden = false;
+      });
+      panel.querySelector('#nsjClear').addEventListener('click', function () {
+        conn.key = ''; conn.enabled = false; saveConn(); paintSheet(); refreshStatus();
+        setConnStatus('', 'Key cleared');
+      });
+    }
+
     refreshStatus();
   }
 
@@ -2919,9 +3337,12 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     var el = panel && panel.querySelector('#nsjStatus');
     if (!el) return;
     var s = snapshot();
-    el.textContent = s.ok
-      ? 'Local · ' + s.accounts.length + ' acct · ' + s.txCount + ' tx'
-      : 'No ledger found';
+    var base = s.ok ? s.accounts.length + ' acct · ' + s.txCount + ' tx' : 'No ledger found';
+    el.textContent = (connReady() ? 'Cloud · ' + providerLabel(conn.provider) + ' · ' : 'Local · ') + base;
+    var fn = panel.querySelector('#nsjFootnote');
+    if (fn) fn.textContent = connReady()
+      ? 'Cloud brain on · brief sent to ' + providerLabel(conn.provider)
+      : 'Reads your ledger locally · nothing leaves this device';
   }
 
   function addMsg(text, who) {
@@ -2947,13 +3368,58 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
   }
   function say(text, instant) { if (instant) { addMsg(text, 'bot'); speak(text); } else typeThen(text); }
 
+  /* ---------------- cloud routing ---------------- */
+  function pushTurn(userText, botText) {
+    history.push({ role: 'user', content: userText }, { role: 'assistant', content: botText });
+    if (history.length > 10) history = history.slice(-10);
+  }
+  function makeTyping() {
+    var t = document.createElement('div');
+    t.className = 'nsj-typing';
+    t.innerHTML = '<i></i><i></i><i></i>';
+    log.appendChild(t);
+    log.scrollTop = log.scrollHeight;
+    return t;
+  }
+  function addMsgWithSource(text, source) {
+    var n = addMsg(text, 'bot');
+    if (source) {
+      var s = document.createElement('span');
+      s.className = 'nsj-src';
+      s.textContent = source;
+      n.appendChild(s);
+    }
+    log.scrollTop = log.scrollHeight;
+    return n;
+  }
   function send(raw) {
     var text = String(raw || '').trim();
     if (!text) return;
     input.value = '';
     addMsg(text, 'me');
     try { if (window.NorthstarFX && window.NorthstarFX.sound) window.NorthstarFX.sound.tap(); } catch (e) {}
-    typeThen(reply(text));
+
+    if (!connReady()) {
+      var localAnswer = reply(text);
+      pushTurn(text, localAnswer);
+      typeThen(localAnswer);
+      return;
+    }
+
+    var snap = snapshot();
+    var typing = makeTyping();
+    callCloud(text, history.slice(), snap).then(function (answer) {
+      typing.remove();
+      addMsgWithSource(answer, 'Cloud · ' + providerLabel(conn.provider));
+      pushTurn(text, answer);
+      speak(answer);
+    }).catch(function (err) {
+      typing.remove();
+      var fallback = reply(text);
+      addMsgWithSource(fallback, 'Local fallback · ' + errText(err));
+      pushTurn(text, fallback);
+      speak(fallback);
+    });
   }
 
   var greeted = false;
@@ -2988,7 +3454,14 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     ask: function (q) { toggle(true); typeThen(reply(q)); },
     reply: reply,
     snapshot: snapshot,
-    ledger: ledger
+    ledger: ledger,
+    brief: brief,
+    systemPrompt: systemPrompt,
+    conn: function () { return Object.assign({}, conn); },
+    setConn: function (patch) { Object.assign(conn, patch || {}); saveConn(); },
+    clearConn: function () { conn.key = ''; conn.enabled = false; saveConn(); },
+    callCloud: function (text, opts) { return callCloud(text, [], snapshot(), opts); },
+    testConnection: testConnection
   };
 })();
 
