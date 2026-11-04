@@ -1681,6 +1681,16 @@ async function retryCloudSync(){if(!fb){showToast(firebaseErrorDetails(lastSyncE
 function queueCloudSave(){clearTimeout(saveTimer);setSync('Saving…');saveTimer=setTimeout(async()=>{try{await writeCloudNow();lastSyncError=null;setSync('Cloud sync on','ok');render()}catch(e){lastSyncError=e;console.error('Northstar cloud save failed',e);setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Cloud save')+' Your browser copy is still available.')}},700)}
 async function handleGoogleSignIn(){if(!fb){showToast('Firebase has not initialized. Check the Firebase unavailable status and reload the page.');return}if(signingIn)return;signingIn=true;try{await fb.signInWithPopup(fb.auth,new fb.GoogleAuthProvider())}catch(e){console.error('Northstar Google sign-in failed',e);showToast(firebaseErrorDetails(e,'Google sign-in'))}finally{signingIn=false}}
 async function handleGoogleSignOut(){if(!fb)return;try{await fb.signOut(fb.auth);showToast('Signed out. This browser copy remains available.')}catch(e){showToast('Could not sign out. Try again.')}}
+/* Read-only bridge for the local assistant: gives it the live in-memory ledger
+   (including cloud-synced data that may not be in localStorage yet). */
+try{
+  Object.defineProperty(window,'NorthstarLedger',{
+    configurable:true,
+    value:function(){
+      try{ return JSON.parse(JSON.stringify(data)); }catch(e){ return data; }
+    }
+  });
+}catch(e){}
 render();initFirebase();initWelcomeJourney();if(!document.documentElement.classList.contains('northstar-seen'))window.setTimeout(()=>$('welcomeContinue')?.focus(),140);
 </script>
 <script>
@@ -2254,102 +2264,159 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
 </script>
 <script id="jarvis-runtime">
 /* ============================================================
-   NORTHSTAR — JARVIS
-   A local, private, data-aware assistant. No network calls.
-   Reads the same localStorage ledger the app writes.
+   NORTHSTAR — JARVIS 2
+   Local, private, data-aware assistant.
+   Reads the live in-memory ledger (cloud included) with a
+   localStorage fallback. No network. No keys.
    ============================================================ */
 (function () {
   'use strict';
 
   var CFG_KEY = 'northstar-jarvis-v1';
-  var CFG_DEFAULT = { tone: 'playful', voice: false, greetingSeen: false };
   var cfg = (function () {
-    try { return Object.assign({}, CFG_DEFAULT, JSON.parse(localStorage.getItem(CFG_KEY) || '{}')); }
-    catch (e) { return Object.assign({}, CFG_DEFAULT); }
+    var base = { tone: 'playful', voice: false };
+    try { return Object.assign(base, JSON.parse(localStorage.getItem(CFG_KEY) || '{}')); }
+    catch (e) { return base; }
   })();
   function saveCfg() { try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch (e) {} }
-
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  /* ---------------- ledger access (read-only) ---------------- */
-  var KEYS = ['northstar-finance-v1:local', 'northstar-finance-v1'];
+  /* ---------------- ledger access ---------------- */
+  function scanStorage() {
+    var best = null, bestScore = -1;
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!k || !/^northstar-finance-v1(:|$)/.test(k)) continue;
+        var d;
+        try { d = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { continue; }
+        if (!d || typeof d !== 'object') continue;
+        var score = (d.transactions || []).length * 3 + (d.accounts || []).length * 5 +
+          (d.budgets || []).length * 2 + (d.goals || []).length * 2 + (d.purchases || []).length * 2;
+        if (score > bestScore) { bestScore = score; best = d; }
+      }
+    } catch (e) {}
+    return best;
+  }
   function ledger() {
-    for (var i = 0; i < KEYS.length; i++) {
-      try {
-        var raw = localStorage.getItem(KEYS[i]);
-        if (raw) { var d = JSON.parse(raw); if (d && typeof d === 'object') return d; }
-      } catch (e) {}
-    }
+    var live = null;
+    try { if (typeof window.NorthstarLedger === 'function') live = window.NorthstarLedger(); } catch (e) {}
+    if (live && typeof live === 'object' && (Array.isArray(live.accounts) || Array.isArray(live.transactions))) return live;
+    var stored = scanStorage();
+    if (stored) return stored;
+    try { var legacy = localStorage.getItem('northstar-finance-v1'); if (legacy) return JSON.parse(legacy); } catch (e) {}
     return null;
   }
 
-  function currencyOf(d) {
-    var c = d && d.settings && d.settings.currency;
-    return typeof c === 'string' && /^[A-Z]{3}$/.test(c) ? c : 'USD';
-  }
-  function fmt(n, d) {
-    var cur = currencyOf(d || ledger());
-    try { return new Intl.NumberFormat(undefined, { style: 'currency', currency: cur, maximumFractionDigits: Math.abs(n) < 100 ? 2 : 0 }).format(n); }
-    catch (e) { return (cur === 'USD' ? '$' : '') + Math.round(n); }
-  }
   function num(v) { var n = Number(v); return isFinite(n) ? n : 0; }
+  function fmt(n, d) {
+    var cur = (d && d.settings && d.settings.currency) || 'USD';
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency', currency: cur,
+        maximumFractionDigits: Math.abs(n) < 100 ? 2 : 0
+      }).format(n);
+    } catch (e) { return '$' + Math.round(n); }
+  }
+  function pct(n) { return Math.round(n) + '%'; }
+  function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+  function keyOf(date) { return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0'); }
+  function shiftMonth(date, delta) { return new Date(date.getFullYear(), date.getMonth() + delta, 1); }
+  var MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+
+  /* ---------------- snapshot ---------------- */
+  function bucket(txs, key) {
+    var out = { key: key, income: 0, spend: 0, count: 0, expenses: 0, cats: {} };
+    txs.forEach(function (t) {
+      if (String(t.date || '').slice(0, 7) !== key) return;
+      out.count++;
+      if (t.type === 'Income') out.income += num(t.amount);
+      else if (t.type === 'Expense') {
+        out.spend += num(t.amount);
+        out.expenses++;
+        var c = t.category || 'Uncategorised';
+        out.cats[c] = (out.cats[c] || 0) + num(t.amount);
+      }
+    });
+    out.catsList = Object.keys(out.cats).map(function (k) { return { name: k, amount: out.cats[k] }; })
+      .sort(function (a, b) { return b.amount - a.amount; });
+    out.top = out.catsList[0] || null;
+    out.rate = out.income > 0 ? ((out.income - out.spend) / out.income) * 100 : null;
+    return out;
+  }
 
   function snapshot() {
     var d = ledger();
-    if (!d) return { empty: true };
+    if (!d) return { ok: false };
+    var txs = d.transactions || [];
     var now = new Date();
-    var ym = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
-    var monthName = now.toLocaleString(undefined, { month: 'long' });
-    var txs = (d.transactions || []).filter(function (t) { return String(t.date || '').slice(0, 7) === ym; });
-    var income = txs.filter(function (t) { return t.type === 'Income'; }).reduce(function (s, t) { return s + num(t.amount); }, 0);
-    var spend = txs.filter(function (t) { return t.type === 'Expense'; }).reduce(function (s, t) { return s + num(t.amount); }, 0);
-    var byCat = {};
-    txs.filter(function (t) { return t.type === 'Expense'; }).forEach(function (t) {
-      var k = t.category || 'Uncategorised';
-      byCat[k] = (byCat[k] || 0) + num(t.amount);
-    });
-    var cats = Object.keys(byCat).map(function (k) { return { name: k, amount: byCat[k] }; })
-      .sort(function (a, b) { return b.amount - a.amount; });
-    var accounts = (d.accounts || []);
+    var thisKey = keyOf(now), prevKey = keyOf(shiftMonth(now, -1));
+    var cur = bucket(txs, thisKey), prev = bucket(txs, prevKey);
+
+    var accounts = d.accounts || [];
     var total = accounts.reduce(function (s, a) { return s + num(a.balance); }, 0);
     var minimums = accounts.reduce(function (s, a) { return s + num(a.minimum); }, 0);
+
     var budgets = (d.budgets || []).map(function (b) {
-      var spent = byCat[b.category] || 0;
-      return { category: b.category, limit: num(b.limit), spent: spent, pct: num(b.limit) > 0 ? (spent / num(b.limit)) * 100 : 0 };
-    });
+      var spent = cur.cats[b.category] || 0;
+      return {
+        category: b.category, limit: num(b.limit), spent: spent,
+        pct: num(b.limit) > 0 ? (spent / num(b.limit)) * 100 : 0,
+        remaining: num(b.limit) - spent
+      };
+    }).sort(function (a, b) { return b.pct - a.pct; });
+
     var goals = (d.goals || []).map(function (g) {
-      return { name: g.name || 'Untitled goal', target: num(g.target), saved: num(g.saved), pct: num(g.target) > 0 ? (num(g.saved) / num(g.target)) * 100 : 0 };
+      return {
+        name: g.name || 'Untitled goal', target: num(g.target), saved: num(g.saved),
+        pct: num(g.target) > 0 ? (num(g.saved) / num(g.target)) * 100 : 0,
+        remaining: Math.max(0, num(g.target) - num(g.saved))
+      };
     });
+
     var purchases = (d.purchases || []).filter(function (p) { return p.status !== 'Purchased'; })
-      .map(function (p) { return { name: p.name || 'Purchase', price: num(p.price), saved: num(p.saved), priority: p.priority || 'Medium' }; });
-    var rate = income > 0 ? ((income - spend) / income) * 100 : null;
+      .map(function (p) {
+        return { name: p.name || 'Purchase', price: num(p.price), saved: num(p.saved), priority: p.priority || 'Medium', date: p.date || '' };
+      });
+
+    var elapsed = now.getDate();
+    var totalDays = daysInMonth(now.getFullYear(), now.getMonth());
+    var daysLeft = Math.max(0, totalDays - elapsed);
+
+    var categories = Object.keys(cur.cats).concat(Object.keys(prev.cats)).filter(function (v, i, a) { return a.indexOf(v) === i; });
+    var deltas = categories.map(function (c) {
+      var nowAmt = cur.cats[c] || 0, before = prev.cats[c] || 0;
+      return { name: c, now: nowAmt, before: before, delta: nowAmt - before };
+    }).sort(function (a, b) { return Math.abs(b.delta) - Math.abs(a.delta); });
+
     return {
-      empty: false, d: d, ym: ym, month: monthName, txs: txs, count: txs.length,
-      income: income, spend: spend, cats: cats, top: cats[0] || null,
+      ok: true, d: d, now: now, thisKey: thisKey, prevKey: prevKey,
+      cur: cur, prev: prev, deltas: deltas,
       accounts: accounts, total: total, minimums: minimums, available: total - minimums,
       budgets: budgets, over: budgets.filter(function (b) { return b.pct > 100; }),
-      goals: goals, purchases: purchases, rate: rate,
+      goals: goals, purchases: purchases,
       purchaseTotal: purchases.reduce(function (s, p) { return s + p.price; }, 0),
-      purchaseSaved: purchases.reduce(function (s, p) { return s + p.saved; }, 0)
+      purchaseSaved: purchases.reduce(function (s, p) { return s + p.saved; }, 0),
+      elapsed: elapsed, totalDays: totalDays, daysLeft: daysLeft,
+      projected: elapsed > 0 ? (cur.spend / elapsed) * totalDays : cur.spend,
+      safeDaily: daysLeft > 0 && cur.income > 0 ? Math.max(0, (cur.income - cur.spend) / daysLeft) : null,
+      txCount: txs.length
     };
   }
 
   /* ---------------- voice ---------------- */
-  var voicesReady = [];
-  function loadVoices() { try { voicesReady = window.speechSynthesis.getVoices() || []; } catch (e) { voicesReady = []; } }
-  if ('speechSynthesis' in window) {
-    loadVoices();
-    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
-  }
+  var voices = [];
+  function loadVoices() { try { voices = window.speechSynthesis.getVoices() || []; } catch (e) { voices = []; } }
+  if ('speechSynthesis' in window) { loadVoices(); window.speechSynthesis.addEventListener('voiceschanged', loadVoices); }
   function speak(text) {
     if (!cfg.voice || !('speechSynthesis' in window)) return;
     try {
       window.speechSynthesis.cancel();
-      var clean = text.replace(/[*_`#>]/g, '').replace(/\s+/g, ' ').slice(0, 320);
+      var clean = String(text).replace(/[*_`#>]/g, '').replace(/\s+/g, ' ').slice(0, 320);
       var u = new SpeechSynthesisUtterance(clean);
-      var v = voicesReady.find(function (x) { return /Daniel|Arthur|George|Oliver|UK English Male/i.test(x.name); }) ||
-              voicesReady.find(function (x) { return /^en[-_]GB/i.test(x.lang); }) ||
-              voicesReady.find(function (x) { return /^en/i.test(x.lang); });
+      var v = voices.find(function (x) { return /Daniel|Arthur|George|Oliver|UK English Male/i.test(x.name); }) ||
+              voices.find(function (x) { return /^en[-_]GB/i.test(x.lang); }) ||
+              voices.find(function (x) { return /^en/i.test(x.lang); });
       if (v) u.voice = v;
       u.rate = 1.02; u.pitch = 0.92; u.volume = 0.9;
       window.speechSynthesis.speak(u);
@@ -2357,179 +2424,398 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
   }
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  /* ---------------- persona ---------------- */
-  var TONES = ['playful', 'ruthless', 'coach'];
+  /* ---------------- language: entities + intents ---------------- */
+  function pick(a) { return a[(Math.random() * a.length) | 0]; }
 
-  function pick(arr) { return arr[(Math.random() * arr.length) | 0]; }
-
-  function roast(s) {
-    if (s.empty) return "I can't see a ledger yet. Log an account and a transaction, then I'll have something to judge.";
-    if (s.tone === 'coach') {
-      if (!s.count) return "No activity logged for " + s.month + " yet. That's not a failure — but the numbers can't help you until they exist.";
-      return "Straight read on " + s.month + ": " + fmt(s.income, s.d) + " in, " + fmt(s.spend, s.d) + " out. " +
-        (s.rate === null ? "Income isn't recorded, so I can't score the month." :
-          s.rate > 20 ? "That's a " + Math.round(s.rate) + "% savings rate — genuinely solid." :
-          s.rate > 0 ? "That's a " + Math.round(s.rate) + "% savings rate. Workable, not impressive." :
-            "You're running negative. Fix that before optimising anything else.");
-    }
-    if (!s.count) return "Zero transactions this month. Either you're extremely disciplined or you've been avoiding me. I know which one I'd bet on.";
-    if (s.over.length) {
-      var b = s.over[0];
-      return pick([
-        "You're " + Math.round(b.pct - 100) + "% over your " + b.category + " budget. Bold strategy — spending money you explicitly told yourself not to spend.",
-        b.category + " is at " + Math.round(b.pct) + "% of budget. The budget isn't a suggestion, it's a promise you made to yourself.",
-        "Your " + b.category + " budget just filed a complaint. " + fmt(b.spent, s.d) + " against " + fmt(b.limit, s.d) + "."
-      ]) + (s.tone === 'ruthless' && s.top ? " Also, " + s.top.name + " is your biggest leak at " + fmt(s.top.amount, s.d) + "." : "");
-    }
-    if (s.rate !== null && s.rate < 0) {
-      return pick([
-        "You spent " + fmt(s.spend, s.d) + " against " + fmt(s.income, s.d) + " income. That's not a savings plan, that's a countdown.",
-        "Negative month: " + fmt(s.spend - s.income, s.d) + " more out than in. Impressive in the way a car fire is impressive.",
-        "Your money left faster than it arrived. " + fmt(s.spend, s.d) + " out, " + fmt(s.income, s.d) + " in."
-      ]);
-    }
-    if (s.rate !== null && s.rate < 10) {
-      return "You kept " + Math.round(s.rate) + "% of what came in. Technically saving. Barely." +
-        (s.top ? " Biggest drain: " + s.top.name + " at " + fmt(s.top.amount, s.d) + "." : "");
-    }
-    if (s.purchases.length) {
-      var remaining = s.purchaseTotal - s.purchaseSaved;
-      return s.purchases.length + " planned purchases still open, " + fmt(remaining, s.d) + " unfunded. That's not a wishlist, that's a queue of future regret." +
-        (s.tone === 'ruthless' ? " And one of them is definitely a want, not a need." : "");
-    }
-    return pick([
-      "Honestly? " + Math.round(s.rate || 0) + "% saved, nothing over budget. I'm suspicious, but impressed.",
-      "Finances look boring this month. Boring is the goal. Keep it up.",
-      "No disasters to mock. Give me a bad decision to work with."
-    ]);
+  function categoriesIn(s) {
+    var known = {};
+    [s.cur.catsList, s.prev.catsList, s.budgets].forEach(function (list) {
+      (list || []).forEach(function (x) { var n = x.name || x.category || ''; if (n) known[n] = true; });
+    });
+    s.deltas.forEach(function (d) { known[d.name] = true; });
+    return Object.keys(known);
   }
 
-  function affordability(s, amount, label) {
-    if (s.empty) return "No ledger, no opinion. Add your accounts first.";
-    var cover = s.available;
-    var vet = amount <= cover;
-    var pctOfCover = cover > 0 ? (amount / cover) * 100 : 999;
-    if (cfg.tone === 'coach') {
-      return (vet ? "Yes — " + fmt(amount, s.d) + " fits inside your " + fmt(cover, s.d) + " of uncommitted balance." :
-        "No. " + fmt(amount, s.d) + " is more than the " + fmt(cover, s.d) + " you actually have free after minimums.") +
-        (pctOfCover > 30 ? " It would consume " + Math.round(pctOfCover) + "% of your cushion, so I'd wait a cycle." : " It's " + Math.round(pctOfCover) + "% of your cushion — manageable.");
-    }
-    if (vet && pctOfCover < 12) return "Yes. " + fmt(amount, s.d) + " is " + Math.round(pctOfCover) + "% of your cushion. Barely a scratch. Go." + (label ? " Enjoy the " + label + "." : "");
-    if (vet && pctOfCover < 30) return "You can afford " + fmt(amount, s.d) + " — it's " + Math.round(pctOfCover) + "% of your cushion. Not fatal, not smart. Your call.";
-    if (vet) return "Technically yes. " + fmt(amount, s.d) + " would eat " + Math.round(pctOfCover) + "% of your cushion. That's the kind of 'yes' that becomes a story later.";
-    return "No. You have " + fmt(cover, s.d) + " free and you're asking about " + fmt(amount, s.d) + ". That's not a purchase, that's a loan from your future self.";
+  function parseAmount(text) {
+    var m = text.match(/(?:\$|usd\s*)?(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?\b/i);
+    if (!m) return null;
+    var v = parseFloat(m[1].replace(/,/g, ''));
+    if (!isFinite(v)) return null;
+    if (m[2]) v *= 1000;
+    return v;
   }
 
-  function advice(s) {
-    if (s.empty) return "Start here: add one account with its real balance, then log a week of transactions. I can't advise a blank page.";
-    var out = [];
-    if (s.over.length) out.push("Cap " + s.over[0].category + " — it's " + Math.round(s.over[0].pct) + "% of budget with the month unfinished.");
-    if (s.rate !== null && s.rate < 10) out.push("Set a floor: move 10% of income the day it lands, before you can see it.");
-    if (s.purchases.length) out.push("Fund the top-priority purchase first; " + fmt(s.purchaseTotal - s.purchaseSaved, s.d) + " is still unfunded across " + s.purchases.length + " items.");
-    if (s.goals.length) {
-      var lag = s.goals.slice().sort(function (a, b) { return a.pct - b.pct; })[0];
-      if (lag && lag.pct < 50) out.push("Your slowest goal is " + lag.name + " at " + Math.round(lag.pct) + "%. Add a fixed amount weekly instead of waiting for leftovers.");
+  function parseMonth(text, s) {
+    if (/last month|previous month/i.test(text)) return 'prev';
+    if (/this month|current month/i.test(text)) return 'cur';
+    var lower = text.toLowerCase();
+    for (var i = 0; i < MONTH_NAMES.length; i++) {
+      if (lower.indexOf(MONTH_NAMES[i]) > -1) {
+        var y = s.now.getFullYear();
+        if (i > s.now.getMonth()) y -= 1;
+        return { key: y + '-' + String(i + 1).padStart(2, '0'), name: MONTH_NAMES[i] };
+      }
     }
-    if (s.available < s.spend) out.push("Your cushion is thinner than one month of spending. That's the real emergency here.");
-    if (!out.length) out.push("Nothing is on fire. Keep the current pace and put the surplus somewhere it can't be spent.");
-    return out.slice(0, 3).map(function (x, i) { return (i + 1) + ". " + x; }).join("\n");
+    return null;
   }
 
-  function reply(text) {
-    var s = snapshot();
-    s.tone = cfg.tone;
-    var t = text.toLowerCase().trim();
-    var askAmount = t.match(/(?:\$|usd\s*)?(\d[\d,]*(?:\.\d+)?)/);
-    var amount = askAmount ? parseFloat(askAmount[1].replace(/,/g, '')) : null;
+  function findCategory(text, s) {
+    var lower = ' ' + text.toLowerCase() + ' ';
+    var best = null;
+    categoriesIn(s).forEach(function (c) {
+      var cl = c.toLowerCase();
+      if (lower.indexOf(' ' + cl) > -1 || lower.indexOf(cl + ' ') > -1) {
+        if (!best || c.length > best.length) best = c;   /* return canonical casing */
+      }
+    });
+    return best;
+  }
 
-    if (!t) return "Say something. I don't do silence.";
+  var INTENTS = [
+    { id: 'see', kw: ['what can you see', 'what do you see', 'what do you know', 'my data', 'can you see', 'read my', 'looking at'] },
+    { id: 'afford', kw: ['afford', 'can i buy', 'should i buy', 'worth buying', 'buy it', 'pull the trigger'] },
+    { id: 'projection', kw: ['projection', 'projected', 'on track', 'end of month', 'will i make it', 'forecast', 'run rate'] },
+    { id: 'compare', kw: ['compare', 'versus', 'vs', 'last month', 'change since', 'delta', 'trend'] },
+    { id: 'roast', kw: ['roast', 'judge', 'rate my', 'how bad', 'savage', 'mock', 'be honest', 'critique'] },
+    { id: 'budget', kw: ['budget', 'over budget', 'overspend', 'over budget', 'limits', 'limit'] },
+    { id: 'spend', kw: ['spend', 'spent', 'spending', 'expenses', 'cost me', 'outgoings'] },
+    { id: 'income', kw: ['income', 'earn', 'salary', 'paycheck', 'paid', 'came in'] },
+    { id: 'savings', kw: ['save', 'saved', 'saving', 'savings rate', 'surplus', 'left over', 'keep'] },
+    { id: 'goals', kw: ['goal', 'goals', 'target', 'progress'] },
+    { id: 'purchases', kw: ['purchase', 'purchases', 'wishlist', 'plan to buy', 'planned'] },
+    { id: 'balance', kw: ['balance', 'net worth', 'how much do i have', 'total', 'cash', 'available'] },
+    { id: 'advice', kw: ['advice', 'what should i', 'next step', 'next move', 'help me', 'decide', 'decision', 'plan for', 'recommend'] },
+    { id: 'safe', kw: ['safe to spend', 'how much can i spend', 'daily', 'per day', 'left to spend'] },
+    { id: 'help', kw: ['what can you do', 'commands', 'help', 'how do i use'] },
+    { id: 'tone', kw: ['tone', 'ruthless', 'playful', 'coach', 'nicer', 'meaner'] },
+    { id: 'greet', kw: ['hi', 'hey', 'hello', 'yo', 'sup', 'jarvis', 'good morning', 'good evening', 'how are you'] }
+  ];
 
-    if (/(^\s*(hi|hey|hello|yo|sup|jarvis)\b)|(how are you)/.test(t)) {
-      if (s.empty) return "Online. No data yet, so I'm just a very expensive-sounding light switch. Add an account and we'll talk.";
-      return "Online. " + fmt(s.total, s.d) + " tracked across " + s.accounts.length + " account" + (s.accounts.length === 1 ? '' : 's') + ". " +
-        (s.count ? fmt(s.spend, s.d) + " out this month." : "Nothing logged this month yet.");
+  function classify(text) {
+    var t = ' ' + text.toLowerCase().replace(/[?!.]/g, ' ') + ' ';
+    var best = { id: null, score: 0 };
+    INTENTS.forEach(function (it) {
+      var score = 0;
+      it.kw.forEach(function (k) {
+        if (t.indexOf(' ' + k) > -1) score += k.indexOf(' ') > -1 ? 2.2 : 1;
+      });
+      if (score > best.score) best = { id: it.id, score: score };
+    });
+    return best.id;
+  }
+
+  /* ---------------- answers ---------------- */
+  var last = { intent: null, category: null, amount: null, month: null };
+
+  function seeAnswer(s) {
+    var lines = [
+      'I can see ' + s.accounts.length + ' account' + (s.accounts.length === 1 ? '' : 's') +
+        ' (' + fmt(s.total, s.d) + '), ' + s.txCount + ' transaction' + (s.txCount === 1 ? '' : 's') + ' all time,',
+      s.budgets.length + ' budget' + (s.budgets.length === 1 ? '' : 's') + ', ' +
+        s.goals.length + ' goal' + (s.goals.length === 1 ? '' : 's') + ' and ' +
+        s.purchases.length + ' open purchase plan' + (s.purchases.length === 1 ? '' : 's') + '.'
+    ];
+    var body = lines.join(' ');
+    if (!s.txCount) body += '\n\nNo transactions logged yet — that’s why I sound empty. Add one and I’ll have something to work with.';
+    else body += '\n\nThis month: ' + fmt(s.cur.spend, s.d) + ' out, ' + fmt(s.cur.income, s.d) + ' in.';
+    return body;
+  }
+
+  function spendAnswer(s, monthRef, category) {
+    var b = monthRef === 'prev' ? s.prev : s.cur;
+    var label = monthRef === 'prev' ? 'last month' : 'this month';
+    if (monthRef && typeof monthRef === 'object') {
+      b = bucket(s.d.transactions || [], monthRef.key);
+      label = monthRef.name;
     }
-    if (/(roast|judge|rate my|how bad|savage|mock|critique|be honest)/.test(t)) return roast(s);
-    if (/(afford|should i buy|can i buy|worth it|buy it)/.test(t)) {
-      if (!amount) return "Afford what? Give me a number and I'll give you a verdict.";
-      var label = t.replace(/.*(buy|afford|get)\s*/, '').replace(/[?.!]/g, '').trim();
-      if (!label || /^[\d\s,.$]+$/.test(label)) label = '';
-      return affordability(s, amount, label.length > 2 ? label : '');
-    }
-    if (/(budget|overspend|over ?budget|limit)/.test(t)) {
-      if (!s.budgets.length) return "No budgets set. Which means nothing is over budget and nothing is under control.";
-      if (s.over.length) return s.over.map(function (b) { return b.category + ": " + fmt(b.spent, s.d) + " of " + fmt(b.limit, s.d) + " (" + Math.round(b.pct) + "%)."; }).join("\n");
-      var closest = s.budgets.slice().sort(function (a, b) { return b.pct - a.pct; })[0];
-      return "Nothing over budget. Closest is " + closest.category + " at " + Math.round(closest.pct) + "% (" + fmt(closest.spent, s.d) + " of " + fmt(closest.limit, s.d) + ").";
-    }
-    if (/(spend|spending|expense|blew|waste)/.test(t)) {
-      if (!s.count) return "No spending recorded in " + s.month + ". Either you're lying or this is a very good month.";
-      var line = fmt(s.spend, s.d) + " out in " + s.month + " across " + s.txs.filter(function (x) { return x.type === 'Expense'; }).length + " transactions.";
-      if (s.top) line += " Biggest: " + s.top.name + " at " + fmt(s.top.amount, s.d) + ".";
-      if (s.cats[1]) line += " Then " + s.cats[1].name + " at " + fmt(s.cats[1].amount, s.d) + ".";
+    if (category) {
+      var amt = b.cats[category] || 0;
+      var prior = s.prev.cats[category] || 0;
+      if (!amt) return 'Nothing recorded under ' + category + ' for ' + label + '. ' + (cfg.tone === 'coach' ? 'Which is either discipline or missing data.' : 'Either virtue or a filing error.');
+      var line = fmt(amt, s.d) + ' on ' + category + ' ' + label + '.';
+      if (monthRef !== 'prev' && prior) line += ' Last month: ' + fmt(prior, s.d) + ' (' + (amt >= prior ? '+' : '') + fmt(amt - prior, s.d) + ').';
+      if (s.budgets.length) {
+        var bud = s.budgets.filter(function (x) { return x.category.toLowerCase() === category; })[0];
+        if (bud) line += ' Budget: ' + fmt(bud.spent, s.d) + ' of ' + fmt(bud.limit, s.d) + ' — ' + pct(bud.pct) + '.';
+      }
       return line;
     }
-    if (/(income|earn|salary|paycheck|paid)/.test(t)) {
-      if (!s.income) return "No income logged this month. That's a data problem, not a character flaw. Probably.";
-      return fmt(s.income, s.d) + " in this month." + (s.rate !== null ? " You kept " + Math.round(s.rate) + "% of it." : "");
+    if (!b.count) return 'Nothing logged for ' + label + '. ' + (cfg.tone === 'coach' ? 'That may just mean it hasn’t been recorded yet.' : 'Either a perfect month or a very quiet ledger.');
+    var out = fmt(b.spend, s.d) + ' out ' + label + ' across ' + b.expenses + ' charge' + (b.expenses === 1 ? '' : 's') + '.';
+    if (b.top) out += ' Biggest: ' + b.top.name + ' at ' + fmt(b.top.amount, s.d) + ' (' + pct((b.top.amount / b.spend) * 100) + ' of spending).';
+    if (b.catsList[1]) out += ' Then ' + b.catsList[1].name + ' at ' + fmt(b.catsList[1].amount, s.d) + '.';
+    if (monthRef !== 'prev' && s.prev.spend > 0) {
+      var diff = s.cur.spend - s.prev.spend;
+      out += '\nVs last month: ' + (diff >= 0 ? '+' : '') + fmt(diff, s.d) + (diff > 0 ? ' more.' : ' less.');
     }
-    if (/(save|saving|rate|surplus|left over)/.test(t)) {
-      if (s.rate === null) return "I need income recorded before I can calculate a savings rate. Otherwise it's just vibes.";
-      var grade = s.rate >= 20 ? 'genuinely good' : s.rate >= 10 ? 'acceptable' : s.rate >= 0 ? 'thin' : 'negative';
-      return "Savings rate: " + Math.round(s.rate) + "% — " + grade + ". " + fmt(s.income - s.spend, s.d) + " left from " + fmt(s.income, s.d) + ".";
-    }
-    if (/(goal|target|progress)/.test(t)) {
-      if (!s.goals.length) return "No goals. Saving without a target is just money hiding.";
-      return s.goals.map(function (g) { return g.name + ": " + fmt(g.saved, s.d) + " of " + fmt(g.target, s.d) + " (" + Math.round(g.pct) + "%)."; }).join("\n");
-    }
-    if (/(balance|net worth|how much do i have|total)/.test(t)) {
-      if (!s.accounts.length) return "No accounts tracked yet. Add one and I'll start counting.";
-      return fmt(s.total, s.d) + " tracked. After minimums, " + fmt(s.available, s.d) + " is actually movable.";
-    }
-    if (/(purchase|buy|plan|wishlist)/.test(t)) {
-      if (!s.purchases.length) return "No planned purchases. Either discipline or denial — I'll allow it.";
-      var next = s.purchases[0];
-      return s.purchases.length + " open plan" + (s.purchases.length === 1 ? '' : 's') + ", " + fmt(s.purchaseTotal - s.purchaseSaved, s.d) + " still unfunded. Next up: " + next.name + " at " + fmt(next.price, s.d) + " (" + fmt(next.saved, s.d) + " saved).";
-    }
-    if (/(advice|what should i|next step|help me|decide|decision|plan)/.test(t)) return advice(s);
-    if (/(what can you do|commands|help)/.test(t)) {
-      return "I read your ledger locally and respond to:\n" +
-        "• “roast me” — honest assessment\n" +
-        "• “can I afford 400” — verdict against your real cushion\n" +
-        "• “how's my spending” / “savings rate” / “budgets” / “goals”\n" +
-        "• “what should I do next” — three concrete moves\n" +
-        "Nothing leaves this device.";
-    }
-    if (/(tone|ruthless|playful|coach|nice)/.test(t)) {
-      return "Tone is set to " + cfg.tone + ". Use the chips at the top to change it — Playful teases, Ruthless doesn't flinch, Coach is kind about it.";
-    }
-    /* fallback */
-    return pick([
-      "I only speak ledger. Try “roast me”, “can I afford 250”, or “what should I do next”.",
-      "That's above my pay grade — I'm a local rules engine, not a philosopher. Ask me about your money.",
-      "Didn't parse that. My brain is a spreadsheet with opinions."
-    ]);
+    return out;
   }
 
-  function greeting() {
+  function projectionAnswer(s) {
+    if (!s.cur.count) return 'Nothing logged this month, so there is nothing to project. My crystal ball is a spreadsheet.';
+    var remaining = s.cur.income > 0 ? s.cur.income - s.cur.spend : null;
+    var out = 'You’re ' + s.elapsed + ' days in with ' + fmt(s.cur.spend, s.d) + ' spent. At this pace you finish ' +
+      new Date(s.now.getFullYear(), s.now.getMonth() + 1, 0).toLocaleString(undefined, { month: 'long' }) +
+      ' at about ' + fmt(s.projected, s.d) + '.';
+    if (remaining !== null) {
+      out += '\nThat would leave ' + fmt(s.cur.income - s.projected, s.d) + ' from ' + fmt(s.cur.income, s.d) + ' income.';
+      if (s.cur.income - s.projected < 0) out += ' You are on pace to overspend.';
+    }
+    if (s.safeDaily !== null) out += '\nSafe daily spend for the remaining ' + s.daysLeft + ' days: ' + fmt(s.safeDaily, s.d) + '.';
+    return out;
+  }
+
+  function compareAnswer(s, category) {
+    if (category) {
+      var a = s.cur.cats[category] || 0, b = s.prev.cats[category] || 0;
+      if (!a && !b) return 'No ' + category + ' spending in either month.';
+      var d = a - b;
+      return category + ': ' + fmt(a, s.d) + ' this month vs ' + fmt(b, s.d) + ' last month (' + (d >= 0 ? '+' : '') + fmt(d, s.d) + ').';
+    }
+    if (!s.cur.count && !s.prev.count) return 'Two empty months is not a comparison, it’s a gap.';
+    var lines = ['This month: ' + fmt(s.cur.spend, s.d) + ' out / ' + fmt(s.cur.income, s.d) + ' in.',
+                 'Last month: ' + fmt(s.prev.spend, s.d) + ' out / ' + fmt(s.prev.income, s.d) + ' in.'];
+    if (s.deltas.length) {
+      var big = s.deltas[0];
+      lines.push('Biggest swing: ' + big.name + ' ' + (big.delta >= 0 ? '+' : '') + fmt(big.delta, s.d) + '.');
+    }
+    return lines.join('\n');
+  }
+
+  function budgetsAnswer(s) {
+    if (!s.budgets.length) return 'No budgets set. Nothing can be over budget when nothing is defined — technically true, practically useless.';
+    if (s.over.length) {
+      return 'Over budget:\n' + s.over.map(function (b) {
+        return '• ' + b.category + ': ' + fmt(b.spent, s.d) + ' of ' + fmt(b.limit, s.d) + ' (' + pct(b.pct) + ', over by ' + fmt(b.spent - b.limit, s.d) + ')';
+      }).join('\n');
+    }
+    var closest = s.budgets[0];
+    return 'Nothing over budget. Closest is ' + closest.category + ' at ' + pct(closest.pct) + ' (' + fmt(closest.spent, s.d) + ' of ' + fmt(closest.limit, s.d) + '), ' + fmt(closest.remaining, s.d) + ' still available.';
+  }
+
+  function goalsAnswer(s) {
+    if (!s.goals.length) return 'No goals set. Saving with no target is just money hiding.';
+    return s.goals.map(function (g) {
+      return '• ' + g.name + ': ' + fmt(g.saved, s.d) + ' of ' + fmt(g.target, s.d) + ' (' + pct(g.pct) + '), ' + fmt(g.remaining, s.d) + ' to go.';
+    }).join('\n');
+  }
+
+  function purchasesAnswer(s) {
+    if (!s.purchases.length) return 'No planned purchases. Either discipline or denial — I won’t pry.';
+    var out = s.purchases.length + ' open plan' + (s.purchases.length === 1 ? '' : 's') + ', ' +
+      fmt(s.purchaseTotal, s.d) + ' total, ' + fmt(s.purchaseTotal - s.purchaseSaved, s.d) + ' still unfunded.\n';
+    out += s.purchases.slice(0, 4).map(function (p) {
+      return '• ' + p.name + ' — ' + fmt(p.price, s.d) + ' (' + fmt(p.saved, s.d) + ' saved, ' + p.priority + ' priority)';
+    }).join('\n');
+    return out;
+  }
+
+  function balanceAnswer(s) {
+    if (!s.accounts.length) return 'No accounts tracked. Add one with its real balance and I can start counting.';
+    var out = fmt(s.total, s.d) + ' across ' + s.accounts.length + ' account' + (s.accounts.length === 1 ? '' : 's') + '.';
+    out += '\nAfter minimum balances: ' + fmt(s.available, s.d) + ' actually movable.';
+    var low = s.accounts.filter(function (a) { return a.minimum != null && num(a.balance) < num(a.minimum); });
+    if (low.length) out += '\n⚠ ' + low.map(function (a) { return a.name; }).join(', ') + ' below its minimum.';
+    return out;
+  }
+
+  function affordAnswer(s, amount, label) {
+    var cover = s.available;
+    var pctCover = cover > 0 ? (amount / cover) * 100 : 999;
+    var fits = amount <= cover;
+    var tail = label ? ' on ' + label : '';
+    if (cfg.tone === 'coach') {
+      return (fits
+        ? 'Yes — ' + fmt(amount, s.d) + tail + ' fits inside ' + fmt(cover, s.d) + ' of uncommitted balance.'
+        : 'Not comfortably. ' + fmt(amount, s.d) + ' exceeds the ' + fmt(cover, s.d) + ' you have free after minimums.') +
+        ' It would use ' + pct(pctCover) + ' of your cushion.' +
+        (pctCover > 30 ? ' I’d wait a cycle and fund it deliberately.' : '');
+    }
+    if (fits && pctCover < 12) return 'Yes. ' + fmt(amount, s.d) + ' is ' + pct(pctCover) + ' of your cushion. Barely a scratch' + tail + '. Go.';
+    if (fits && pctCover < 30) return 'You can afford ' + fmt(amount, s.d) + ' — ' + pct(pctCover) + ' of your cushion' + tail + '. Not fatal, not clever. Your call.';
+    if (fits) return 'Technically yes: ' + fmt(amount, s.d) + ' would eat ' + pct(pctCover) + ' of your cushion' + tail + '. That’s the kind of yes that becomes a story later.';
+    return 'No. You have ' + fmt(cover, s.d) + ' free and you’re asking about ' + fmt(amount, s.d) + tail + '. That’s not a purchase, that’s a loan from your future self.';
+  }
+
+  function safeAnswer(s) {
+    if (s.safeDaily === null) return 'I need income recorded this month before I can calculate a safe daily number.';
+    var out = 'Safe daily spend: ' + fmt(s.safeDaily, s.d) + ' for the remaining ' + s.daysLeft + ' day' + (s.daysLeft === 1 ? '' : 's') + '.';
+    var committed = s.purchases.reduce(function (a, p) { return a + Math.max(0, p.price - p.saved); }, 0);
+    if (committed > 0) out += '\nThat leaves nothing for the ' + fmt(committed, s.d) + ' of unfunded purchases unless you cut elsewhere.';
+    return out;
+  }
+
+  function roastAnswer(s) {
+    if (!s.accounts.length && !s.cur.count) return 'You have no data. I can’t roast an empty room — that’s just bullying.';
+    var bits = [];
+    if (s.over.length) {
+      var b = s.over[0];
+      bits.push(pick([
+        'Your ' + b.category + ' budget is at ' + pct(b.pct) + ' — ' + fmt(b.spent, s.d) + ' against ' + fmt(b.limit, s.d) + '. Bold, given you wrote that number yourself.',
+        b.category + ' is ' + pct(b.pct) + ' of budget. A budget isn’t a suggestion, it’s a promise you made to yourself.',
+        'You blew past ' + b.category + ' by ' + fmt(b.spent - b.limit, s.d) + '. Impressive in the way a car fire is impressive.'
+      ]));
+    }
+    if (s.cur.rate !== null && s.cur.rate < 0) {
+      bits.push('You spent ' + fmt(s.cur.spend - s.cur.income, s.d) + ' more than you earned this month.');
+    } else if (s.cur.rate !== null && s.cur.rate < 10 && s.cur.count) {
+      bits.push('You kept ' + pct(s.cur.rate) + ' of what came in. Technically saving. Barely.');
+    }
+    if (s.projected > s.cur.income && s.cur.income > 0) {
+      bits.push('At this pace you finish the month at ' + fmt(s.projected, s.d) + ' — ' + fmt(s.projected - s.cur.income, s.d) + ' past your income.');
+    }
+    if (s.purchases.length) {
+      bits.push(s.purchases.length + ' planned purchase' + (s.purchases.length === 1 ? '' : 's') + ' with ' + fmt(s.purchaseTotal - s.purchaseSaved, s.d) + ' unfunded. A wishlist with dates is still a wishlist.');
+    }
+    if (!bits.length) {
+      bits.push(pick([
+        'Honestly? ' + (s.cur.rate !== null ? pct(s.cur.rate) + ' saved' : 'no overspending') + ', nothing over budget. I’m suspicious, but impressed.',
+        'Boring month. Boring is the goal. Keep it up.',
+        'No disasters to mock. Give me a bad decision to work with.'
+      ]));
+    }
+    if (cfg.tone === 'ruthless' && s.deltas.length && s.deltas[0].delta > 0) {
+      bits.push('Worst drift: ' + s.deltas[0].name + ' up ' + fmt(s.deltas[0].delta, s.d) + ' on last month.');
+    }
+    if (cfg.tone === 'coach') {
+      return 'Straight read: ' + bits.join(' ') + ' The fix is one number — pick the biggest line and cut it 20% next month.';
+    }
+    return bits.join(' ');
+  }
+
+  function adviceAnswer(s) {
+    var moves = [];
+    if (s.over.length) moves.push('Cut ' + s.over[0].category + ' — already ' + pct(s.over[0].pct) + ' of its budget with ' + s.daysLeft + ' days left.');
+    if (s.projected > s.cur.income && s.cur.income > 0) moves.push('You’re tracking ' + fmt(s.projected - s.cur.income, s.d) + ' over income. Cap the remaining ' + s.daysLeft + ' days at ' + fmt(s.safeDaily || 0, s.d) + '/day.');
+    else if (s.safeDaily !== null && s.safeDaily > 0) moves.push('Keep daily spending under ' + fmt(s.safeDaily, s.d) + ' to stay inside this month’s income.');
+    if (s.cur.rate !== null && s.cur.rate < 10) moves.push('Move 10% of income out the day it lands — before it’s visible, before it’s spent.');
+    if (s.purchases.length) {
+      var top = s.purchases.slice().sort(function (a, b) { return b.price - a.price; })[0];
+      moves.push('Fund ' + top.name + ' (' + fmt(top.price - top.saved, s.d) + ' short) before adding anything new to the list.');
+    }
+    if (s.goals.length) {
+      var slow = s.goals.slice().sort(function (a, b) { return a.pct - b.pct; })[0];
+      if (slow.pct < 60) moves.push(slow.name + ' is at ' + pct(slow.pct) + ' (' + fmt(slow.remaining, s.d) + ' to go) — automate a weekly amount instead of waiting for leftovers.');
+    }
+    if (s.available < s.cur.spend) moves.push('Your cushion (' + fmt(s.available, s.d) + ') is smaller than one month’s spending. That’s the actual emergency.');
+    if (!moves.length) moves.push('Nothing is on fire. Move the surplus somewhere it can’t be spent and keep doing exactly this.');
+    return moves.slice(0, 3).map(function (m, i) { return (i + 1) + '. ' + m; }).join('\n');
+  }
+
+  function helpAnswer() {
+    return 'I read your ledger locally and answer:\n' +
+      '• “what can you see” — what I’m working from\n' +
+      '• “roast me” — honest assessment\n' +
+      '• “can I afford 400” — verdict against your real cushion\n' +
+      '• “how much did I spend on dining last month”\n' +
+      '• “am I on track this month” — projection\n' +
+      '• “compare to last month”\n' +
+      '• “what should I do next” — three ranked moves\n' +
+      '• “how much can I spend per day”\n\nFollow-ups work too: ask “and dining?” or “why?” after an answer.';
+  }
+
+  function greeting(s) {
+    if (!s.ok) return 'I can’t reach your ledger yet. Add an account, or reload once you’re signed in — then I’ll start reading.';
+    if (!s.accounts.length && !s.txCount) {
+      return 'Online, but the ledger is empty. Add one account with its real balance and log a transaction — then I have something to work with.';
+    }
+    var head = 'Online. ' + s.accounts.length + ' account' + (s.accounts.length === 1 ? '' : 's') + ', ' + s.txCount + ' transaction' + (s.txCount === 1 ? '' : 's') + '. ';
+    if (s.over.length) return head + s.over[0].category + ' is already at ' + pct(s.over[0].pct) + ' of budget. We should talk about that.';
+    if (s.cur.rate !== null && s.cur.rate < 0) return head + 'You’re ' + fmt(s.cur.spend - s.cur.income, s.d) + ' negative this month. Ask for a roast or a plan.';
+    if (s.projected > s.cur.income && s.cur.income > 0) return head + 'At this pace you’ll overspend by ' + fmt(s.projected - s.cur.income, s.d) + '.';
+    if (s.purchases.length) return head + s.purchases.length + ' purchase plan' + (s.purchases.length === 1 ? '' : 's') + ' open, ' + fmt(s.purchaseTotal - s.purchaseSaved, s.d) + ' unfunded.';
+    return head + (s.cur.count ? fmt(s.cur.spend, s.d) + ' out this month. ' : 'Quiet month. ') + 'What are we deciding?';
+  }
+
+  /* ---------------- the brain ---------------- */
+  function reply(text) {
     var s = snapshot();
-    s.tone = cfg.tone;
-    if (s.empty) return "Online. I can't see a ledger yet — add an account and log something, then I'll have opinions.";
-    if (s.over.length) return "Online. " + s.over[0].category + " is at " + Math.round(s.over[0].pct) + "% of budget. We should talk about that.";
-    if (s.rate !== null && s.rate < 0) return "Online. You're " + fmt(s.spend - s.income, s.d) + " negative this month. Ask me for a roast, or a plan — dealer's choice.";
-    if (s.purchases.length) return "Online. " + s.purchases.length + " purchase plan" + (s.purchases.length === 1 ? '' : 's') + " open and " + fmt(s.purchaseTotal - s.purchaseSaved, s.d) + " unfunded. Want my read?";
-    return "Online. " + fmt(s.total, s.d) + " tracked, " + (s.count ? fmt(s.spend, s.d) + " spent this month." : "quiet month so far.") + " What are we deciding?";
+    if (!s.ok) return 'I can’t read the ledger. If you’re signed in, reload once — the app may still be loading your cloud copy.';
+    var raw = String(text || '').trim();
+    var t = raw.toLowerCase();
+    if (!t) return 'Say something specific. “Roast me” works.';
+
+    var category = findCategory(t, s);
+    var amount = parseAmount(t);
+    var monthRef = parseMonth(t, s);
+
+    /* follow-ups that lean on the previous answer */
+    if (/^(why|how come|explain|really)\b/.test(t) && last.intent) {
+      if (last.category) {
+        var whyBucket = last.month === 'prev' ? s.prev : s.cur;
+        var whyLabel = last.month === 'prev' ? 'last month' : 'this month';
+        var whyOther = last.month === 'prev' ? s.cur : s.prev;
+        var whyAmt = whyBucket.cats[last.category] || 0;
+        var otherAmt = whyOther.cats[last.category] || 0;
+        var hasBudget = s.budgets.some(function (b) { return b.category.toLowerCase() === String(last.category).toLowerCase(); });
+        return 'Because ' + last.category + ' came to ' + fmt(whyAmt, s.d) + ' ' + whyLabel +
+          ', against ' + fmt(otherAmt, s.d) + ' in the other month. ' +
+          (hasBudget ? 'And it has a budget it’s supposed to respect.' : 'No budget on it, which is how these things drift.');
+      }
+      return 'The numbers are the reason: ' + fmt(s.cur.spend, s.d) + ' out versus ' + fmt(s.cur.income, s.d) + ' in, with ' + s.daysLeft + ' days still to go.';
+    }
+    if (/^(and|what about|how about)\b/.test(t) && (category || amount) && last.intent) {
+      if (last.intent === 'spend' && category) { last.category = category; return spendAnswer(s, monthRef, category); }
+      if (last.intent === 'afford' && amount) { last.amount = amount; return affordAnswer(s, amount, category || ''); }
+    }
+
+    var bareAmount = /^\s*\$?\s*\d[\d,.]*\s*k?\s*$/.test(t);
+    var intent = bareAmount ? 'afford' : classify(t) || (last.intent && t.split(/\s+/).length <= 3 ? last.intent : null);
+    if (intent === 'compare' && monthRef && /spend|spent|cost|pay|paid/.test(t)) intent = 'spend';
+    if (!intent) {
+      if (amount !== null) intent = 'afford';
+      else if (category) intent = 'spend';
+    }
+
+    if (intent) { last.intent = intent; last.category = category || last.category; last.amount = amount || last.amount; }
+    if (monthRef) last.month = monthRef;
+    else if (intent === 'spend' || intent === 'afford' || intent === 'budget') last.month = 'cur';
+
+    switch (intent) {
+      case 'see': return seeAnswer(s);
+      case 'spend': return spendAnswer(s, monthRef, category);
+      case 'afford': {
+        if (amount === null) return 'Afford what? Give me a number — “can I afford 400” — and I’ll judge it against your ' + fmt(s.available, s.d) + ' of free balance.';
+        var label = raw.replace(/.*(?:buy|afford|get)\s*/i, '').replace(/[?.!]/g, '').trim();
+        if (!label || /^[\d\s,.$k]+$/i.test(label)) label = category || '';
+        return affordAnswer(s, amount, label);
+      }
+      case 'projection': return projectionAnswer(s);
+      case 'compare': return compareAnswer(s, category);
+      case 'roast': return roastAnswer(s);
+      case 'budget': return budgetsAnswer(s);
+      case 'income':
+        return s.cur.income > 0
+          ? fmt(s.cur.income, s.d) + ' in this month' + (s.cur.rate !== null ? ', keeping ' + pct(s.cur.rate) + '.' : '.')
+          : 'No income recorded this month. That’s a data gap, not a character flaw. Probably.';
+      case 'savings':
+        if (s.cur.rate === null) return 'I need income recorded before I can compute a savings rate. Otherwise it’s just vibes.';
+        return 'Savings rate: ' + pct(s.cur.rate) + ' — ' + (s.cur.rate >= 20 ? 'genuinely good' : s.cur.rate >= 10 ? 'acceptable' : s.cur.rate >= 0 ? 'thin' : 'negative') +
+          '. ' + fmt(s.cur.income - s.cur.spend, s.d) + ' left from ' + fmt(s.cur.income, s.d) + '.';
+      case 'goals': return goalsAnswer(s);
+      case 'purchases': return purchasesAnswer(s);
+      case 'balance': return balanceAnswer(s);
+      case 'safe': return safeAnswer(s);
+      case 'advice': return adviceAnswer(s);
+      case 'help': return helpAnswer();
+      case 'tone':
+        return 'Tone is ' + cfg.tone + '. Chips up top switch it: Playful teases, Ruthless doesn’t flinch, Coach is kind about it.';
+      case 'greet':
+        return s.accounts.length || s.txCount
+          ? greeting(s)
+          : 'Online. No ledger yet — add an account and I’ll have something to judge.';
+      default:
+        return pick([
+          'I don’t follow. I speak ledger: try “roast me”, “can I afford 250”, or “what should I do next”.',
+          'That’s outside what I can compute. Ask me about spending, budgets, goals, or a purchase.',
+          'No idea what that means, but I’m confident about your money. Try “am I on track this month”.'
+        ]);
+    }
   }
 
   /* ---------------- UI ---------------- */
-  var panel, log, input, orb, typingEl = null, built = false;
+  var panel, log, input, orb, built = false;
 
-  function el(tag, cls, html) {
-    var n = document.createElement(tag);
-    if (cls) n.className = cls;
-    if (html != null) n.innerHTML = html;
-    return n;
-  }
   function icon(path, size) {
     return '<svg viewBox="0 0 24 24" width="' + (size || 16) + '" height="' + (size || 16) + '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + path + '</svg>';
   }
@@ -2538,19 +2824,21 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     if (built) return;
     built = true;
 
-    orb = el('button', 'nsj-orb');
+    orb = document.createElement('button');
     orb.type = 'button';
+    orb.className = 'nsj-orb';
     orb.setAttribute('aria-label', 'Open Northstar assistant');
     orb.innerHTML = icon('<path d="M12 3.4 13.6 8.6 18.8 10.2 13.6 11.8 12 17 10.4 11.8 5.2 10.2 10.4 8.6z"/><path d="M17.6 15.4l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>', 24) +
       '<span class="nsj-live"></span>';
 
-    panel = el('section', 'nsj-panel');
+    panel = document.createElement('section');
+    panel.className = 'nsj-panel';
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-label', 'Northstar assistant');
     panel.innerHTML =
       '<header class="nsj-head">' +
         '<div class="nsj-avatar">NS</div>' +
-        '<div class="nsj-title"><b>JARVIS</b><span id="nsjStatus">Local brain · offline</span></div>' +
+        '<div class="nsj-title"><b>JARVIS</b><span id="nsjStatus">Reading ledger…</span></div>' +
         '<div class="nsj-tones">' +
           '<button type="button" class="nsj-tone" data-tone="playful" aria-pressed="' + (cfg.tone === 'playful') + '">Playful</button>' +
           '<button type="button" class="nsj-tone" data-tone="ruthless" aria-pressed="' + (cfg.tone === 'ruthless') + '">Ruthless</button>' +
@@ -2560,10 +2848,11 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
       '</header>' +
       '<div class="nsj-log" id="nsjLog" role="log" aria-live="polite"></div>' +
       '<div class="nsj-chips">' +
+        '<button type="button" class="nsj-chip" data-ask="what can you see">What do you see?</button>' +
         '<button type="button" class="nsj-chip" data-ask="roast me">Roast me</button>' +
-        '<button type="button" class="nsj-chip" data-ask="how is my spending">Spending</button>' +
+        '<button type="button" class="nsj-chip" data-ask="am I on track this month">On track?</button>' +
+        '<button type="button" class="nsj-chip" data-ask="how much did I spend on dining this month">Dining?</button>' +
         '<button type="button" class="nsj-chip" data-ask="what should I do next">Next move</button>' +
-        '<button type="button" class="nsj-chip" data-ask="can I afford 250">Afford 250?</button>' +
       '</div>' +
       '<div class="nsj-foot">' +
         '<button type="button" class="nsj-btn" id="nsjVoice" aria-pressed="' + (cfg.voice ? 'true' : 'false') + '" aria-label="Toggle spoken replies">' + icon('<path d="M4 9.5h3.2L12 5.5v13L7.2 14.5H4z"/><path d="M15.6 9a4 4 0 0 1 0 6"/>') + '</button>' +
@@ -2571,7 +2860,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
         '<button type="button" class="nsj-btn" id="nsjMic" aria-label="Voice input">' + icon('<path d="M12 4.5a2.6 2.6 0 0 0-2.6 2.6v4.4a2.6 2.6 0 0 0 5.2 0V7.1A2.6 2.6 0 0 0 12 4.5z"/><path d="M6.5 11a5.5 5.5 0 0 0 11 0"/><path d="M12 16.5V20"/>') + '</button>' +
         '<button type="button" class="nsj-btn send" id="nsjSend" aria-label="Send">' + icon('<path d="M5 12h13M13 6.5 18.5 12 13 17.5"/>') + '</button>' +
       '</div>' +
-      '<div class="nsj-footnote">Runs locally · nothing leaves this device</div>';
+      '<div class="nsj-footnote">Reads your ledger locally · nothing leaves this device</div>';
 
     document.body.appendChild(orb);
     document.body.appendChild(panel);
@@ -2579,22 +2868,19 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     log = panel.querySelector('#nsjLog');
     input = panel.querySelector('#nsjInput');
 
-    orb.addEventListener('click', toggle);
+    orb.addEventListener('click', function () { toggle(); });
     panel.querySelector('.nsj-close').addEventListener('click', function () { toggle(false); });
 
     panel.querySelectorAll('.nsj-tone').forEach(function (b) {
       b.addEventListener('click', function () {
         cfg.tone = b.getAttribute('data-tone'); saveCfg();
-        panel.querySelectorAll('.nsj-tone').forEach(function (x) {
-          x.setAttribute('aria-pressed', String(x === b));
-        });
-        say("Tone: " + cfg.tone + ".", true);
+        panel.querySelectorAll('.nsj-tone').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+        say('Tone: ' + cfg.tone + '.', true);
       });
     });
     panel.querySelectorAll('.nsj-chip').forEach(function (b) {
       b.addEventListener('click', function () { send(b.getAttribute('data-ask')); });
     });
-
     panel.querySelector('#nsjSend').addEventListener('click', function () { send(input.value); });
     input.addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); send(input.value); }
@@ -2605,7 +2891,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     voiceBtn.addEventListener('click', function () {
       cfg.voice = !cfg.voice; saveCfg();
       voiceBtn.setAttribute('aria-pressed', String(cfg.voice));
-      if (cfg.voice) speak("Voice online.");
+      if (cfg.voice) speak('Voice online.');
       else if ('speechSynthesis' in window) window.speechSynthesis.cancel();
     });
 
@@ -2614,45 +2900,51 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     var rec = null;
     mic.addEventListener('click', function () {
       if (!SR) return;
-      if (rec) { rec.stop(); return; }
+      if (rec) { try { rec.stop(); } catch (e) {} return; }
       try {
         rec = new SR();
         rec.lang = navigator.language || 'en-US';
         rec.interimResults = false;
-        rec.maxAlternatives = 1;
         mic.classList.add('rec');
-        rec.onresult = function (ev) {
-          var said = ev.results[0][0].transcript;
-          mic.classList.remove('rec'); rec = null;
-          send(said);
-        };
+        rec.onresult = function (ev) { mic.classList.remove('rec'); rec = null; send(ev.results[0][0].transcript); };
         rec.onerror = rec.onend = function () { mic.classList.remove('rec'); rec = null; };
         rec.start();
       } catch (e) { mic.classList.remove('rec'); rec = null; }
     });
+
+    refreshStatus();
+  }
+
+  function refreshStatus() {
+    var el = panel && panel.querySelector('#nsjStatus');
+    if (!el) return;
+    var s = snapshot();
+    el.textContent = s.ok
+      ? 'Local · ' + s.accounts.length + ' acct · ' + s.txCount + ' tx'
+      : 'No ledger found';
   }
 
   function addMsg(text, who) {
-    var n = el('div', 'nsj-msg ' + who);
+    var n = document.createElement('div');
+    n.className = 'nsj-msg ' + who;
     n.textContent = text;
     log.appendChild(n);
     log.scrollTop = log.scrollHeight;
     return n;
   }
-
-  function typeThen(text, done) {
-    var t = el('div', 'nsj-typing', '<i></i><i></i><i></i>');
+  function typeThen(text) {
+    var t = document.createElement('div');
+    t.className = 'nsj-typing';
+    t.innerHTML = '<i></i><i></i><i></i>';
     log.appendChild(t);
     log.scrollTop = log.scrollHeight;
-    var wait = reduce ? 60 : Math.min(1100, 320 + text.length * 7);
+    var wait = reduce ? 60 : Math.min(900, 260 + text.length * 5);
     setTimeout(function () {
       t.remove();
       addMsg(text, 'bot');
       speak(text);
-      if (done) done();
     }, wait);
   }
-
   function say(text, instant) { if (instant) { addMsg(text, 'bot'); speak(text); } else typeThen(text); }
 
   function send(raw) {
@@ -2661,8 +2953,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     input.value = '';
     addMsg(text, 'me');
     try { if (window.NorthstarFX && window.NorthstarFX.sound) window.NorthstarFX.sound.tap(); } catch (e) {}
-    var answer = reply(text);
-    typeThen(answer);
+    typeThen(reply(text));
   }
 
   var greeted = false;
@@ -2673,13 +2964,11 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     orb.classList.toggle('open', open);
     orb.setAttribute('aria-expanded', String(open));
     if (open) {
+      refreshStatus();
       setTimeout(function () { input.focus(); }, 180);
-      if (!greeted) {
-        greeted = true;
-        typeThen(greeting());
-      }
-    } else {
-      try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) {}
+      if (!greeted) { greeted = true; typeThen(greeting(snapshot())); }
+    } else if ('speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
     }
   }
 
@@ -2694,7 +2983,13 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', build);
   else build();
 
-  window.NorthstarJarvis = { open: function () { toggle(true); }, ask: function (q) { toggle(true); send(q); }, reply: reply, snapshot: snapshot };
+  window.NorthstarJarvis = {
+    open: function () { toggle(true); },
+    ask: function (q) { toggle(true); typeThen(reply(q)); },
+    reply: reply,
+    snapshot: snapshot,
+    ledger: ledger
+  };
 })();
 
 </script>
