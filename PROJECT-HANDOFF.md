@@ -212,11 +212,11 @@ The visitor's screenshot showed `Local fallback · Missing authentication header
 
 **Verification:** `node --check`/`vm.Script` syntax validation, parse5 and css-tree parsing, and focused jsdom tests cover stale-model migration, session-only key storage, OpenRouter Authorization header and model, 64-token probe, hidden Base URL, verified-vs-unverified status, cloud source labels, full auth error detail, bounded long error text, a single retry recovering a 502, and attribution on all assistant responses. All passed. No live provider call or browser visual QA was possible in this sandbox.
 
-## 4h. Jarvis ambient liquid-ink animation (2026-11-03)
+## 4h. Site-wide ambient ink background (2026-11-03)
 
-Added a slow-moving monochrome ink current behind Jarvis's glass panel, plus larger, softly drifting gray plumes while the panel is open. Existing pointer/message ink blooms remain the more colorful interactive accents. The ambient timer is created only while Jarvis is open and is stopped when it closes; reduced-motion users get no new continuous animation. No 3D transforms or finance/data behavior changes.
+Follow-up to the earlier Jarvis-only ink experiment: the user clarified that they wanted ink as an ambient **page background**, not behind Jarvis and not tied to cursor movement. Removed the Jarvis canvas blooms/continuous panel effect and removed the global cursor light/trail. The page now gets a monochrome, softly diffusing ink-in-water canvas beneath the app shell, spawning slow-moving gray plumes independently of pointer position. The effect is available on coarse-pointer devices, stops while the document is hidden, and is disabled for reduced-motion users. Existing ambient gradient fields remain. No 3D transforms or finance/data behavior changes.
 
-**Verification:** parse5 reported 0 HTML errors; css-tree parsed all six style blocks; both Jarvis runtime scripts passed JavaScript syntax checks; `git diff --check` passed. The preview server is available for the user to inspect; no visual QA was claimed in the sandbox.
+**Verification:** parse5 reported 0 HTML errors; css-tree parsed all six style blocks; both remaining runtime scripts passed syntax checks; jsdom confirmed the page creates the full-viewport ambient canvas, keeps it outside the Jarvis panel, and does not install pointer-movement handlers. `git diff --check` passed. Reduced-motion CSS and the runtime's early return were checked. A live preview can be inspected by the user; no visual QA is claimed here.
 
 ## 5. User requirements and non-negotiable design constraints
 
@@ -333,6 +333,7 @@ Latest code-focused commits visible during this review were on 2026-10-26. The c
 
 - 2026-11-03: Added the BYOK cloud brain — paste-in key slot in a Connections sheet, Gemini/OpenAI/Anthropic/Groq/OpenRouter/custom adapters, session-by-default key storage isolated from finance data, principal-free brief, silent local fallback with per-message source labels. Widened the `safe` intent. 27 BYOK + 11 local-brain jsdom assertions pass; no live API call or visual QA was possible.
 - 2026-11-03: Fixed BYOK reliability issues reported during visitor testing: stale model defaults, false `Connected` status, hidden-field CSS leak, short probe tokens, truncated upstream errors, and no transient retry. All assistant replies now identify their source; see 4g. Focused jsdom/parser checks pass; live provider access and visual QA were not available.
+- 2026-11-03: Moved ambient ink out of Jarvis to a page-wide grayscale background per user clarification. It drifts independently of pointer movement, runs on coarse pointers, pauses in hidden tabs, and is disabled for reduced motion.
 
 - 2026-11-03: Re-reviewed the prior Northstar project context available in this conversation, the current repository inventory, root README, Firestore rules, Worker source/configuration, current `index.html`, and recent Git commit history. Rewrote this handoff to reflect the current static-site architecture and implemented functionality.
 - 2026-11-03: Corrected the mobile-scrolling status. The user confirmed scrolling was already fixed; repository commits from 2026-10-24 and 2026-10-26 and the current responsive CSS corroborate that status. No new scrolling code was changed.
