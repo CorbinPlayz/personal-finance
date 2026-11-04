@@ -2,9 +2,19 @@
 
 Print-ready instruction manuals. One per problem type. Written to be followed with a pen in hand, not read like an article.
 
-| Manual | Source | PDF |
-|---|---|---|
-| Fixing Your Ender 3 V2 — 13 pages | [`ender-3-v2-manual.md`](ender-3-v2-manual.md) | [`ender-3-v2-manual.pdf`](ender-3-v2-manual.pdf) |
+| Manual | Source | Standard PDF | Print-friendly PDF |
+|---|---|---|---|
+| Fixing Your Ender 3 V2 — 14 pages | [`ender-3-v2-manual.md`](ender-3-v2-manual.md) | [`ender-3-v2-manual.pdf`](ender-3-v2-manual.pdf) | [`ender-3-v2-manual-print-friendly.pdf`](ender-3-v2-manual-print-friendly.pdf) |
+
+### Two editions
+
+- **Standard** — solid black phase banners and table headers. Best on a laser printer or screen.
+- **Print-friendly** — same content, no solid black fills anywhere. Banners become heavy
+  rules with big numerals, table headers become rules. About **80% less toner** by ink
+  coverage than the standard edition, and it won't curl cheap paper.
+
+Both are built from the same source in one run. The switch is the `LOW_INK` flag, set per
+edition in `build_edition()`.
 
 ## Why PDF
 
@@ -27,7 +37,7 @@ python3 -m venv .venv
 .venv/bin/python fix-log/manuals/build_pdf.py
 ```
 
-Output overwrites `ender-3-v2-manual.pdf`. The script prints a page count and the first
+Output overwrites both PDFs in one run. The script prints a page count and the first
 line of text on each page so you can sanity-check pagination without opening a viewer.
 
 Fonts: DejaVu Sans (standard on most Linux installs, at `/usr/share/fonts/truetype/dejavu`).
@@ -44,3 +54,6 @@ Change `FONT_DIR` in the script if yours lives elsewhere. The font needs the ☐
   loud because it's the $35 mistake almost everyone makes.
 - **Never say "easy."** Say "moderate, and the order is what matters." It's honest, and it
   keeps people following the steps instead of improvising.
+- **No ink where it isn't doing work.** A full-bleed black cover looks great on screen and
+  is a bad thing to hand someone with a $40 inkjet. The print-friendly edition is the
+  default recommendation, not the compromise.

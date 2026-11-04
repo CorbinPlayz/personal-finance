@@ -39,7 +39,7 @@ Step-by-step instruction manuals, one per problem type — written so you can fo
 
 | Manual | Source | Printable PDF |
 |---|---|---|
-| Fixing Your Ender 3 V2 (13 pp) | [`manuals/ender-3-v2-manual.md`](manuals/ender-3-v2-manual.md) | [`manuals/ender-3-v2-manual.pdf`](manuals/ender-3-v2-manual.pdf) |
+| Fixing Your Ender 3 V2 (14 pp) | [`manuals/ender-3-v2-manual.md`](manuals/ender-3-v2-manual.md) | [`manuals/ender-3-v2-manual.pdf`](manuals/ender-3-v2-manual.pdf) · [print-friendly](manuals/ender-3-v2-manual-print-friendly.pdf) |
 
 Rebuild instructions and house style: [`manuals/README.md`](manuals/README.md)
 

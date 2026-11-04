@@ -63,6 +63,11 @@ MARGIN_T = 1.05 * inch
 MARGIN_B = 0.85 * inch
 CONTENT_W = PAGE_W - MARGIN_L - MARGIN_R
 
+# LOW_INK=None -> the full-impact edition.
+# LOW_INK=True -> an edition built to survive a home printer: no solid black fills,
+#                 inversion bars redrawn as rules, mid-greys darkened for legibility.
+LOW_INK = None
+
 PAGES = {}  # page number -> phase label, filled by the doc template
 RENDER_STATE = {"label": ""}
 
@@ -97,6 +102,11 @@ st_check = S("check", fontSize=10, leading=15)
 st_small = S("small", fontSize=8.5, leading=12, textColor=GREY)
 st_center_small = S("cs", fontSize=8.5, leading=12, textColor=GREY, alignment=TA_CENTER)
 st_tbl_h = S("tblh", fontName="DJ-B", fontSize=8.5, leading=11.5, textColor=colors.white)
+
+
+def _tbl_head_style():
+    return st_tbl_h if not LOW_INK else S("tblh2", fontName="DJ-B", fontSize=8.5,
+                                          leading=11.5, textColor=INK)
 st_tbl = S("tbl", fontSize=8.5, leading=11.5)
 st_tbl_b = S("tblb", fontName="DJ-B", fontSize=8.5, leading=11.5)
 st_figcap = S("cap", fontSize=7.6, leading=10, textColor=GREY)
@@ -215,17 +225,30 @@ def callout(title, body, kind="note"):
 
 def decision_box(lines, header="DECISION POINT"):
     """Inverted band header plus its contents."""
-    head = Table([[Paragraph(header, S("dh", fontName="DJ-B", fontSize=8, leading=10,
-                                       textColor=colors.white))]],
-                 colWidths=[CONTENT_W], rowHeights=[0.235 * inch])
-    head.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, -1), BLACK),
-        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("LEFTPADDING", (0, 0), (-1, -1), 12),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-        ("TOPPADDING", (0, 0), (-1, -1), 0),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-    ]))
+    if LOW_INK:
+        head = Table([[Paragraph(header, S("dh", fontName="DJ-B", fontSize=8, leading=10,
+                                           textColor=INK))]],
+                     colWidths=[CONTENT_W], rowHeights=[0.235 * inch])
+        head.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+            ("LINEABOVE", (0, 0), (-1, 0), 2.0, BLACK),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 12),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ]))
+    else:
+        head = Table([[Paragraph(header, S("dh", fontName="DJ-B", fontSize=8, leading=10,
+                                           textColor=colors.white))]],
+                     colWidths=[CONTENT_W], rowHeights=[0.235 * inch])
+        head.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), BLACK),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 12),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 0),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+        ]))
     rows = []
     for l in lines:
         if l == "---":
@@ -264,7 +287,7 @@ def data_table(rows, widths=None, header=True, first_bold=False):
         cells = []
         for c_i, cell in enumerate(row):
             if r_i == 0 and header:
-                cells.append(Paragraph(cell, st_tbl_h))
+                cells.append(Paragraph(cell, _tbl_head_style()))
             elif first_bold and c_i == 0:
                 cells.append(Paragraph(cell, st_tbl_b))
             else:
@@ -281,11 +304,20 @@ def data_table(rows, widths=None, header=True, first_bold=False):
         ("LINEBELOW", (0, -1), (-1, -1), 1.0, INK),
     ]
     if header:
-        style += [
-            ("BACKGROUND", (0, 0), (-1, 0), BLACK),
-            ("TOPPADDING", (0, 0), (-1, 0), 8),
-            ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
-        ]
+        if LOW_INK:
+            style += [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.white),
+                ("LINEABOVE", (0, 0), (-1, 0), 2.0, BLACK),
+                ("LINEBELOW", (0, 0), (-1, 0), 0.8, BLACK),
+                ("TOPPADDING", (0, 0), (-1, 0), 9),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 9),
+            ]
+        else:
+            style += [
+                ("BACKGROUND", (0, 0), (-1, 0), BLACK),
+                ("TOPPADDING", (0, 0), (-1, 0), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+            ]
     t.setStyle(TableStyle(style))
     return [t, Spacer(1, 12)]
 
@@ -513,80 +545,110 @@ def fig_caption(text):
 
 # ---------------------------------------------------------------- page furniture
 def on_cover(canvas, doc):
+    """Ink-light cover: white page, black type, one rule. Made to be printed, not admired."""
     canvas.saveState()
-    canvas.setFillColor(BLACK)
-    canvas.rect(0, 0, PAGE_W, PAGE_H, stroke=0, fill=1)
-
     x = MARGIN_L
-    top = PAGE_H - 1.55 * inch
+    right = PAGE_W - MARGIN_R
+    top = PAGE_H - 1.35 * inch
 
-    # top meta line
-    canvas.setFillColor(DIM)
+    # --- top meta line
+    canvas.setFillColor(BLACK)
     canvas.setFont("DJ-B", 8)
     canvas.drawString(x, top, "FIX LOG  /  ENTRY 001")
-    canvas.drawRightString(PAGE_W - MARGIN_R, top, "NORTHSTAR · 2026")
+    canvas.setFillColor(GREY)
+    canvas.drawRightString(right, top, "Northstar  ·  2026")
 
-    # hairline under meta
-    canvas.setStrokeColor(colors.HexColor("#3a3a3a"))
-    canvas.setLineWidth(0.6)
-    canvas.line(x, top - 10, PAGE_W - MARGIN_R, top - 10)
+    canvas.setStrokeColor(INK)
+    canvas.setLineWidth(1.4)
+    canvas.line(x, top - 12, right, top - 12)
 
-    # title
-    t1 = top - 92
-    canvas.setFillColor(colors.white)
-    canvas.setFont("DJ-B", 52)
+    # --- title
+    t1 = top - 108
+    canvas.setFillColor(BLACK)
+    canvas.setFont("DJ-B", 54)
     canvas.drawString(x, t1, "FIXING YOUR")
-    canvas.drawString(x, t1 - 56, "ENDER 3 V2")
+    canvas.drawString(x, t1 - 58, "ENDER 3 V2")
 
-    # title rule
-    canvas.setLineWidth(4)
-    canvas.line(x, t1 - 82, x + 1.5 * inch, t1 - 82)
+    # one solid bar under the title. On the low-ink edition it becomes a rule.
+    if LOW_INK:
+        canvas.setStrokeColor(BLACK)
+        canvas.setLineWidth(2.6)
+        canvas.line(x, t1 - 90, x + 2.9 * inch, t1 - 90)
+    else:
+        canvas.setFillColor(BLACK)
+        canvas.rect(x, t1 - 92, 2.9 * inch, 7, stroke=0, fill=1)
 
-    canvas.setFillColor(colors.HexColor("#c6c6c6"))
-    canvas.setFont("DJ", 13)
-    canvas.drawString(x, t1 - 112, "An instruction manual for humans.")
+    canvas.setFillColor(INK)
+    canvas.setFont("DJ", 14)
+    canvas.drawString(x, t1 - 122, "An instruction manual for humans.")
+    canvas.setFillColor(GREY)
     canvas.setFont("DJ", 11.5)
-    canvas.setFillColor(DIM)
-    canvas.drawString(x, t1 - 134, "One action per step. Follow it in order.")
+    canvas.drawString(x, t1 - 143, "One action per step. Follow it in order.")
 
-    # phase index
-    cy = t1 - 192
-    canvas.setFillColor(colors.HexColor("#6d6d6d"))
-    canvas.setFont("DJ-B", 7.5)
+    # --- what this fixes
+    cy = t1 - 205
+    canvas.setFillColor(BLACK)
+    canvas.setFont("DJ-B", 8)
+    canvas.drawString(x, cy, "THIS MANUAL FIXES")
+    gap_y = cy - 22
+    canvas.setFont("DJ", 11)
+    canvas.setFillColor(INK)
+    canvas.drawString(x, gap_y, "A bed that won\u2019t level  \u00b7  a screw that has to be so loose it falls off")
+    canvas.drawString(x, gap_y - 18, "Extrusion problems  \u00b7  suspected moisture  \u00b7  a machine you can\u2019t use")
+
+    # --- phase index
+    cy = gap_y - 62
+    canvas.setFillColor(BLACK)
+    canvas.setFont("DJ-B", 8)
     canvas.drawString(x, cy, "INSIDE")
 
     items = [
-        ("PHASE 1", "Is the printer crooked?", "10 min · free · do this first"),
-        ("PHASE 2", "Level the bed", "15 min · the part everyone does badly"),
-        ("PHASE 3", "Fix the extrusion", "15 min · name the symptom first"),
-        ("PHASE 4", "If it was moisture", "4–6 hrs of waiting"),
+        ("PHASE 1", "Is the printer crooked?", "10 min  ·  free  ·  do this first"),
+        ("PHASE 2", "Level the bed", "15 min  ·  the part everyone does badly"),
+        ("PHASE 3", "Fix the extrusion", "15 min  ·  name the symptom first"),
+        ("PHASE 4", "If it was moisture", "4\u20136 hrs of waiting"),
         ("PHASE 5", "If 1 and 2 failed", "the buy-a-part stage"),
     ]
     ry = cy - 26
     for num, title, sub in items:
-        canvas.setFillColor(colors.HexColor("#8f8f8f"))
-        canvas.setFont("DJ-B", 7.5)
-        canvas.drawString(x, ry, num)
+        # phase numeral in a solid black square
+        canvas.setFillColor(BLACK)
+        canvas.rect(x, ry - 8, 26, 20, stroke=0, fill=1)
         canvas.setFillColor(colors.white)
-        canvas.setFont("DJ-B", 12)
-        canvas.drawString(x + 0.9 * inch, ry, title)
-        canvas.setFillColor(colors.HexColor("#7d7d7d"))
-        canvas.setFont("DJ", 8.5)
-        canvas.drawRightString(PAGE_W - MARGIN_R, ry, sub)
-        canvas.setStrokeColor(colors.HexColor("#262626"))
-        canvas.setLineWidth(0.5)
-        canvas.line(x, ry - 11, PAGE_W - MARGIN_R, ry - 11)
-        ry -= 25
+        canvas.setFont("DJ-B", 11)
+        canvas.drawCentredString(x + 13, ry - 2, num.replace("PHASE ", ""))
 
-    # bottom
-    canvas.setStrokeColor(colors.HexColor("#3a3a3a"))
-    canvas.setLineWidth(0.7)
-    canvas.line(x, 1.42 * inch, PAGE_W - MARGIN_R, 1.42 * inch)
-    canvas.setFillColor(colors.HexColor("#7d7d7d"))
+        canvas.setFillColor(BLACK)
+        canvas.setFont("DJ-B", 12)
+        canvas.drawString(x + 40, ry, title)
+
+        canvas.setFillColor(GREY)
+        canvas.setFont("DJ", 8.6)
+        canvas.drawRightString(right, ry, sub)
+
+        canvas.setStrokeColor(LGREY)
+        canvas.setLineWidth(0.5)
+        canvas.line(x, ry - 12, right, ry - 12)
+        ry -= 27
+
+    # --- footer
+    canvas.setStrokeColor(LGREY)
+    canvas.setLineWidth(0.6)
+    canvas.line(x, 1.55 * inch, right, 1.55 * inch)
+
+    canvas.setFillColor(BLACK)
+    canvas.setFont("DJ-B", 8.5)
+    canvas.drawString(x, 1.24 * inch, "PRINT SETTINGS")
+    canvas.setFillColor(INK)
+    canvas.setFont("DJ", 8.5)
+    canvas.drawString(x, 1.09 * inch, "Single-sided  ·  no scaling  ·  black and white")
+    canvas.drawString(x, 0.96 * inch, "Pages 3\u20137 are the bed fix. 8\u201310 only if it also extrudes badly.")
+
+    canvas.setFillColor(GREY)
     canvas.setFont("DJ", 8.2)
-    canvas.drawString(x, 1.14 * inch, "Northstar Fix Log  ·  compiled 2026-11-04")
-    canvas.drawRightString(PAGE_W - MARGIN_R, 1.14 * inch,
-                           "Print single-sided  ·  write in the blanks")
+    canvas.drawRightString(right, 1.24 * inch, "Northstar Fix Log")
+    canvas.drawRightString(right, 1.09 * inch, "compiled 2026-11-04")
+
     canvas.restoreState()
 
 
@@ -634,6 +696,27 @@ class PhaseBanner(Flowable):
 
     def draw(self):
         c = self.canv
+        if LOW_INK:
+            # rule-box banner: heavy top and bottom rules, big numeral, no ink flood
+            c.setFillColor(colors.white)
+            c.rect(0, 0, self.width, self.height, stroke=0, fill=1)
+            c.setStrokeColor(BLACK)
+            c.setLineWidth(2.4)
+            c.line(0, self.height - 1.2, self.width, self.height - 1.2)
+            c.setLineWidth(0.8)
+            c.line(0, 2.4, self.width, 2.4)
+            c.setFillColor(BLACK)
+            c.setFont("DJ-B", 46)
+            c.drawRightString(self.width - 2, 18, self.num)
+            c.setFont("DJ-B", 8)
+            c.drawString(0, self.height - 24, "PHASE " + self.num)
+            c.setFont("DJ-B", 20)
+            c.drawString(0, self.height - 50, self.title)
+            c.setFillColor(colors.HexColor("#555555"))
+            c.setFont("DJ", 9.2)
+            c.drawString(0, self.height - 68, self.sub)
+            return
+
         c.setFillColor(BLACK)
         c.rect(0, 0, self.width, self.height, stroke=0, fill=1)
         # ghosted numeral, right side, clipped by the band edges
@@ -643,17 +726,17 @@ class PhaseBanner(Flowable):
         c.drawRightString(self.width - 16, 12, self.num)
         c.restoreState()
         # text
-        c.setFillColor(colors.HexColor("#8f8f8f"))
+        c.setFillColor(colors.HexColor("#a8a8a8"))
         c.setFont("DJ-B", 8)
         c.drawString(18, self.height - 24, "PHASE " + self.num)
         c.setFillColor(colors.white)
         c.setFont("DJ-B", 20)
         c.drawString(18, self.height - 50, self.title)
-        c.setFillColor(colors.HexColor("#b5b5b5"))
+        c.setFillColor(colors.HexColor("#c8c8c8"))
         c.setFont("DJ", 9.2)
         c.drawString(18, self.height - 68, self.sub)
         # hairline under the subtitle, fading to the right
-        c.setStrokeColor(colors.HexColor("#4a4a4a"))
+        c.setStrokeColor(colors.HexColor("#5a5a5a"))
         c.setLineWidth(0.7)
         c.line(18, 16, self.width * 0.55, 16)
 
@@ -1222,7 +1305,8 @@ def _render(out_path, flow):
         rightMargin=MARGIN_R,
         topMargin=MARGIN_T,
         bottomMargin=MARGIN_B,
-        title="Fixing Your Ender 3 V2 — An Instruction Manual for Humans",
+        title=("Fixing Your Ender 3 V2 — An Instruction Manual for Humans"
+               + (" (print-friendly)" if LOW_INK else "")),
         author="Northstar Fix Log",
         subject="Entry 001: bed leveling, crooked gantry, and extrusion problems",
         creator="Northstar Fix Log build_pdf.py",
@@ -1267,7 +1351,16 @@ def render_two_pass(final_path):
     return learned
 
 
-render_two_pass(OUT)
+def build_edition(path, low_ink=False):
+    """Build one edition. Low-ink strips every solid black fill for home printing."""
+    global LOW_INK, OUTFILE
+    LOW_INK = low_ink
+    OUTFILE = path
+    return render_two_pass(path)
+
+
+build_edition(OUT, low_ink=False)
+build_edition(os.path.join(HERE, "ender-3-v2-manual-print-friendly.pdf"), low_ink=True)
 
 # ---------------------------------------------------------------- verify
 from pypdf import PdfReader
