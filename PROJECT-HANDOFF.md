@@ -21,7 +21,7 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 |---|---|
 | Main website | Implemented in root `index.html` |
 | Mobile layout and navigation | Implemented |
-| Mobile vertical scrolling | **Resolved.** The user confirmed it was already fixed. Do not reopen it as an outstanding bug or redo the fix unless a new regression is reported. |
+| Mobile vertical scrolling | User reported that scrolling fails on mobile again on 2026-11-04. Found a later ≤900px CSS override forcing `html` and `body` to `overflow-y: visible`; changed the mobile override to keep vertical overflow auto. CSS/HTML parsing passes; needs confirmation on the user's phone/browser. |
 | Visual design | Monochrome black/white system in the `#mono-design` layer (2026-11-03) |
 | Local persistence | Implemented with browser `localStorage` |
 | Google sign-in / Firestore sync | Implemented in the front end. The user previously reported that Google sign-in and cloud sync worked; this has not been freshly tested during this handoff update. |
@@ -331,7 +331,7 @@ The latest code-focused work added local Jarvis review-before-save finance-actio
 ## 12. Recommended next steps for a new AI/developer
 
 1. Read this handoff and the root `README.md`, then inspect the exact current `index.html` before editing.
-2. Treat mobile scrolling as resolved. Do not spend time re-fixing it unless the user reports a new regression.
+2. Mobile scroll is not yet confirmed on the user's device after the 2026-11-04 CSS fix. Verify both the first-visit welcome overlay and the main app page on mobile Safari/Chrome before calling it resolved.
 3. Ask what feature or improvement the user wants next; do not assume the Cloudflare Worker should be integrated just because its files exist.
 4. For visual refinements, preserve the existing premium Northstar design language and the compact Purchase Planner behavior. For the dashboard, prioritize useful information density over simply enlarging cards.
 5. Protect data integrity: keep user-entered amounts intact, preserve the local/cloud conflict flow, respect account minimums and purchase allocations, and do not add sample balances.
@@ -343,6 +343,7 @@ The latest code-focused work added local Jarvis review-before-save finance-actio
 - 2026-11-03: Fixed BYOK reliability issues reported during visitor testing: stale model defaults, false `Connected` status, hidden-field CSS leak, short probe tokens, truncated upstream errors, and no transient retry. All assistant replies now identify their source; see 4g. Focused jsdom/parser checks pass; live provider access and visual QA were not available.
 - 2026-11-03: Moved ambient ink out of Jarvis to a page-wide grayscale background per user clarification. It drifts independently of pointer movement, runs on coarse pointers, pauses in hidden tabs, and is disabled for reduced motion.
 - 2026-11-03: Added local Jarvis drafts for transaction, tracked balance, budget, goal, and planned-purchase actions. Existing forms remain the only save path; jsdom verified prefills and no writes before explicit submit. See 4i; no visual QA or provider call was performed.
+- 2026-11-04: User reported mobile scrolling stopped. Found the later ≤900px media rule set `html` and `body` vertical overflow to `visible!important`, overriding the earlier scrollable-document rules. Restored `overflow-y:auto!important` for mobile and retained vertical touch scrolling; CSS and inline-script parsing pass. Physical-device/browser confirmation is still needed.
 
 - 2026-11-03: Re-reviewed the prior Northstar project context available in this conversation, the current repository inventory, root README, Firestore rules, Worker source/configuration, current `index.html`, and recent Git commit history. Rewrote this handoff to reflect the current static-site architecture and implemented functionality.
 - 2026-11-03: Corrected the mobile-scrolling status. The user confirmed scrolling was already fixed; repository commits from 2026-10-24 and 2026-10-26 and the current responsive CSS corroborate that status. No new scrolling code was changed.
