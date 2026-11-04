@@ -22,6 +22,7 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | Main website | Implemented in root `index.html` |
 | Mobile layout and navigation | Implemented |
 | Mobile vertical scrolling | **Resolved.** The user confirmed it was already fixed. Do not reopen it as an outstanding bug or redo the fix unless a new regression is reported. |
+| Visual design | Monochrome black/white system in the `#mono-design` layer (2026-11-03) |
 | Local persistence | Implemented with browser `localStorage` |
 | Google sign-in / Firestore sync | Implemented in the front end. The user previously reported that Google sign-in and cloud sync worked; this has not been freshly tested during this handoff update. |
 | Transactions, accounts, budgets, goals, purchases | Implemented in the main app |
@@ -101,6 +102,22 @@ The front end's blank data model contains arrays for accounts, transactions, bud
 - If local and cloud records differ on sign-in, the user is shown a choice to use the cloud copy, keep the local copy, or decide later.
 - The app can export/restore a JSON backup. Restore replaces the currently active dataset after confirmation.
 - Changing the display currency changes formatting only. It does not convert values using exchange rates.
+
+## 4a. Visual design system — monochrome (2026-11-03)
+
+The app was deliberately restyled to a **sleek black-and-white** identity (luxury minimalism / premium SaaS), replacing the earlier navy-and-blue fintech palette. Preserve this direction unless the user asks to change it.
+
+- **Where the styling lives:** `index.html` now has two `<style>` blocks. The original sheet (first) is mostly structure. The design layer is the second block, `<style id="mono-design">`, at the end of `<head>`; it ends with its own responsive re-declarations so it does not flatten the mobile layout. Add new visual rules there rather than scattering them through the original sheet.
+- **Palette:** ink `#080808`, paper `#ffffff`, canvas `#f7f7f7`, hairlines `#e9e9e9`/`#ececec`, secondary text `#6e6e6e`–`#9a9a9a`. Every legacy hex in the file was remapped to a neutral ramp.
+- **Deliberate exception:** one muted oxblood `#8f2f26` (`--danger`) is kept for destructive actions, form errors, and over-budget states only. It is not decoration.
+- **Money semantics (intentional, not a bug):** positive amounts are ink black; negative/expense amounts are quiet gray (`#6e6e6e`) rather than red. Red is reserved for true errors and delete actions. Do not "fix" this back to green/red without asking.
+- **Preserved exception:** the purchase-planner "purchased" X marker remains red per an earlier explicit user request. It is the one intentionally non-monochrome component.
+- **Icons:** the sidebar nav, mobile dock, topbar buttons, metric tiles, transaction rows, account cards, goal cards, empty states, and welcome benefits now use inline SVG line icons (1.6px stroke, `currentColor`), not Unicode glyphs. The shared set is the `_ico()` helper plus the `ICON` object defined just after `esc()` in the module script. Reuse it instead of adding glyphs.
+- **Brand mark:** the Northstar star SVGs (`nsBg*` / `nsStar*` gradients) are monochrome — charcoal tile (`#242424`→`#101010`) with a silver-to-white star and a hairline `#ffffff26` edge. Keep those gradient IDs intact; the avatar and breadcrumb variants are generated as strings in JS.
+- **Type and detail:** Manrope for display/values, DM Sans for UI/body, tabular numerals (`font-variant-numeric`) on all money-bearing components, 14px card radius, 9px control radius, hairline borders with a barely-there shadow instead of heavy elevation, black primary buttons with white text, and 180–350ms `cubic-bezier(.22,.61,.36,1)` motion.
+- **Mobile:** the black floating dock uses a white active pill. Safe-area bottom padding and the documented scroll fixes were left untouched.
+
+**Verification note:** the development sandbox has no browser, so this restyle was validated with parsers rather than by screenshot — `parse5` reported 0 HTML parse errors, `css-tree` reported 0 CSS parse errors in both style blocks, an automated scan found 0 rule pairs below a 2.2 contrast ratio, and the page was confirmed served over HTTP. Final visual confirmation is user-side. Do not claim a visual QA pass that did not happen.
 
 ## 5. User requirements and non-negotiable design constraints
 
@@ -217,4 +234,5 @@ Latest code-focused commits visible during this review were on 2026-10-26. The c
 
 - 2026-11-03: Re-reviewed the prior Northstar project context available in this conversation, the current repository inventory, root README, Firestore rules, Worker source/configuration, current `index.html`, and recent Git commit history. Rewrote this handoff to reflect the current static-site architecture and implemented functionality.
 - 2026-11-03: Corrected the mobile-scrolling status. The user confirmed scrolling was already fixed; repository commits from 2026-10-24 and 2026-10-26 and the current responsive CSS corroborate that status. No new scrolling code was changed.
+- 2026-11-03: Full visual redesign to a monochrome design language. Added the `#mono-design` style layer, remapped every colour literal to a neutral ramp with a single oxblood danger accent, replaced Unicode glyphs with inline SVG line icons (nav, dock, metrics, transactions, accounts, goals, empty states, welcome benefits), rebuilt the monochrome brand marks, and added tabular numerals. Structure, data logic, persistence, sync, and the documented mobile scroll fixes were not changed; the only JS edits are icon/colour values plus the new `ICON` set.
 - 2026-11-03: Documented the important Cloudflare integration gap: a Worker backend exists, but the current Guide remains local/rules-based and does not call the Worker.
