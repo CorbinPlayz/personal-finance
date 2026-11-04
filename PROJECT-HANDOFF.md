@@ -212,6 +212,12 @@ The visitor's screenshot showed `Local fallback · Missing authentication header
 
 **Verification:** `node --check`/`vm.Script` syntax validation, parse5 and css-tree parsing, and focused jsdom tests cover stale-model migration, session-only key storage, OpenRouter Authorization header and model, 64-token probe, hidden Base URL, verified-vs-unverified status, cloud source labels, full auth error detail, bounded long error text, a single retry recovering a 502, and attribution on all assistant responses. All passed. No live provider call or browser visual QA was possible in this sandbox.
 
+## 4h. Jarvis ambient liquid-ink animation (2026-11-03)
+
+Added a slow-moving monochrome ink current behind Jarvis's glass panel, plus larger, softly drifting gray plumes while the panel is open. Existing pointer/message ink blooms remain the more colorful interactive accents. The ambient timer is created only while Jarvis is open and is stopped when it closes; reduced-motion users get no new continuous animation. No 3D transforms or finance/data behavior changes.
+
+**Verification:** parse5 reported 0 HTML errors; css-tree parsed all six style blocks; both Jarvis runtime scripts passed JavaScript syntax checks; `git diff --check` passed. The preview server is available for the user to inspect; no visual QA was claimed in the sandbox.
+
 ## 5. User requirements and non-negotiable design constraints
 
 These requirements come from prior Northstar discussions and should guide future work.
