@@ -29,9 +29,10 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | Purchase priority sorting and compact tile/detail flow | Implemented |
 | Purchased state and one-time X animation | Implemented; recent commits refined the visual alignment of the X and impact ring |
 | Guide | Implemented as a **local rules-based planner**, not an external generative AI model |
+| Jarvis cloud brain (BYOK) | Implemented. Visitors paste their own key in the panel's Connections sheet; key is per-browser, excluded from data/backups; local engine is the default and the fallback (see 4f) |
 | Manual price research/history | Implemented; no live retailer feed or automatic price monitoring |
 | JSON backup / restore | Implemented |
-| Cloudflare AI Worker | Worker code and setup notes exist, but the website is **not wired to call it** and deployment is not confirmed |
+| Cloudflare AI Worker | Worker code and setup notes exist, but the website is **not wired to call it** and deployment is not confirmed. The visitor-key (BYOK) path in 4f is what shipped instead |
 | Automated test suite / build pipeline | No `package.json`, test runner, or React/Vite build was found in the current repository inventory |
 
 ## 3. Repository inventory — verified
@@ -176,6 +177,27 @@ The design is **monochrome chrome with colour for money only**. The user explici
 
 **Verification:** parse5 0 errors; css-tree 0 errors across five blocks; `node --check` clean; a jsdom suite **seeded under a UID-scoped key** (the exact failing case) with 25 assertions covering totals, current and previous month spend, category queries, prior-month queries, affordability both ways, projection, comparison, budgets, goals, balance, safe-daily, advice, roast, help, follow-ups (`and rent`, `why`), bare amount, greeting and zero runtime errors. The in-memory bridge itself cannot be exercised in jsdom (it does not run module scripts) — it was verified statically to sit inside the module where `data` is in scope.
 
+## 4f. BYOK cloud brain for Jarvis, plus a routing fix (2026-11-03)
+
+Jarvis now has an optional visitor-supplied LLM. The site ships **no keys** and has no server: the visitor pastes their own key into a slot inside the panel, and requests go browser → provider directly. The local rules engine stays the default and the fallback.
+
+**Where it lives (all inside `#jarvis-runtime`, plus one CSS block):**
+- Gear button `#nsjGear` in the panel header opens `#nsjSheet`, a Connections sheet rendered with the panel markup (after `#nsjFootnote`).
+- Controls: provider select (`gemini`, `openai`, `anthropic`, `groq`, `openrouter`, `custom`), key field (`type=password`), model field, base URL (custom only), switches for Cloud brain / Remember on this device / Include transactions, buttons Save & test, Preview payload, Clear key, and a status line `#nsjConnStatus`.
+
+**Key isolation (the important part — do not merge this into finance data):**
+- Dedicated storage key `northstar-jarvis-conn-v1`, written to `sessionStorage` by default and to `localStorage` only when "Remember on this device" is on. Toggling the switch moves the blob and clears the other copy.
+- It is **not** part of `data`, so it is absent from the Firestore document and from `exportBackup()` (which serialises `{...data}` only). `JSON.stringify(conn)` exists solely inside `saveConn()`.
+- The key never appears in the repo, in page source, or in any export. It is sent only to the selected provider (Gemini puts it in the query string; OpenAI-compatible uses `Authorization: Bearer`; Anthropic uses `x-api-key` plus `anthropic-dangerous-direct-browser-access: true`).
+
+**Routing:** `send()` uses the cloud when `connReady()` (key + model + cloud switch on), sending a compact derived brief — month, currency, account counts/totals, this/last month income and spend, top categories, budgets, goals, planned purchases, days left, projection — never the raw ledger unless "Include transactions" is on (then at most 8 recent rows with descriptions trimmed to 40 chars). `max_tokens` ~420, 30 s `AbortController`, last 6 turns of history. Any failure (network, 401, timeout, empty body) silently falls back to the local answer and labels the message `Local fallback · <reason>`; successful cloud answers are labelled `Cloud · <provider>`.
+
+**Guardrail:** `systemPrompt()` forbids inventing balances or transactions, requires citing brief figures, caps length at ~90 words, and states the currency.
+
+**Also fixed here:** intent matching missed "how much can i safely spend" (it matched `spend`); `safely spend` / `safe spend` / `safe daily` were added to the `safe` intent. `brief()` and `systemPrompt()` now self-resolve a snapshot when called without one, and `callCloud()` rejects early with a clear message when the custom provider has no base URL or the provider is unknown.
+
+**Verification:** parse5 0 errors; css-tree 0 errors across six style blocks (the new one has 41 rules); `node --check` clean; a jsdom BYOK suite with **27 assertions** using a stubbed `fetch` (sheet opens, key survives a provider switch, Save & test reaches `api.openai.com` and enables cloud, status lines update, key lands in sessionStorage not localStorage, Remember migrates it, preview payload renders, OpenAI/Anthropic/Gemini/Groq adapters each parse the right response shape, Anthropic sends the browser-access header, provider errors surface, a cloud answer renders with its `Cloud · OpenAI` label, a 401 falls back to the local engine with `Local fallback`, zero runtime errors). A separate 11-assertion regression suite re-checks the local brain (ledger visibility, category MoM, afford yes/no, safe daily, greeting, month-state reset, brief, guardrail). No live provider call was ever made — no credentials exist in the sandbox — and no visual/interaction review was possible.
+
 ## 5. User requirements and non-negotiable design constraints
 
 These requirements come from prior Northstar discussions and should guide future work.
@@ -288,6 +310,8 @@ Latest code-focused commits visible during this review were on 2026-10-26. The c
 6. After each meaningful change, validate the relevant flows, state precisely what was tested, and update this handoff.
 
 ## Work log
+
+- 2026-11-03: Added the BYOK cloud brain — paste-in key slot in a Connections sheet, Gemini/OpenAI/Anthropic/Groq/OpenRouter/custom adapters, session-by-default key storage isolated from finance data, principal-free brief, silent local fallback with per-message source labels. Widened the `safe` intent. 27 BYOK + 11 local-brain jsdom assertions pass; no live API call or visual QA was possible.
 
 - 2026-11-03: Re-reviewed the prior Northstar project context available in this conversation, the current repository inventory, root README, Firestore rules, Worker source/configuration, current `index.html`, and recent Git commit history. Rewrote this handoff to reflect the current static-site architecture and implemented functionality.
 - 2026-11-03: Corrected the mobile-scrolling status. The user confirmed scrolling was already fixed; repository commits from 2026-10-24 and 2026-10-26 and the current responsive CSS corroborate that status. No new scrolling code was changed.
