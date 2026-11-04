@@ -326,7 +326,7 @@ The most relevant code-history milestones on `main` include:
 - 2026-10-26: iPhone document-scrolling improvement; purchase planner descriptions and clear-data safeguards; automatic purchase priority sorting; compact square tiles and detail view; separate Purchased group; muted completed cards; one-time animated X; subsequent X/ring alignment refinements.
 - 2026-11-03: initial project handoff added.
  
-The latest code-focused work on the active Arena branch adds local Jarvis review-before-save finance-action drafts. It remains on the feature branch until the requested PR → merge → branch sync workflow is completed.
+The latest code-focused work added local Jarvis review-before-save finance-action drafts; see section 4i. The feature landed in PR #12.
 
 ## 12. Recommended next steps for a new AI/developer
 
