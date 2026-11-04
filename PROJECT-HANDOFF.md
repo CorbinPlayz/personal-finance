@@ -29,7 +29,7 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | Purchase priority sorting and compact tile/detail flow | Implemented |
 | Purchased state and one-time X animation | Implemented; recent commits refined the visual alignment of the X and impact ring |
 | Guide | Implemented as a **local rules-based planner**, not an external generative AI model |
-| Jarvis cloud brain (BYOK) | Implemented. Visitors paste their own key in the panel's Connections sheet; key is per-browser, excluded from data/backups; local engine is the default and fallback. Reliability fixes, honest verification status, source labels, and provider diagnostics are in 4g |
+| Jarvis cloud brain (BYOK) | Implemented. Visitors paste their own key in the panel's Connections sheet; key is per-browser, excluded from data/backups; local engine is the default and fallback. Reliability fixes, honest verification status, source labels, and provider diagnostics are in 4g. Local review-before-save finance-action drafts are documented in 4i |
 | Manual price research/history | Implemented; no live retailer feed or automatic price monitoring |
 | JSON backup / restore | Implemented |
 | Cloudflare AI Worker | Worker code and setup notes exist, but the website is **not wired to call it** and deployment is not confirmed. The visitor-key (BYOK) path in 4f is what shipped instead |
@@ -137,7 +137,7 @@ On top of the monochrome system there is a third additive layer: `<style id="liq
 
 ## 4c. Jarvis — local assistant (2026-11-03)
 
-A floating assistant orb (bottom-right) opens a glass chat panel. It is **entirely local**: `<style id="jarvis-design">` + `<script id="jarvis-runtime">`, no network calls of any kind, no API key, no third party. It reads the same `localStorage` ledger the app writes (`northstar-finance-v1:local`, falling back to `northstar-finance-v1`) and talks to the UI only by reading that data — it never mutates state.
+A floating assistant orb (bottom-right) opens a glass chat panel. It is **entirely local**: `<style id="jarvis-design">` + `<script id="jarvis-runtime">`, no network calls of any kind, no API key, no third party. It reads the same live ledger the app writes and uses a localStorage fallback. The draft-only typed money-action path can fill existing app forms but never directly changes ledger state; see 4i.
 
 - **What it can answer:** greeting/status, `roast me` (a candid, numbers-driven assessment), `can I afford <amount>`, spending by month + top categories, income, savings rate, budget status (and overruns), goal progress, total balance minus account minimums, open purchase plans, `what should I do next` (three ranked moves), plus a capability list.
 - **Tone modes:** Playful (default), Ruthless, Coach — chosen with chips in the header, persisted. The roast is generated from real figures (over-budget categories, negative savings rate, unfunded purchases), not canned filler, though it is a rules engine rather than a language model.
@@ -217,6 +217,14 @@ The visitor's screenshot showed `Local fallback · Missing authentication header
 Follow-up to the earlier Jarvis-only ink experiment: the user clarified that they wanted ink as an ambient **page background**, not in the Jarvis panel and not tied to cursor movement. Removed the Jarvis ink canvas and the global cursor light/trail. The first page-wide version was hidden because `.main-area` painted an opaque gray gradient above the background; this follow-up makes that shell surface transparent so the ink wash can show through the gutters while cards remain opaque. Three large, soft-edged grayscale clouds morph slowly behind the app shell, layered with a subtle canvas that spawns drifting gray plumes on a timer. It is independent of pointer position, runs on coarse-pointer devices, pauses while the document is hidden, and becomes static under reduced-motion preferences. No 3D transforms or finance/data behavior changes.
 
 **Verification:** parse5 reported 0 HTML errors; css-tree parsed all six style blocks; both remaining runtime scripts passed syntax checks; jsdom confirmed the three full-page ink clouds and full-viewport ambient canvas mount outside Jarvis, the main-area background is transparent so the underlay is visible, and no pointer-movement handler is installed. Under reduced motion the clouds remain static and the canvas is omitted. `git diff --check` passed. A live preview can be inspected by the user; no visual QA is claimed here.
+
+## 4i. Jarvis manual finance actions (2026-11-03)
+
+Jarvis now recognizes a focused set of explicit money-management phrasings locally, before optional cloud routing, and fills Northstar’s existing forms as drafts. Supported actions: expenses, income, and transfers; tracked account-balance edits; creating/updating a category budget; creating a savings goal or updating its saved-to-date amount; and creating a planned purchase or editing an existing plan’s price, target date, funding account, or priority. The normal app form remains the only write path: nothing is persisted or sent to cloud sync until the user reviews and submits the existing form. Existing validation, account calculations, persistence, and sync are reused.
+
+This is a typed local intent path, not an unlimited natural-language model and not a claim to answer thousands of distinct questions. It is deliberately not bank linking, real transfers/payments, or automatic purchase completion. Balance edits replace the manually tracked balance without creating a transaction. Goal contributions update the goal tracker only and do not move money. Purchase drafts create plans only and do not deduct balances. If required information is ambiguous or missing, Jarvis asks or leaves the account field for the user to select; it does not invent balances.
+
+**Verification:** both runtime scripts pass Node syntax parsing. A jsdom integration harness exercised transaction, explicit-save, balance, budget, goal, planned-purchase creation/editing, transfer direction, bare-amount, and balance-question cases; it verified modal prefills and no persistence before Save. No browser visual QA or live provider call was performed.
 
 ## 5. User requirements and non-negotiable design constraints
 
@@ -318,7 +326,7 @@ The most relevant code-history milestones on `main` include:
 - 2026-10-26: iPhone document-scrolling improvement; purchase planner descriptions and clear-data safeguards; automatic purchase priority sorting; compact square tiles and detail view; separate Purchased group; muted completed cards; one-time animated X; subsequent X/ring alignment refinements.
 - 2026-11-03: initial project handoff added.
  
-Latest code-focused commits visible during this review were on 2026-10-26. The current handoff update is documentation-only and should not change app behavior.
+The latest code-focused work on the active Arena branch adds local Jarvis review-before-save finance-action drafts. It remains on the feature branch until the requested PR → merge → branch sync workflow is completed.
 
 ## 12. Recommended next steps for a new AI/developer
 
@@ -334,6 +342,7 @@ Latest code-focused commits visible during this review were on 2026-10-26. The c
 - 2026-11-03: Added the BYOK cloud brain — paste-in key slot in a Connections sheet, Gemini/OpenAI/Anthropic/Groq/OpenRouter/custom adapters, session-by-default key storage isolated from finance data, principal-free brief, silent local fallback with per-message source labels. Widened the `safe` intent. 27 BYOK + 11 local-brain jsdom assertions pass; no live API call or visual QA was possible.
 - 2026-11-03: Fixed BYOK reliability issues reported during visitor testing: stale model defaults, false `Connected` status, hidden-field CSS leak, short probe tokens, truncated upstream errors, and no transient retry. All assistant replies now identify their source; see 4g. Focused jsdom/parser checks pass; live provider access and visual QA were not available.
 - 2026-11-03: Moved ambient ink out of Jarvis to a page-wide grayscale background per user clarification. It drifts independently of pointer movement, runs on coarse pointers, pauses in hidden tabs, and is disabled for reduced motion.
+- 2026-11-03: Added local Jarvis drafts for transaction, tracked balance, budget, goal, and planned-purchase actions. Existing forms remain the only save path; jsdom verified prefills and no writes before explicit submit. See 4i; no visual QA or provider call was performed.
 
 - 2026-11-03: Re-reviewed the prior Northstar project context available in this conversation, the current repository inventory, root README, Firestore rules, Worker source/configuration, current `index.html`, and recent Git commit history. Rewrote this handoff to reflect the current static-site architecture and implemented functionality.
 - 2026-11-03: Corrected the mobile-scrolling status. The user confirmed scrolling was already fixed; repository commits from 2026-10-24 and 2026-10-26 and the current responsive CSS corroborate that status. No new scrolling code was changed.

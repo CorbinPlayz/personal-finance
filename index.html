@@ -1149,6 +1149,7 @@ body.nsx-grain:after{
 /* ============================================================
    NORTHSTAR — JARVIS CONNECTIONS (bring your own key)
    ============================================================ */
+.modal-backdrop{z-index:1800}
 .nsj-gear{border:0;background:transparent;color:#8f8f8f;cursor:pointer;padding:4px;border-radius:6px;display:grid;place-items:center}
 .nsj-gear:hover{color:#fff;background:rgba(255,255,255,.08)}
 .nsj-gear svg{width:16px;height:16px}
@@ -3043,7 +3044,9 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
       '• “am I on track this month” — projection\n' +
       '• “compare to last month”\n' +
       '• “what should I do next” — three ranked moves\n' +
-      '• “how much can I spend per day”\n\nFollow-ups work too: ask “and dining?” or “why?” after an answer.';
+      '• “how much can I spend per day”\n' +
+      '• “I spent 24 at Safeway yesterday” — I fill the transaction form for review\n\n' +
+      'I can draft expenses, income, transfers, balance edits, budgets, savings-goal updates, and planned purchases. Nothing is saved until you review the form and press Save.';
   }
 
   function greeting(s) {
@@ -3438,12 +3441,247 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     log.scrollTop = log.scrollHeight;
     return n;
   }
+  function actionDate(text) {
+    var now = new Date(), t = String(text || '').toLowerCase();
+    function iso(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    var relative = /\b(today|yesterday|tomorrow)\b/.exec(t);
+    if (relative) { var d = new Date(now.getFullYear(), now.getMonth(), now.getDate()); d.setDate(d.getDate() + (relative[1] === 'yesterday' ? -1 : relative[1] === 'tomorrow' ? 1 : 0)); return { value: iso(d), defaulted: false }; }
+    var ymd = /\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/.exec(t);
+    if (ymd) { var yd = new Date(+ymd[1], +ymd[2] - 1, +ymd[3]); if (yd.getFullYear() === +ymd[1] && yd.getMonth() === +ymd[2] - 1 && yd.getDate() === +ymd[3]) return { value: iso(yd), defaulted: false }; }
+    var slash = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/.exec(t);
+    if (slash) { var sy = slash[3] ? +slash[3] : now.getFullYear(); if (sy < 100) sy += 2000; var sd = new Date(sy, +slash[1] - 1, +slash[2]); if (sd.getFullYear() === sy && sd.getMonth() === +slash[1] - 1 && sd.getDate() === +slash[2]) return { value: iso(sd), defaulted: false }; }
+    var months = { jan:0,january:0,feb:1,february:1,mar:2,march:2,apr:3,april:3,may:4,jun:5,june:5,jul:6,july:6,aug:7,august:7,sep:8,sept:8,september:8,oct:9,october:9,nov:10,november:10,dec:11,december:11 };
+    var named = /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+(\d{1,2})(?:,?\s+(20\d{2}))?\b/.exec(t);
+    if (named) { var mi = months[named[1]], ny = named[3] ? +named[3] : now.getFullYear(), nd = new Date(ny, mi, +named[2]); if (nd.getFullYear() === ny && nd.getMonth() === mi && nd.getDate() === +named[2]) return { value: iso(nd), defaulted: false }; }
+    return { value: iso(now), defaulted: true };
+  }
+
+  function actionAmount(text) {
+    var cleaned = String(text || '').replace(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g, ' ')
+      .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, ' ')
+      .replace(/\b(?:today|yesterday|tomorrow)\b/gi, ' ')
+      .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,?\s+20\d{2})?\b/gi, ' ');
+    var currency = /(?:\$|usd\s*)(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?\b/i.exec(cleaned);
+    if (currency) { var value = parseFloat(currency[1].replace(/,/g, '')); if (currency[2]) value *= 1000; return isFinite(value) ? value : null; }
+    return parseAmount(cleaned);
+  }
+
+  function accountMentions(text, s) {
+    var t = String(text || '').toLowerCase(), words = t.split(/[^a-z0-9]+/), found = [];
+    (s.accounts || []).forEach(function (a) {
+      var name = String(a.name || '').trim().toLowerCase(), index = name ? t.indexOf(name) : -1;
+      if (index < 0) {
+        var type = String(a.type || '').trim().toLowerCase();
+        if (type && words.indexOf(type) >= 0) index = t.indexOf(type);
+      }
+      if (index >= 0 && !found.some(function (x) { return x.account.id === a.id; })) found.push({ account: a, index: index, length: name.length });
+    });
+    return found.sort(function (a, b) { return a.index - b.index || b.length - a.length; }).map(function (x) { return x.account; });
+  }
+
+  function actionCategory(text, s) {
+    var all = ['Housing','Food','Transport','Shopping','Entertainment','Bills','Health','Education','Other'];
+    (s.d && s.d.transactions || []).forEach(function (tx) { if (tx.category && all.indexOf(tx.category) < 0) all.push(tx.category); });
+    (s.d && s.d.budgets || []).forEach(function (b) { if (b.category && all.indexOf(b.category) < 0) all.push(b.category); });
+    var t = String(text || '').toLowerCase(), normalized = ' ' + t.replace(/[^a-z0-9]+/g, ' ') + ' ';
+    var exact = all.slice().sort(function (a,b) { return b.length-a.length; }).find(function (c) { var key = ' ' + c.toLowerCase().replace(/[^a-z0-9]+/g, ' ') + ' '; return normalized.indexOf(key) >= 0; });
+    if (exact) return exact;
+    var aliases = [
+      [/\b(grocer(?:y|ies)|dining|restaurant|food|lunch|coffee|takeout|take away)\b/,'Food'],
+      [/\b(gas|fuel|transit|bus|train|uber|lyft|transportation)\b/,'Transport'],
+      [/\b(rent|mortgage|housing)\b/,'Housing'],
+      [/\b(utility|utilities|electric|water|internet|phone|bill|bills)\b/,'Bills'],
+      [/\b(doctor|medical|medicine|pharmacy|health)\b/,'Health'],
+      [/\b(school|tuition|education|class)\b/,'Education'],
+      [/\b(movie|concert|game|entertainment)\b/,'Entertainment'],
+      [/\b(clothes|shopping|store)\b/,'Shopping']
+    ];
+    for (var i=0;i<aliases.length;i++) if (aliases[i][0].test(t)) return aliases[i][1];
+    return 'Other';
+  }
+
+  function openActionDraft(action, values, itemId) {
+    var root = document.getElementById('modalRoot');
+    if (!root || root.querySelector('.modal-backdrop')) return false;
+    var trigger = document.createElement('button');
+    trigger.type = 'button'; trigger.dataset.action = action; trigger.style.display = 'none';
+    if (itemId) trigger.dataset.id = itemId;
+    document.body.appendChild(trigger); trigger.click(); trigger.remove();
+    var form = document.getElementById('modalForm');
+    if (!form) return false;
+    if (values.type && form.elements.namedItem('type')) {
+      var typeEl = form.elements.namedItem('type'); typeEl.value = values.type;
+      typeEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    Object.keys(values).forEach(function (name) {
+      if (name === 'type') return;
+      var el = form.elements.namedItem(name);
+      if (!el || el.disabled) return;
+      el.value = values[name] == null ? '' : String(values[name]);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    return true;
+  }
+
+  function routeMoneyAction(raw) {
+    var text = String(raw || '').trim(), t = text.toLowerCase(), s = snapshot();
+    if (!s.ok) return null;
+    var amount = actionAmount(text), accounts = accountMentions(text, s);
+    var names = (s.accounts || []).map(function (a) { return a.name; }).join(', ');
+    var hasBalance = /\bbalance\b/.test(t);
+    var balanceVerb = /\b(set|update|change|correct)\b/.test(t);
+    var balanceAssignment = amount !== null && /\b(to|at|is|now)\b/.test(t);
+    var balanceIntent = hasBalance && (balanceVerb || balanceAssignment);
+    if (balanceIntent) {
+      if (amount === null && !balanceVerb) return null;
+      if (amount === null) return 'What is the new balance amount? I will fill the account form, but won’t save until you confirm.';
+      var acc = accounts.length === 1 ? accounts[0] : (accounts.length === 0 && s.accounts.length === 1 ? s.accounts[0] : null);
+      if (!acc) return s.accounts.length ? 'Which account should I update? Your accounts are: ' + names + '. I won’t change any balance until you choose one.' : 'Create an account first, then tell me its current balance.';
+      if (!openActionDraft('edit-account', { balance: amount.toFixed(2) }, acc.id)) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
+      return 'I filled the current balance for ' + acc.name + ' as ' + fmt(amount, s.d) + '. Review it and press Save to replace the tracked balance; this does not move money or add a transaction.';
+    }
+
+    var goal = (s.d && s.d.goals || []).slice().sort(function(a,b){return String(b.name||'').length-String(a.name||'').length;}).find(function(g){return g.name&&t.indexOf(String(g.name).toLowerCase())>=0;});
+    var goalContribution = /^(?:please\s+)?(?:add|put|save|contribute)\b/.test(t) && /\b(to|toward|towards|into|in|for)\b/.test(t) && goal && amount !== null;
+    if (goalContribution) {
+      var newSaved = Math.round(((Number(goal.saved)||0)+amount)*100)/100;
+      if (!openActionDraft('edit-goal', { saved: newSaved.toFixed(2) }, goal.id)) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
+      return 'I drafted a ' + fmt(amount, s.d) + ' contribution for “' + goal.name + '” and updated its saved-to-date field to ' + fmt(newSaved, s.d) + '. This only updates your tracker; it does not move money. Review and press Save to apply.';
+    }
+
+    var budgetIntent = /^(?:please\s+)?(?:set|create|add|update)\b.*\bbudget\b/.test(t) || /^budget\s+(?:for|on)\b/.test(t);
+    if (budgetIntent) {
+      if (amount === null) return 'What monthly budget limit should I enter?';
+      var category = actionCategory(text, s);
+      if (category === 'Other' && !/\bother\b/.test(t)) return 'Which expense category should get that budget? Try Housing, Food, Transport, Shopping, Entertainment, Bills, Health, Education, or Other.';
+      var budget = (s.d && s.d.budgets || []).find(function(b){return String(b.category).toLowerCase()===category.toLowerCase();});
+      if (!openActionDraft(budget?'edit-budget':'add-budget', { category: category, limit: amount.toFixed(2) }, budget && budget.id)) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
+      return 'I drafted a monthly ' + category + ' budget of ' + fmt(amount, s.d) + (budget?' by updating the existing budget':'') + '. Review and press Save to apply.';
+    }
+
+    var createGoalIntent = /^(?:please\s+)?(?:create|make|start|add|set\s+up)\b.*\bgoal\b/.test(t);
+    if (createGoalIntent) {
+      if (amount === null) return 'What target amount should I put on the goal?';
+      var goalName = text.replace(/^\s*(?:please\s+)?(?:create|make|start|add|set\s+up)\s+(?:a\s+)?/i,'')
+        .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,?\s+20\d{2})?\b/ig,' ')
+        .replace(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g,' ')
+        .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g,' ')
+        .replace(/(?:\$|usd\s*)?\d[\d,]*(?:\.\d+)?\s*(?:k|thousand)?\b/ig,' ')
+        .replace(/\b(?:savings\s+)?goal\b/ig,' ').replace(/\b(?:called|named|with|target|amount|of|for|a)\b/ig,' ')
+        .replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim();
+      if (!goalName) return 'What should I call the savings goal?';
+      if (!openActionDraft('add-goal', { name: goalName, target: amount.toFixed(2), saved: '0' })) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
+      return 'I drafted the savings goal “' + goalName + '” with a target of ' + fmt(amount, s.d) + '. The saved amount starts at zero; review and press Save to create it.';
+    }
+
+    var editablePurchases = (s.d && s.d.purchases || []).filter(function(p){return p.status !== 'Purchased' && p.status !== 'Cancelled' && p.name && t.indexOf(String(p.name).toLowerCase()) >= 0;}).sort(function(a,b){return String(b.name).length-String(a.name).length;});
+    var purchaseUpdateIntent = /^(?:please\s+)?(?:update|change|edit|adjust)\b/.test(t) && (editablePurchases.length > 0 || /\b(?:planned\s+)?purchase\b/.test(t));
+    if (purchaseUpdateIntent) {
+      if (!editablePurchases.length) {
+        var plannedNames = (s.d && s.d.purchases || []).filter(function(p){return p.status !== 'Purchased' && p.status !== 'Cancelled';}).map(function(p){return p.name;}).join(', ');
+        return plannedNames ? 'Which planned purchase should I update? Your open plans are: ' + plannedNames + '.' : 'There are no open planned purchases to update yet.';
+      }
+      if (editablePurchases.length > 1 && String(editablePurchases[0].name).toLowerCase() === String(editablePurchases[1].name).toLowerCase()) return 'I found more than one open purchase named “' + editablePurchases[0].name + '”. Please distinguish which one you mean.';
+      var targetPurchase = editablePurchases[0], purchaseChanges = {};
+      var priceMentioned = /(?:\$|usd\s*)\d/i.test(text) || /\b(?:price|cost|amount)\b/i.test(t) || /\bto\s+\d/i.test(t);
+      if (amount !== null && priceMentioned) purchaseChanges.price = amount.toFixed(2);
+      var dateMentioned = /\b(?:today|yesterday|tomorrow|20\d{2}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2})\b/i.test(text);
+      if (dateMentioned) purchaseChanges.date = actionDate(text).value;
+      if (accounts.length === 1) purchaseChanges.accountId = accounts[0].id;
+      var changedPriority = /\b(high|medium|low)\s+priority\b/i.exec(text);
+      if (changedPriority) purchaseChanges.priority = changedPriority[1][0].toUpperCase() + changedPriority[1].slice(1).toLowerCase();
+      if (!Object.keys(purchaseChanges).length) return 'What should I change on “' + targetPurchase.name + '”? I can update its price, target date, funding account, or priority.';
+      if (!openActionDraft('edit-purchase', purchaseChanges, targetPurchase.id)) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
+      var changeLabels = Object.keys(purchaseChanges).map(function(k){return k === 'accountId' ? 'funding account' : k === 'date' ? 'target date' : k;}).join(', ');
+      return 'I drafted changes to “' + targetPurchase.name + '” (' + changeLabels + '). Review the form and press Save; the purchase remains planned and nothing has been deducted.';
+    }
+
+    var purchaseIntent = (/^(?:please\s+)?(?:plan|create)\b/.test(t) && !/\bbudget\b/.test(t)) || /^(?:please\s+)?(?:add|create)\b.*\b(?:planned\s+)?purchase\b/.test(t);
+    if (purchaseIntent) {
+      if (amount === null) return 'What price should I put on the planned purchase?';
+      if (!s.accounts.length) return 'Create an account first, then tell me which account will fund the purchase. I won’t invent an account or balance.';
+      if (accounts.length > 1) return 'Which account should fund the planned purchase? Your accounts are: ' + names + '.';
+      var purchaseAccountId = accounts.length === 1 ? accounts[0].id : s.accounts.length === 1 ? s.accounts[0].id : '';
+      var purchaseDate = actionDate(text);
+      var purchaseName = text.replace(/^\s*(?:please\s+)?(?:plan|create|add)\s+(?:a\s+|an\s+)?(?:new\s+)?(?:planned\s+)?(?:purchase\s+(?:for|of)\s+)?/i, '')
+        .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,?\s+20\d{2})?\b/ig,' ')
+        .replace(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g,' ')
+        .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g,' ')
+        .replace(/(?:\$|usd\s*)?\d[\d,]*(?:\.\d+)?\s*(?:k|thousand)?\b/ig, ' ')
+        .replace(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g, ' ')
+        .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, ' ')
+        .replace(/\b(?:today|yesterday|tomorrow|by|on|with|from|using|account|purchase|planned|for|a|an|priority|high|medium|low)\b/ig, ' ')
+        .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,?\s+20\d{2})?\b/ig, ' ');
+      accounts.forEach(function(a){ if(a.name){ var p=purchaseName.toLowerCase().indexOf(String(a.name).toLowerCase()); if(p>=0) purchaseName=purchaseName.slice(0,p)+' '+purchaseName.slice(p+String(a.name).length); } });
+      purchaseName = purchaseName.replace(/[.,:!?]/g, ' ').replace(/\s+/g, ' ').trim().slice(0,100);
+      if (!purchaseName) return 'What should I call the planned purchase?';
+      var priority = /\bhigh\s+priority\b/i.test(text) ? 'High' : /\blow\s+priority\b/i.test(text) ? 'Low' : 'Medium';
+      var purchaseCategory = actionCategory(text, s);
+      var purchaseValues = { name: purchaseName, price: amount.toFixed(2), date: purchaseDate.value, priority: priority, category: purchaseCategory, accountId: purchaseAccountId, saved: '0', status: 'Planning' };
+      if (!openActionDraft('add-purchase', purchaseValues)) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
+      return 'I drafted “' + purchaseName + '” as a planned purchase for ' + fmt(amount, s.d) + (purchaseAccountId ? ' from ' + accountNameFromSnapshot(s, purchaseAccountId) : '') + (purchaseDate.defaulted ? ' · date set to today' : ' · ' + purchaseDate.value) + '. Review the details and press Save; nothing has been recorded or deducted.';
+    }
+
+    var transfer = /^(?:(?:i|we)\s+)?(?:just\s+)?(?:transferred|moved)\b/.test(t) || /^(?:transfer|move)\b/.test(t) || /^(?:please\s+)?(?:log|record|add)\b.*\btransfer\b/.test(t);
+    var income = /^(?:(?:i|we)\s+)?(?:just\s+)?(?:received|earned|deposited|got\s+paid|was\s+paid|my\s+paycheck\s+was)\b/.test(t) || /^(?:please\s+)?(?:log|record|add)\b.*\b(?:income|paycheck)\b/.test(t);
+    var expense = /^(?:(?:i|we)\s+)?(?:just\s+)?(?:spent|paid|bought|purchased|was\s+charged|got\s+charged)\b/.test(t) || /^(?:please\s+)?(?:log|record|add)\b.*\b(?:expense|transaction|purchase)\b/.test(t);
+    if (transfer || income || expense) {
+      if (amount === null) return 'What amount should I put in the transaction? I’ll fill the form for review, then wait for you to save it.';
+      if (!s.accounts.length) return 'Create an account first, then tell me the transaction again. I won’t invent an account or balance.';
+      var type = transfer ? 'Transfer' : income ? 'Income' : 'Expense';
+      var accountId = accounts.length ? accounts[0].id : s.accounts.length === 1 ? s.accounts[0].id : '';
+      var toAccountId = '';
+      if (type === 'Transfer') {
+        function accountAfter(marker) {
+          var start = t.indexOf(marker);
+          if (start < 0) return null;
+          start += marker.length;
+          return accounts.find(function(a) {
+            var name = String(a.name || '').trim().toLowerCase(), typeName = String(a.type || '').trim().toLowerCase();
+            return (name && t.indexOf(name, start) >= start) || (typeName && t.indexOf(typeName, start) >= start);
+          }) || null;
+        }
+        var source = accountAfter('from ') || accounts[0] || null;
+        var destination = accountAfter('to ') || accountAfter('into ') || accounts.find(function(a){return !source||a.id!==source.id;}) || null;
+        accountId = source ? source.id : '';
+        toAccountId = destination ? destination.id : '';
+      }
+      var date = actionDate(text);
+      var category = type === 'Income' ? 'Income' : type === 'Transfer' ? 'Other' : actionCategory(text, s);
+      var description = text.replace(/^\s*(?:please\s+)?(?:(?:i|we)\s+)?(?:just\s+)?/i,'')
+        .replace(/^(?:log|record|add)\s+(?:a\s+)?(?:new\s+)?(?:transaction|expense|income|transfer|purchase)?\s*/i,'')
+        .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,?\s+20\d{2})?\b/ig,' ')
+        .replace(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g,' ')
+        .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g,' ')
+        .replace(/^(?:spent|paid|bought|purchased|received|earned|deposited|transferred|moved|was\s+charged|got\s+paid)\b/i,' ')
+        .replace(/(?:\$|usd\s*)?\d[\d,]*(?:\.\d+)?\s*(?:k|thousand)?\b/ig,' ')
+        .replace(/\b(?:today|yesterday|tomorrow|on|from|to|using|with|my|the|account|expense|income|transaction|transfer|purchase|spent|paid|bought|purchased|received|earned|deposited|transferred|moved|at|for)\b/ig,' ');
+      accounts.forEach(function(a){ if(a.name){ var p=description.toLowerCase().indexOf(String(a.name).toLowerCase()); if(p>=0) description=description.slice(0,p)+' '+description.slice(p+String(a.name).length); } });
+      description=description.replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim().slice(0,120);
+      if (!description) description = type === 'Transfer' ? 'Transfer' : type === 'Income' ? 'Income' : category === 'Other' ? 'Expense' : category;
+      var values={ description: description, amount: amount.toFixed(2), type: type, category: category, accountId: accountId, date: date.value };
+      if (type === 'Transfer') values.toAccountId = toAccountId;
+      if (!openActionDraft('add-transaction', values)) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
+      return 'I drafted ' + (type === 'Expense' ? 'an expense' : type === 'Income' ? 'income' : 'a transfer') + ' for ' + fmt(amount, s.d) + (description?' · '+description:'') + (accountId?' · '+accountNameFromSnapshot(s,accountId):' · choose an account') + (date.defaulted?' · date set to today':' · '+date.value) + '. Review every field and press Save; nothing has been recorded yet.' + (type === 'Transfer' ? ' This is only a ledger entry; it does not move money.' : '');
+    }
+    return null;
+  }
+
+  function accountNameFromSnapshot(s, id) {
+    var a = (s.accounts || []).find(function(x){return x.id===id;});
+    return a ? a.name : 'account';
+  }
+
   function send(raw) {
     var text = String(raw || '').trim();
     if (!text) return;
     input.value = '';
     addMsg(text, 'me');
     try { if (window.NorthstarFX && window.NorthstarFX.sound) window.NorthstarFX.sound.tap(); } catch (e) {}
+
+    var actionAnswer = routeMoneyAction(text);
+    if (actionAnswer) { pushTurn(text, actionAnswer); typeThen(actionAnswer, 'Local action draft'); return; }
 
     if (!connReady()) {
       var localAnswer = reply(text);
@@ -3501,8 +3739,9 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
 
   window.NorthstarJarvis = {
     open: function () { toggle(true); },
-    ask: function (q) { toggle(true); typeThen(reply(q)); },
+    ask: function (q) { toggle(true); send(q); },
     reply: reply,
+    draftMoneyAction: routeMoneyAction,
     snapshot: snapshot,
     ledger: ledger,
     brief: brief,
