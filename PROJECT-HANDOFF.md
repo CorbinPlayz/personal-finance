@@ -35,6 +35,24 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | Cloudflare AI Worker | Worker code and setup notes exist, but the website is **not wired to call it** and deployment is not confirmed. The visitor-key (BYOK) path in 4f is what shipped instead |
 | Automated test suite / build pipeline | No `package.json`, test runner, or React/Vite build was found in the current repository inventory |
 
+## 2a. Fix log and printed manuals (2026-11-04)
+
+`fix-log/` is a separate, non-app section of the repository. It is not linked from `index.html` and does not affect
+the planner website.
+
+| Path | What it is |
+|---|---|
+| `fix-log/README.md` | Why the log exists, how to write an entry, posting guidelines |
+| `fix-log/TEMPLATE.md` | Blank entry template |
+| `fix-log/001-ender-3-v2-bed-and-extrusion.md` | First entry, diagnostic tree, still open |
+| `fix-log/manuals/ender-3-v2-manual.md` | 13-page step-by-step manual, markdown source |
+| `fix-log/manuals/ender-3-v2-manual.pdf` | Generated print-ready PDF (Letter, DejaVu Sans, vector figures) |
+| `fix-log/manuals/build_pdf.py` | ReportLab generator; `requirements.txt` alongside |
+| `fix-log/manuals/README.md` | Rebuild steps and house style |
+
+There is no `package.json` and no build pipeline for the website. The PDF generator is a standalone Python script;
+it is not wired into any CI. Rebuild with a local venv (see `fix-log/manuals/README.md`).
+
 ## 3. Repository inventory — verified
 
 | File | Purpose and important notes |
