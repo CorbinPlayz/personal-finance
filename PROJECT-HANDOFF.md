@@ -148,6 +148,16 @@ A floating assistant orb (bottom-right) opens a glass chat panel. It is **entire
 
 **Verification:** `parse5` 0 errors, `css-tree` 0 errors across four style blocks, 0 low-contrast pairs, `node --check` clean, and a jsdom harness with a seeded ledger asserting arithmetic (spend 2300, income 5200, 56% savings rate, two over-budget categories), the roast/affordability/advice/balance/goals answers, panel opening via `J`, and no runtime errors. **Spoken replies and the mic were never exercised** — no audio device or real browser here.
 
+## 4d. Semantic colour + Jarvis ink (2026-11-03)
+
+The design is **monochrome chrome with colour for money only**. The user explicitly asked for transactions to have colour again; do not remove these accents without being asked.
+
+- **Where:** `<style id="color-accents">` (five style blocks now) and `<script id="jarvis-ink">`.
+- **Money colours:** income `#1a7f5a` (`--money-in`), expense `#b3402a` (`--money-out`), transfer `#2b57c4` (`--money-move`), with pale tints for pill/icon backgrounds. Applied to `.positive`/`.negative` amounts, `.type-pill.income|expense|transfer`, `.tx-icon.*`, metric tiles, and a six-hue rotating palette for the spending-by-category bars.
+- **Still monochrome:** shell chrome, nav, buttons, inputs, headings, cards, tables, modals, Jarvis panel. The rule of thumb: **if it is a number or a category, colour is allowed; if it is UI furniture, it stays black/white.**
+- **Jarvis panel ink:** a canvas inside `.nsj-panel` (z 1, content at z 2, border ring at z 3) renders white/iridescent plumes behind the chat text — on pointer move, on tap, and one soft bloom per incoming message. Clipped by the panel's rounded corners, respects reduced motion, capped at 26 plumes.
+- **Verification:** `parse5` 0 errors, `css-tree` 0 errors across all five blocks, `node --check` clean, and a jsdom run asserting the ink canvas mounts as the panel's first child, synthetic pointer events raise nothing, and every colour rule is present.
+
 ## 5. User requirements and non-negotiable design constraints
 
 These requirements come from prior Northstar discussions and should guide future work.
@@ -263,6 +273,7 @@ Latest code-focused commits visible during this review were on 2026-10-26. The c
 
 - 2026-11-03: Re-reviewed the prior Northstar project context available in this conversation, the current repository inventory, root README, Firestore rules, Worker source/configuration, current `index.html`, and recent Git commit history. Rewrote this handoff to reflect the current static-site architecture and implemented functionality.
 - 2026-11-03: Corrected the mobile-scrolling status. The user confirmed scrolling was already fixed; repository commits from 2026-10-24 and 2026-10-26 and the current responsive CSS corroborate that status. No new scrolling code was changed.
+- 2026-11-03: Restored semantic colour for money (income/expense/transfer, category palette) while keeping the chrome monochrome, and added the ink plume layer inside the Jarvis panel.
 - 2026-11-03: Added Jarvis — a local, offline, data-aware assistant with tone modes, optional speech output/input, and a glass panel. Reads the ledger read-only; no network, no API keys.
 - 2026-11-03: Added the Liquid Black layer — glass shell, iridescent accents, drifting ambient fields, ink-in-water cursor, staggered motion + count-ups, a synthesized sound system with a topbar mute, a ⌘K command palette, keyboard shortcuts, a grain toggle and a logo easter egg. All additive (+790/-0); core app logic untouched.
 - 2026-11-03: Full visual redesign to a monochrome design language. Added the `#mono-design` style layer, remapped every colour literal to a neutral ramp with a single oxblood danger accent, replaced Unicode glyphs with inline SVG line icons (nav, dock, metrics, transactions, accounts, goals, empty states, welcome benefits), rebuilt the monochrome brand marks, and added tabular numerals. Structure, data logic, persistence, sync, and the documented mobile scroll fixes were not changed; the only JS edits are icon/colour values plus the new `ICON` set.

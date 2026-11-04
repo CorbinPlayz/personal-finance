@@ -1085,6 +1085,65 @@ body.nsx-grain:after{
 }
 
 </style>
+<style id="color-accents">
+/* ============================================================
+   NORTHSTAR — SEMANTIC COLOUR ACCENTS
+   Money gets colour back. Chrome stays monochrome.
+   ============================================================ */
+:root{
+  --money-in:#1a7f5a;
+  --money-out:#b3402a;
+  --money-move:#2b57c4;
+  --money-in-bg:#e7f5ee;
+  --money-out-bg:#fbece7;
+  --money-move-bg:#e9effb;
+}
+
+/* ---------- amounts ---------- */
+.positive{color:var(--money-in)!important;font-weight:600}
+.negative{color:var(--money-out)!important}
+
+/* ---------- transaction types ---------- */
+.type-pill.income{background:var(--money-in-bg);color:#126b48;border-color:#c9e7d9}
+.type-pill.expense{background:var(--money-out-bg);color:#9c3623;border-color:#f0d3c8}
+.type-pill.transfer{background:var(--money-move-bg);color:#22479f;border-color:#d3ddf7}
+
+.tx-icon.income{background:var(--money-in-bg);color:#126b48}
+.tx-icon.expense{background:var(--money-out-bg);color:#9c3623}
+.tx-icon.transfer{background:var(--money-move-bg);color:#22479f}
+
+/* ---------- metric tiles ---------- */
+.metric-icon.navy{background:var(--money-move-bg)!important;color:var(--money-move)!important}
+.metric-icon.green{background:var(--money-in-bg)!important;color:var(--money-in)!important}
+.metric-icon.orange{background:var(--money-out-bg)!important;color:var(--money-out)!important}
+.metric-icon.purple{background:#f2ecfd!important;color:#6b46c1!important}
+
+/* ---------- spending by category ---------- */
+.category-chart>div:nth-child(6n+1) .category-fill{background:linear-gradient(90deg,#1a7f5a,#33a87a)}
+.category-chart>div:nth-child(6n+2) .category-fill{background:linear-gradient(90deg,#b3402a,#d9694f)}
+.category-chart>div:nth-child(6n+3) .category-fill{background:linear-gradient(90deg,#2b57c4,#5b84e0)}
+.category-chart>div:nth-child(6n+4) .category-fill{background:linear-gradient(90deg,#6b46c1,#9a7ae0)}
+.category-chart>div:nth-child(6n+5) .category-fill{background:linear-gradient(90deg,#0f7c8c,#37a8b8)}
+.category-chart>div:nth-child(6n+6) .category-fill{background:linear-gradient(90deg,#a5487a,#cc74a2)}
+
+/* keep the flow shimmer subtle over colour */
+.category-fill{position:relative}
+.category-fill:after{
+  content:'';position:absolute;inset:0;border-radius:inherit;opacity:.35;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+  background-size:200% 100%;animation:nsxFlow 4.4s linear infinite
+}
+@media(prefers-reduced-motion:reduce){.category-fill:after{animation:none;opacity:0}}
+
+/* ---------- jarvis ink ---------- */
+.nsj-panel .nsj-ink-layer{
+  position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;
+  opacity:.9
+}
+.nsj-panel>.nsj-head,.nsj-panel>.nsj-log,.nsj-panel>.nsj-chips,.nsj-panel>.nsj-foot,.nsj-panel>.nsj-footnote{position:relative;z-index:2}
+.nsj-panel:after{z-index:3}
+
+</style>
 </head>
 <body>
 <section class="welcome-screen" id="welcomeScreen" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
@@ -2636,6 +2695,142 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
   else build();
 
   window.NorthstarJarvis = { open: function () { toggle(true); }, ask: function (q) { toggle(true); send(q); }, reply: reply, snapshot: snapshot };
+})();
+
+</script>
+<script id="jarvis-ink">
+/* ============================================================
+   NORTHSTAR — INK INSIDE THE JARVIS PANEL
+   Plumes bloom behind the chat text; one burst per reply.
+   ============================================================ */
+(function () {
+  'use strict';
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  var TINTS = ['255,154,213', '183,156,255', '139,232,255', '168,255,212', '255,255,255'];
+
+  function mount(panel) {
+    if (!panel || panel.querySelector('.nsj-ink-layer')) return;
+    var canvas = document.createElement('canvas');
+    canvas.className = 'nsj-ink-layer';
+    canvas.setAttribute('aria-hidden', 'true');
+    panel.insertBefore(canvas, panel.firstChild);
+
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var W = 0, H = 0;
+
+    function size() {
+      var r = panel.getBoundingClientRect();
+      W = Math.max(1, Math.round(r.width));
+      H = Math.max(1, Math.round(r.height));
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    size();
+    if (window.ResizeObserver) new ResizeObserver(size).observe(panel);
+    else window.addEventListener('resize', size, { passive: true });
+
+    var plumes = [], MAX = 26, running = false, frameLast = 0, lastSpawn = -999;
+
+    function spawn(x, y, strength) {
+      if (plumes.length >= MAX) plumes.shift();
+      plumes.push({
+        x: x, y: y,
+        r: (7 + Math.random() * 10) * (strength || 1),
+        life: 0,
+        ttl: 1000 + Math.random() * 700,
+        driftX: (Math.random() - 0.5) * 18,
+        driftY: -8 - Math.random() * 14,
+        tint: TINTS[(Math.random() * TINTS.length) | 0]
+      });
+      if (!running) { running = true; frameLast = 0; requestAnimationFrame(frame); }
+    }
+
+    function frame(ts) {
+      var dt = Math.min(48, ts - (frameLast || ts));
+      frameLast = ts;
+      ctx.clearRect(0, 0, W, H);
+
+      for (var i = plumes.length - 1; i >= 0; i--) {
+        var p = plumes[i];
+        p.life += dt;
+        var t = p.life / p.ttl;
+        if (t >= 1) { plumes.splice(i, 1); continue; }
+
+        var ease = 1 - Math.pow(1 - t, 3);
+        var r = p.r * (1 + ease * 3.2);
+        var x = p.x + p.driftX * ease;
+        var y = p.y + p.driftY * ease;
+        var a = Math.pow(1 - t, 1.7);
+
+        var g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, 'rgba(255,255,255,' + (0.11 * a).toFixed(3) + ')');
+        g.addColorStop(0.5, 'rgba(230,230,240,' + (0.055 * a).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+
+        var g2 = ctx.createRadialGradient(x, y, r * 0.5, x, y, r * 1.2);
+        g2.addColorStop(0, 'rgba(' + p.tint + ',' + (0.07 * a).toFixed(3) + ')');
+        g2.addColorStop(1, 'rgba(' + p.tint + ',0)');
+        ctx.fillStyle = g2;
+        ctx.beginPath(); ctx.arc(x, y, r * 1.2, 0, Math.PI * 2); ctx.fill();
+      }
+
+      if (plumes.length) requestAnimationFrame(frame);
+      else { running = false; ctx.clearRect(0, 0, W, H); }
+    }
+
+    panel.addEventListener('pointermove', function (e) {
+      var now = performance.now();
+      if (now - lastSpawn < 34) return;
+      lastSpawn = now;
+      var r = panel.getBoundingClientRect();
+      spawn(e.clientX - r.left, e.clientY - r.top, 1);
+    }, { passive: true });
+
+    panel.addEventListener('pointerdown', function (e) {
+      var r = panel.getBoundingClientRect();
+      for (var i = 0; i < 3; i++) {
+        spawn(e.clientX - r.left + (Math.random() - 0.5) * 26, e.clientY - r.top + (Math.random() - 0.5) * 26, 1.2);
+      }
+    }, { passive: true });
+
+    /* one soft bloom per message */
+    var log = panel.querySelector('#nsjLog');
+    if (log) {
+      new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+          [].forEach.call(m.addedNodes, function (n) {
+            if (n.nodeType !== 1 || !n.classList || !n.classList.contains('nsj-msg')) return;
+            var rect = n.getBoundingClientRect(), pr = panel.getBoundingClientRect();
+            var cx = Math.min(W - 20, Math.max(20, rect.left - pr.left + 26));
+            var cy = Math.min(H - 30, Math.max(30, rect.top - pr.top + rect.height / 2));
+            spawn(cx, cy, 1.5);
+            spawn(cx + 24, cy + 10, 1);
+          });
+        });
+      }).observe(log, { childList: true });
+    }
+  }
+
+  function start() {
+    var tries = 0;
+    (function wait() {
+      var panel = document.querySelector('.nsj-panel');
+      if (panel) { mount(panel); return; }
+      if (tries++ < 40) setTimeout(wait, 100);
+    })();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
 
 </script>
