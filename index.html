@@ -1165,6 +1165,7 @@ body.nsx-grain:after{
 .nsj-sheet-head span{margin-left:auto;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#7a7a7a}
 .nsj-sheet-body{flex:1;overflow:auto;padding:12px 14px 18px;display:flex;flex-direction:column;gap:12px}
 .nsj-field{display:flex;flex-direction:column;gap:5px}
+.nsj-field[hidden]{display:none!important}
 .nsj-field label{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:#8a8a8a}
 .nsj-field input[type=text],.nsj-field input[type=password],.nsj-field select{
   background:rgba(255,255,255,.06)!important;border:1px solid rgba(255,255,255,.14)!important;
@@ -2511,21 +2512,24 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
   /* ---------------- connections: bring your own key ---------------- */
   var CONN_KEY = 'northstar-jarvis-conn-v1';
   var PROVIDERS = {
-    gemini: { label: 'Google Gemini', model: 'gemini-2.0-flash', url: 'https://generativelanguage.googleapis.com/v1beta/models/', help: 'aistudio.google.com' },
+    gemini: { label: 'Google Gemini', model: 'gemini-2.5-flash-lite', url: 'https://generativelanguage.googleapis.com/v1beta/models/', help: 'aistudio.google.com' },
     openai: { label: 'OpenAI', model: 'gpt-4o-mini', url: 'https://api.openai.com/v1/chat/completions', help: 'platform.openai.com' },
-    anthropic: { label: 'Anthropic', model: 'claude-3-5-haiku-latest', url: 'https://api.anthropic.com/v1/messages', help: 'console.anthropic.com' },
-    groq: { label: 'Groq', model: 'llama-3.3-70b-versatile', url: 'https://api.groq.com/openai/v1/chat/completions', help: 'console.groq.com' },
-    openrouter: { label: 'OpenRouter', model: 'meta-llama/llama-3.3-70b-instruct:free', url: 'https://openrouter.ai/api/v1/chat/completions', help: 'openrouter.ai/keys' },
+    anthropic: { label: 'Anthropic', model: 'claude-haiku-4-5', url: 'https://api.anthropic.com/v1/messages', help: 'console.anthropic.com' },
+    groq: { label: 'Groq', model: 'openai/gpt-oss-120b', url: 'https://api.groq.com/openai/v1/chat/completions', help: 'console.groq.com' },
+    openrouter: { label: 'OpenRouter', model: 'google/gemma-4-31b-it:free', url: 'https://openrouter.ai/api/v1/chat/completions', help: 'openrouter.ai/keys' },
     custom: { label: 'Custom (OpenAI-compatible)', model: '', url: '', help: 'your own endpoint' }
   };
-  var CONN_DEFAULT = { provider: 'gemini', model: 'gemini-2.0-flash', key: '', base: '', remember: false, includeTx: false, enabled: false };
+  var CONN_DEFAULT = { provider: 'gemini', model: 'gemini-2.5-flash-lite', key: '', base: '', remember: false, includeTx: false, enabled: false };
   var conn = loadConn();
   var history = [];
+  var cloudVerified = false;
 
   function loadConn() {
     var c = Object.assign({}, CONN_DEFAULT), raw = null;
     try { raw = localStorage.getItem(CONN_KEY) || sessionStorage.getItem(CONN_KEY); } catch (e) {}
     if (raw) { try { Object.assign(c, JSON.parse(raw)); } catch (e) {} }
+    var retired = { gemini: 'gemini-2.0-flash', anthropic: 'claude-3-5-haiku-latest', groq: 'llama-3.3-70b-versatile', openrouter: 'meta-llama/llama-3.3-70b-instruct:free' };
+    if (retired[c.provider] === c.model) c.model = PROVIDERS[c.provider].model;
     return c;
   }
   function saveConn() {
@@ -2609,8 +2613,26 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
 
   function errText(e) {
     if (!e) return 'unknown error';
-    if (e.name === 'AbortError') return 'request timed out';
-    return String(e.message || e).slice(0, 120);
+    if (e.name === 'AbortError') return 'Request timed out (30 seconds)';
+    var message = String(e.message || e);
+    return message.length > 600 ? message.slice(0, 320) + ' … ' + message.slice(-260) : message;
+  }
+
+  function providerError(status, body, provider) {
+    body = body || {};
+    var detail = body.error && (body.error.message || body.error) || body.message || '';
+    var meta = body.error && body.error.metadata || body.metadata || {};
+    var raw = meta.raw || '';
+    if (raw && typeof raw !== 'string') raw = JSON.stringify(raw);
+    var upstream = meta.provider_name || meta.provider || '';
+    if (typeof detail === 'object') detail = JSON.stringify(detail);
+    if ((status === 401 || status === 403) && !detail) detail = 'Authentication rejected — check that the key belongs to this provider';
+    if (status === 404) detail = (detail ? detail + ' · ' : '') + 'model or endpoint not found — check the model ID and provider';
+    var message = providerLabel(provider) + ' HTTP ' + status + (upstream ? ' · upstream ' + upstream : '') + (detail ? ': ' + detail : '');
+    if (raw && String(raw) !== String(detail)) message += ' · ' + String(raw);
+    var err = new Error(message || (providerLabel(provider) + ' HTTP ' + status));
+    err.status = status; err.provider = provider; err.upstream = upstream;
+    return err;
   }
 
   function extractGemini(j) {
@@ -2620,7 +2642,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     return parts.map(function (p) { return p.text || ''; }).join('').trim();
   }
 
-  async function callCloud(userText, pastTurns, s, opts) {
+  async function callCloudOnce(userText, pastTurns, s, opts) {
     opts = opts || {};
     var key = String(conn.key || '').trim();
     var model = String(conn.model || '').trim();
@@ -2650,7 +2672,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
           })
         });
         var gj = await gres.json().catch(function () { return null; });
-        if (!gres.ok) throw new Error((gj && gj.error && gj.error.message) || ('HTTP ' + gres.status));
+        if (!gres.ok) throw providerError(gres.status, gj, 'gemini');
         var gtext = extractGemini(gj);
         if (!gtext) throw new Error('Empty response from Gemini');
         return gtext;
@@ -2671,7 +2693,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
           })
         });
         var aj = await ares.json().catch(function () { return null; });
-        if (!ares.ok) throw new Error((aj && aj.error && aj.error.message) || ('HTTP ' + ares.status));
+        if (!ares.ok) throw providerError(ares.status, aj, 'anthropic');
         var atext = (aj && aj.content ? aj.content.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('') : '').trim();
         if (!atext) throw new Error('Empty response from Anthropic');
         return atext;
@@ -2696,7 +2718,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
         })
       });
       var oj = await ores.json().catch(function () { return null; });
-      if (!ores.ok) throw new Error((oj && oj.error && (oj.error.message || oj.error)) || ('HTTP ' + ores.status));
+      if (!ores.ok) throw providerError(ores.status, oj, conn.provider);
       var otext = oj && oj.choices && oj.choices[0] && oj.choices[0].message && oj.choices[0].message.content;
       otext = String(otext || '').trim();
       if (!otext) throw new Error('Empty response from provider');
@@ -2706,10 +2728,21 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     }
   }
 
+  async function callCloud(userText, pastTurns, s, opts) {
+    try {
+      return await callCloudOnce(userText, pastTurns, s, opts);
+    } catch (err) {
+      if ((err && err.name === 'AbortError') || (err && err.status >= 500 && err.status <= 599)) {
+        return await callCloudOnce(userText, pastTurns, s, opts);
+      }
+      throw err;
+    }
+  }
+
   async function testConnection() {
     var s = snapshot();
     if (!s.ok) s = { ok: false, d: { settings: {} }, accounts: [], cur: { income: 0, spend: 0, catsList: [], rate: null }, prev: { income: 0, spend: 0 }, budgets: [], goals: [], purchases: [], total: 0, available: 0, daysLeft: 0, projected: 0 };
-    var replyText = await callCloud('Reply with exactly: connected', [], s, { maxTokens: 24 });
+    var replyText = await callCloud('Reply with exactly: connected', [], s, { maxTokens: 64 });
     return replyText;
   }
 
@@ -3247,8 +3280,8 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
       setSwitch(panel.querySelector('#nsjEnabled'), conn.enabled);
       setSwitch(panel.querySelector('#nsjRemember'), conn.remember);
       setSwitch(panel.querySelector('#nsjTx'), conn.includeTx);
-      setConnStatus(connReady() ? 'ok' : '', connReady()
-        ? 'Connected · ' + providerLabel(conn.provider) + ' · ' + (conn.model || 'no model')
+      setConnStatus(connReady() && cloudVerified ? 'ok' : '', connReady()
+        ? (cloudVerified ? 'Connected · ' : 'Cloud on · unverified · ') + providerLabel(conn.provider) + ' · ' + (conn.model || 'no model')
         : (conn.key ? 'Key saved — switch Cloud brain on' : 'Not connected'));
     }
 
@@ -3264,9 +3297,9 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
       panel.querySelector('#nsjProvider').addEventListener('change', function (e) {
         var next = e.target.value;
         var wasDefault = !conn.model || conn.model === (PROVIDERS[conn.provider] || {}).model;
-        conn.provider = next;
+        conn.provider = next; cloudVerified = false;
         if (wasDefault) conn.model = (PROVIDERS[next] || {}).model || '';
-        saveConn(); paintSheet();
+        saveConn(); paintSheet(); refreshStatus();
       });
       ['#nsjKey', '#nsjModel', '#nsjBase'].forEach(function (sel) {
         var field = panel.querySelector(sel);
@@ -3274,7 +3307,8 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
           if (sel === '#nsjKey') conn.key = e.target.value.trim();
           if (sel === '#nsjModel') conn.model = e.target.value.trim();
           if (sel === '#nsjBase') conn.base = e.target.value.trim();
-          saveConn();
+          cloudVerified = false;
+          saveConn(); refreshStatus();
         };
         field.addEventListener('input', sync);
         field.addEventListener('change', sync);
@@ -3301,13 +3335,16 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
         conn.model = panel.querySelector('#nsjModel').value.trim();
         conn.base = panel.querySelector('#nsjBase').value.trim();
         saveConn();
-        setConnStatus('', 'Testing…');
+        cloudVerified = false;
+        setConnStatus('', 'Testing connection…');
         testConnection().then(function (r) {
-          conn.enabled = true; saveConn();
-          setConnStatus('ok', 'Connected · ' + (r || 'ok').slice(0, 24));
+          conn.enabled = true; cloudVerified = true; saveConn();
+          setConnStatus('ok', 'Connected · ' + providerLabel(conn.provider) + ' · ' + conn.model);
           refreshStatus(); paintSheet();
         }).catch(function (err) {
+          cloudVerified = false;
           setConnStatus('err', errText(err));
+          refreshStatus();
         });
       });
       panel.querySelector('#nsjPreview').addEventListener('click', function () {
@@ -3325,7 +3362,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
         box.hidden = false;
       });
       panel.querySelector('#nsjClear').addEventListener('click', function () {
-        conn.key = ''; conn.enabled = false; saveConn(); paintSheet(); refreshStatus();
+        conn.key = ''; conn.enabled = false; cloudVerified = false; saveConn(); paintSheet(); refreshStatus();
         setConnStatus('', 'Key cleared');
       });
     }
@@ -3338,10 +3375,10 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     if (!el) return;
     var s = snapshot();
     var base = s.ok ? s.accounts.length + ' acct · ' + s.txCount + ' tx' : 'No ledger found';
-    el.textContent = (connReady() ? 'Cloud · ' + providerLabel(conn.provider) + ' · ' : 'Local · ') + base;
+    el.textContent = (connReady() ? 'Cloud ' + (cloudVerified ? 'connected' : 'on · unverified') + ' · ' + providerLabel(conn.provider) + ' · ' + conn.model + ' · ' : 'Local · ') + base;
     var fn = panel.querySelector('#nsjFootnote');
     if (fn) fn.textContent = connReady()
-      ? 'Cloud brain on · brief sent to ' + providerLabel(conn.provider)
+      ? (cloudVerified ? 'Cloud reply verified · ' : 'Cloud is on but has not yet succeeded · ') + providerLabel(conn.provider) + ' · BYOK key stays in this browser'
       : 'Reads your ledger locally · nothing leaves this device';
   }
 
@@ -3353,7 +3390,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     log.scrollTop = log.scrollHeight;
     return n;
   }
-  function typeThen(text) {
+  function typeThen(text, source) {
     var t = document.createElement('div');
     t.className = 'nsj-typing';
     t.innerHTML = '<i></i><i></i><i></i>';
@@ -3362,11 +3399,11 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     var wait = reduce ? 60 : Math.min(900, 260 + text.length * 5);
     setTimeout(function () {
       t.remove();
-      addMsg(text, 'bot');
+      addMsgWithSource(text, source || 'Local rules engine');
       speak(text);
     }, wait);
   }
-  function say(text, instant) { if (instant) { addMsg(text, 'bot'); speak(text); } else typeThen(text); }
+  function say(text, instant) { if (instant) { addMsgWithSource(text, 'Local rules engine'); speak(text); } else typeThen(text, 'Local rules engine'); }
 
   /* ---------------- cloud routing ---------------- */
   function pushTurn(userText, botText) {
@@ -3410,11 +3447,15 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     var typing = makeTyping();
     callCloud(text, history.slice(), snap).then(function (answer) {
       typing.remove();
-      addMsgWithSource(answer, 'Cloud · ' + providerLabel(conn.provider));
+      cloudVerified = true;
+      refreshStatus();
+      addMsgWithSource(answer, 'Cloud · ' + providerLabel(conn.provider) + ' · ' + conn.model);
       pushTurn(text, answer);
       speak(answer);
     }).catch(function (err) {
       typing.remove();
+      cloudVerified = false;
+      refreshStatus();
       var fallback = reply(text);
       addMsgWithSource(fallback, 'Local fallback · ' + errText(err));
       pushTurn(text, fallback);
@@ -3458,7 +3499,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     brief: brief,
     systemPrompt: systemPrompt,
     conn: function () { return Object.assign({}, conn); },
-    setConn: function (patch) { Object.assign(conn, patch || {}); saveConn(); },
+    setConn: function (patch) { Object.assign(conn, patch || {}); cloudVerified = false; saveConn(); },
     clearConn: function () { conn.key = ''; conn.enabled = false; saveConn(); },
     callCloud: function (text, opts) { return callCloud(text, [], snapshot(), opts); },
     testConnection: testConnection
