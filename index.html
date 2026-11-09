@@ -265,65 +265,62 @@ body{height:auto!important;min-height:100%;overflow:visible!important;overscroll
 
 
 /* ============================================================
-   PURCHASE COMPLETION — one choreographed timeline per card
-   0ms    hairline traces the tile perimeter
-   90ms   seal presses in, ring sweeps and a contact echo fires
-   240ms  the two strokes draw through each other
-   300ms  the price is struck, with a pen-lift dot
-   180ms  a single light sweep crosses the card
-   Every element is bounded to its own space; nothing is stretched
-   across the card's title or price. Trigger, stagger and the
-   purchase-x-visible hook are unchanged.
+   PURCHASE COMPLETION — full-bleed stamp, choreographed
+   A large X inside its own ring, centred on the card and never
+   clipped by the card edge. Sequence, once per card:
+   0ms    scrim fades, outer ring sweeps in, contact pulse fires
+   120ms  the X draws in simultaneously from both ends
+   300ms  a second concentric ring sweeps counter-clockwise
+   380ms  the stamp overshoots and settles
+   520ms  two rings peel off and dissipate
+   180ms  a light sweep crosses the card
+   The mark scales with the card, keeps 1:1 geometry, and uses
+   currentColor so a purchased state can print it in grey.
    ============================================================ */
 .purchase-tile-purchased{--purchase-x-ease:cubic-bezier(.22,1,.36,1)}
-.purchase-tile-purchased .purchase-tile-top{padding-right:34px}
 
-/* 1 — perimeter trace */
-.purchase-tile-trace{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;border-radius:inherit;opacity:.9}
-.purchase-tile-trace svg{display:block;width:100%;height:100%}
-.purchase-trace-path{
-  fill:none;stroke:#8f2f26;stroke-width:1.4;stroke-opacity:.34;
-  stroke-dasharray:1;stroke-dashoffset:1;vector-effect:non-scaling-stroke;
-}
-
-/* 5 — light sweep */
-.purchase-tile-sheen{
-  position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;overflow:hidden;
-  opacity:0;
-}
-.purchase-tile-sheen:before{
-  content:"";position:absolute;top:-20%;bottom:-20%;left:0;width:52%;
-  background:linear-gradient(100deg,transparent,#ffffff00 12%,#ffffffa8 50%,#ffffff00 88%,transparent);
-  transform:translateX(-140%) skewX(-14deg);
-}
-
-/* 2 + 3 — seal press, ring sweep, contact echo */
-.purchase-tile-seal{
-  position:absolute;right:9px;top:9px;z-index:3;width:26px;height:26px;
-  display:grid;place-items:center;border-radius:50%;
-  background:#fff;border:1px solid #d9d9d9;color:#8f2f26;
-  box-shadow:0 1px 2px #0808080f;pointer-events:none;
+/* the stamp itself: square, centred, sized from the card's short side */
+.purchase-tile-stamp{
+  position:absolute;z-index:2;left:50%;top:50%;width:74%;aspect-ratio:1/1;
+  margin:-37% 0 0 -37%;pointer-events:none;color:#8f2f26;
   transform-origin:50% 50%;opacity:0;
 }
-.purchase-tile-seal svg{width:14px;height:14px;display:block;overflow:visible}
-.purchase-seal-ring{
-  fill:none;stroke:#8f2f26;stroke-opacity:.26;stroke-width:1.4;
-  stroke-dasharray:1;stroke-dashoffset:1;vector-effect:non-scaling-stroke;
+.purchase-tile-stamp svg{display:block;width:100%;height:100%;overflow:visible}
+.purchase-tile-bloom{
+  position:absolute;inset:-6%;z-index:1;pointer-events:none;border-radius:inherit;opacity:0;
+  background:radial-gradient(circle at 50% 50%,#ffffff 0 38%,rgba(255,255,255,.92) 52%,rgba(255,255,255,0) 76%);
 }
-.purchase-seal-echo{
-  fill:none;stroke:#8f2f26;stroke-width:1.2;stroke-opacity:0;
-  vector-effect:non-scaling-stroke;transform-box:fill-box;transform-origin:center;
+.purchase-tile-purchased.purchase-x-visible .purchase-tile-bloom{
+  animation:purchaseBloom .9s var(--purchase-x-ease) var(--purchase-x-delay,0ms) both;
 }
-.purchase-seal-stroke{
-  fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;
-  stroke-dasharray:1;stroke-dashoffset:1;vector-effect:non-scaling-stroke;
+@keyframes purchaseBloom{0%{opacity:0}46%{opacity:1}100%{opacity:.94}}
+.purchase-stamp-ring,.purchase-stamp-x,.purchase-stamp-glint{
+  fill:none;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:1;stroke-dashoffset:1;
+}
+.purchase-stamp-ring{stroke:currentColor}
+.purchase-stamp-ring-a{stroke-width:1.6;stroke-opacity:.5}
+.purchase-stamp-ring-b{stroke-width:1.1;stroke-opacity:.34;stroke-dasharray:1;opacity:0}
+.purchase-stamp-x{stroke:currentColor;stroke-width:4.4;stroke-opacity:.9}
+.purchase-stamp-pulse{fill:none;stroke:currentColor;stroke-width:2;stroke-opacity:0;vector-effect:non-scaling-stroke;transform-box:fill-box;transform-origin:center}
+.purchase-stamp-glint{
+  stroke:#ffffff;stroke-width:2.4;stroke-opacity:0;stroke-dasharray:.16 1;
+}
+
+/* 5 — light sweep across the card */
+.purchase-tile-sheen{position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;overflow:hidden;opacity:0}
+.purchase-tile-sheen:before{
+  content:"";position:absolute;top:-20%;bottom:-20%;left:0;width:52%;
+  background:linear-gradient(100deg,transparent,#ffffff00 12%,#ffffff9e 50%,#ffffff00 88%,transparent);
+  transform:translateX(-140%) skewX(-14deg);
 }
 
 /* 4 — struck price */
 .purchase-tile-purchased .purchase-tile-price{position:relative;align-self:flex-start;max-width:100%;color:#8a8a8a}
 .purchase-tile-strike{
   position:absolute;left:-2px;right:-2px;top:54%;height:1.5px;border-radius:2px;
-  background:#8f2f26;opacity:.82;pointer-events:none;
+  background:#8f2f26;opacity:.9;pointer-events:none;z-index:3;
+  box-shadow:0 0 0 .5px #ffffff8c;
   transform:scaleX(0);transform-origin:left center;
 }
 .purchase-tile-strike:after{
@@ -332,79 +329,88 @@ body{height:auto!important;min-height:100%;overflow:visible!important;overscroll
 }
 
 /* ---- the timeline ---- */
-.purchase-tile-purchased.purchase-x-visible{animation:purchaseSettle .52s cubic-bezier(.22,1,.36,1) var(--purchase-x-delay,0ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-trace-path{
-  animation:purchaseTrace .62s var(--purchase-x-ease) var(--purchase-x-delay,0ms) both;
+.purchase-tile-purchased.purchase-x-visible .purchase-tile-stamp{
+  animation:purchaseStampIn .9s var(--purchase-x-ease) var(--purchase-x-delay,0ms) both;
 }
-.purchase-tile-purchased.purchase-x-visible .purchase-tile-seal{
-  animation:purchaseSealPress .52s cubic-bezier(.16,.9,.28,1) calc(var(--purchase-x-delay,0ms) + 90ms) both;
+.purchase-tile-purchased.purchase-x-visible .purchase-stamp-ring-a{
+  animation:purchaseRingSweep .62s cubic-bezier(.3,.9,.3,1) calc(var(--purchase-x-delay,0ms) + 40ms) both;
 }
-.purchase-tile-purchased.purchase-x-visible .purchase-seal-ring{
-  animation:purchaseSealSweep .46s cubic-bezier(.3,.9,.3,1) calc(var(--purchase-x-delay,0ms) + 120ms) both;
+.purchase-tile-purchased.purchase-x-visible .purchase-stamp-ring-b{
+  animation:purchaseRingSweep2 .78s cubic-bezier(.3,.9,.3,1) calc(var(--purchase-x-delay,0ms) + 300ms) both;
 }
-.purchase-tile-purchased.purchase-x-visible .purchase-seal-echo{
-  animation:purchaseSealEcho .8s cubic-bezier(.16,.72,.25,1) calc(var(--purchase-x-delay,0ms) + 150ms) both;
+.purchase-tile-purchased.purchase-x-visible .purchase-stamp-pulse{
+  animation:purchaseStampPulse .95s cubic-bezier(.16,.72,.25,1) calc(var(--purchase-x-delay,0ms) + 60ms) both;
 }
-.purchase-tile-purchased.purchase-x-visible .purchase-seal-stroke.purchase-seal-a{
-  animation:purchaseSealDraw .26s cubic-bezier(.2,.75,.25,1) calc(var(--purchase-x-delay,0ms) + 240ms) both;
+.purchase-tile-purchased.purchase-x-visible .purchase-stamp-x-a{
+  animation:purchaseXDraw .42s cubic-bezier(.2,.75,.25,1) calc(var(--purchase-x-delay,0ms) + 120ms) both;
 }
-.purchase-tile-purchased.purchase-x-visible .purchase-seal-stroke.purchase-seal-b{
-  animation:purchaseSealDraw .26s cubic-bezier(.2,.75,.25,1) calc(var(--purchase-x-delay,0ms) + 320ms) both;
+.purchase-tile-purchased.purchase-x-visible .purchase-stamp-x-b{
+  animation:purchaseXDraw .42s cubic-bezier(.2,.75,.25,1) calc(var(--purchase-x-delay,0ms) + 120ms) both;
+}
+.purchase-tile-purchased.purchase-x-visible .purchase-stamp-glint{
+  animation:purchaseGlint 1.15s cubic-bezier(.3,.55,.2,1) calc(var(--purchase-x-delay,0ms) + 520ms) both;
 }
 .purchase-tile-purchased.purchase-x-visible .purchase-tile-strike{
-  animation:purchaseStrike .3s cubic-bezier(.2,.75,.25,1) calc(var(--purchase-x-delay,0ms) + 400ms) both;
+  animation:purchaseStrike .32s cubic-bezier(.2,.75,.25,1) calc(var(--purchase-x-delay,0ms) + 560ms) both;
 }
 .purchase-tile-purchased.purchase-x-visible .purchase-tile-strike:after{
-  animation:purchaseStrikeDot .34s var(--purchase-x-ease) calc(var(--purchase-x-delay,0ms) + 660ms) both;
+  animation:purchaseStrikeDot .34s var(--purchase-x-ease) calc(var(--purchase-x-delay,0ms) + 820ms) both;
 }
 .purchase-tile-purchased.purchase-x-visible .purchase-tile-sheen{
-  animation:purchaseSheenFade .86s linear calc(var(--purchase-x-delay,0ms) + 180ms) both;
+  animation:purchaseSheenFade .9s linear calc(var(--purchase-x-delay,0ms) + 240ms) both;
 }
 .purchase-tile-purchased.purchase-x-visible .purchase-tile-sheen:before{
-  animation:purchaseSheen 1.05s cubic-bezier(.3,.55,.2,1) calc(var(--purchase-x-delay,0ms) + 180ms) both;
+  animation:purchaseSheen 1.05s cubic-bezier(.3,.55,.2,1) calc(var(--purchase-x-delay,0ms) + 240ms) both;
 }
 
-@keyframes purchaseSettle{
-  0%{filter:grayscale(0) brightness(1)}
-  58%{filter:grayscale(.2) brightness(.985)}
-  100%{filter:grayscale(0) brightness(1)}
+@keyframes purchaseStampIn{
+  0%{opacity:0;transform:scale(1.5) rotate(-7deg);filter:blur(3px)}
+  42%{opacity:1;filter:blur(0)}
+  62%{transform:scale(.93) rotate(1.2deg)}
+  82%{transform:scale(1.015) rotate(-.3deg)}
+  100%{opacity:1;transform:scale(1) rotate(0)}
 }
-@keyframes purchaseTrace{from{stroke-dashoffset:1;opacity:.9}to{stroke-dashoffset:0;opacity:.9}}
-@keyframes purchaseSealPress{
-  0%{opacity:0;transform:scale(1.38)}
-  55%{opacity:1;transform:scale(.94)}
-  100%{opacity:1;transform:scale(1)}
+@keyframes purchaseRingSweep{from{stroke-dashoffset:1;stroke-opacity:.5}70%{stroke-opacity:.5}to{stroke-dashoffset:-.16;stroke-opacity:.24}}
+@keyframes purchaseRingSweep2{0%{opacity:0;stroke-dashoffset:.42}18%{opacity:1}to{opacity:.55;stroke-dashoffset:-.58}}
+@keyframes purchaseStampPulse{
+  0%{opacity:0;transform:scale(.72)}
+  24%{opacity:.5}
+  100%{opacity:0;transform:scale(1.34)}
 }
-@keyframes purchaseSealSweep{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
-@keyframes purchaseSealEcho{
-  0%{opacity:0;transform:scale(.55)}
-  22%{opacity:.5}
-  100%{opacity:0;transform:scale(1.65)}
+@keyframes purchaseXDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes purchaseGlint{
+  0%{opacity:0;stroke-dashoffset:.55}
+  20%{opacity:.9}
+  70%{opacity:.65}
+  100%{opacity:0;stroke-dashoffset:-.4}
 }
-@keyframes purchaseSealDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
 @keyframes purchaseStrike{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes purchaseStrikeDot{
   0%{opacity:0;transform:scale(.3)}
   35%{opacity:.85;transform:scale(1.25)}
   100%{opacity:0;transform:scale(1.9)}
 }
-@keyframes purchaseSheenFade{0%{opacity:0}14%{opacity:.85}72%{opacity:.85}100%{opacity:0}}
+@keyframes purchaseSheenFade{0%{opacity:0}14%{opacity:.8}72%{opacity:.8}100%{opacity:0}}
 @keyframes purchaseSheen{from{transform:translateX(-140%) skewX(-14deg)}to{transform:translateX(320%) skewX(-14deg)}}
 
 @media(prefers-reduced-motion:reduce){
-  .purchase-tile-purchased.purchase-x-visible .purchase-trace-path,
-  .purchase-tile-purchased.purchase-x-visible .purchase-tile-seal,
-  .purchase-tile-purchased.purchase-x-visible .purchase-seal-ring,
-  .purchase-tile-purchased.purchase-x-visible .purchase-seal-echo,
-  .purchase-tile-purchased.purchase-x-visible .purchase-seal-stroke,
+  .purchase-tile-purchased.purchase-x-visible .purchase-tile-stamp,
+  .purchase-tile-purchased.purchase-x-visible .purchase-tile-bloom,
+  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-ring-a,
+  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-ring-b,
+  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-pulse,
+  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-x-a,
+  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-x-b,
+  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-glint,
   .purchase-tile-purchased.purchase-x-visible .purchase-tile-strike,
   .purchase-tile-purchased.purchase-x-visible .purchase-tile-strike:after,
   .purchase-tile-purchased.purchase-x-visible .purchase-tile-sheen,
   .purchase-tile-purchased.purchase-x-visible .purchase-tile-sheen:before{animation:none!important}
-  .purchase-tile-trace,.purchase-tile-sheen{display:none}
-  .purchase-tile-seal{opacity:1}
-  .purchase-seal-ring{stroke-dashoffset:0}
-  .purchase-seal-stroke{stroke-dashoffset:0}
+  .purchase-tile-sheen,.purchase-stamp-pulse,.purchase-stamp-glint,.purchase-stamp-ring-b{display:none}
+  .purchase-tile-bloom{opacity:.94}
+  .purchase-tile-stamp{opacity:1}
+  .purchase-stamp-ring-a{stroke-dashoffset:0;stroke-opacity:.4}
+  .purchase-stamp-x{stroke-dashoffset:0}
   .purchase-tile-strike{transform:scaleX(1)}
   .purchase-tile-strike:after{display:none}
 }
@@ -1697,13 +1703,15 @@ function renderPurchaseTile(p){
   <strong class="purchase-tile-price">${esc(money(p.price))}${purchased?'<span class="purchase-tile-strike" aria-hidden="true"></span>':''}</strong>
   <div class="purchase-tile-meta"><span>${purchased?'Purchased':'Target'}</span><strong>${esc(fmtDate(p.date))}</strong></div>
   <div class="purchase-tile-progress"><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div><span>${purchased?'Completed':Math.round(pct)+'% saved'}</span></div></div>
-  ${purchased?`<span class="purchase-tile-trace" aria-hidden="true"><svg viewBox="0 0 100 100" preserveAspectRatio="none" focusable="false"><rect class="purchase-trace-path" x=".5" y=".5" width="99" height="99" rx="6" pathLength="1"/></svg></span>
-  <span class="purchase-tile-sheen" aria-hidden="true"></span>
-  <span class="purchase-tile-seal" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" focusable="false">
-   <circle class="purchase-seal-echo" cx="12" cy="12" r="10.4"/>
-   <circle class="purchase-seal-ring" cx="12" cy="12" r="10.4" pathLength="1" transform="rotate(-90 12 12)"/>
-   <path class="purchase-seal-stroke purchase-seal-a" d="M7.6 7.6 16.4 16.4" pathLength="1"/>
-   <path class="purchase-seal-stroke purchase-seal-b" d="M16.4 7.6 7.6 16.4" pathLength="1"/>
+  ${purchased?`<span class="purchase-tile-sheen" aria-hidden="true"></span>
+  <span class="purchase-tile-bloom" aria-hidden="true"></span>
+  <span class="purchase-tile-stamp" aria-hidden="true"><svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" fill="none" stroke-linecap="round" focusable="false">
+   <circle class="purchase-stamp-ring purchase-stamp-ring-a" cx="50" cy="50" r="43" pathLength="1" transform="rotate(-90 50 50)"/>
+   <circle class="purchase-stamp-ring purchase-stamp-ring-b" cx="50" cy="50" r="36" pathLength="1" transform="rotate(-90 50 50)"/>
+   <circle class="purchase-stamp-pulse" cx="50" cy="50" r="43"/>
+   <path class="purchase-stamp-x purchase-stamp-x-a" d="M19 19 81 81" pathLength="1"/>
+   <path class="purchase-stamp-x purchase-stamp-x-b" d="M81 19 19 81" pathLength="1"/>
+   <circle class="purchase-stamp-glint" cx="50" cy="50" r="43" pathLength="1" transform="rotate(-90 50 50)"/>
   </svg></span>`:""}
  </article>`;
 }
