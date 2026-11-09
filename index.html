@@ -265,113 +265,87 @@ body{height:auto!important;min-height:100%;overflow:visible!important;overscroll
 
 
 /* ============================================================
-   PURCHASE COMPLETION — whole-shape stamp
-   Rule: nothing is ever drawn in pieces. The circle and the X
-   are complete shapes at every frame; motion only fades and
-   scales them. A struck-out half-circle or a half-drawn X reads
-   as a rendering bug, so neither is possible here.
-   Timeline (~560ms total, once per card on first view):
-   0ms    veil settles over the card content
-   60ms   ring blooms out from 0.86 while fading in
-   60ms   X lands: starts large and light, presses down to rest
-   300ms  a single contact wave expands off the ring and is gone
+   PURCHASE COMPLETION — compact badge
+   Sized and placed like a component, not a watermark. The card's
+   own information stays legible: no veil, no veil-over-text, no
+   strike line running under the badge.
+   Rules learned from earlier builds (do not undo):
+   • no stroke-dasharray / dashoffset — half-drawn arcs read as bugs
+   • no full-card overlays — they hide the price and the name
+   • the badge keeps its own aspect ratio and is never stretched
+   • the circle must be a whole circle at every frame
+   Timeline ~520ms, once per card on first view:
+   0ms    badge presses in from 1.18x and light
+   120ms  contact echo expands off the ring and is gone
    ============================================================ */
 .purchase-tile-purchased{--purchase-x-ease:cubic-bezier(.22,1,.36,1)}
+.purchase-tile-purchased .purchase-tile-top{padding-right:44px}
 
-/* content veil: makes the mark deliberate instead of overlapping */
-.purchase-tile-purchased .purchase-tile-top{position:relative;z-index:4}
-.purchase-tile-veil{
-  position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;
-  background:linear-gradient(150deg,rgba(248,248,248,.965),rgba(241,241,241,.98));
-  opacity:0;
+.purchase-tile-badge{
+  position:absolute;right:10px;top:10px;z-index:4;
+  width:34px;height:34px;pointer-events:none;color:#8f2f26;
+  transform-origin:50% 50%;opacity:0;will-change:transform,opacity;
 }
+.purchase-tile-badge svg{display:block;width:100%;height:100%;overflow:visible}
 
-/* the stamp: square, centred, sized from the card's short side */
-.purchase-tile-stamp{
-  position:absolute;z-index:2;left:50%;top:50%;width:52%;aspect-ratio:1/1;
-  margin:-26% 0 0 -26%;pointer-events:none;color:#8f2f26;
-  transform-origin:50% 50%;opacity:0;
-  will-change:transform,opacity;
+.purchase-badge-ring{
+  stroke:currentColor;stroke-width:1.6;stroke-opacity:.62;
+  vector-effect:non-scaling-stroke;fill:#ffffff;fill-opacity:.92;
 }
-.purchase-tile-stamp svg{display:block;width:100%;height:100%;overflow:visible}
-
-.purchase-stamp-disc{fill:#ffffff;stroke:none;opacity:.92}
-.purchase-stamp-ring{
-  stroke:currentColor;stroke-width:1.15;stroke-opacity:.46;
+.purchase-badge-x{
+  stroke:currentColor;stroke-width:2.1;stroke-opacity:.95;
   vector-effect:non-scaling-stroke;
 }
-.purchase-stamp-x{
-  stroke:currentColor;stroke-width:1.75;stroke-opacity:.88;
-  vector-effect:non-scaling-stroke;
-}
-.purchase-stamp-dot{fill:currentColor;opacity:0;transform-box:fill-box;transform-origin:center}
-
-/* contact wave: a real circle that scales and fades, never dashed */
-.purchase-tile-stamp:after{
-  content:"";position:absolute;inset:0;border-radius:50%;
-  border:1px solid #8f2f26;opacity:0;pointer-events:none;
+.purchase-badge-echo{
+  stroke:currentColor;stroke-width:1.4;stroke-opacity:0;
+  vector-effect:non-scaling-stroke;fill:none;
+  transform-box:fill-box;transform-origin:center;
 }
 
-/* struck price — drawn from the left in a single quick gesture */
+/* the price keeps a visible strike; the badge never sits on it */
 .purchase-tile-purchased .purchase-tile-price{position:relative;align-self:flex-start;max-width:100%;color:#8a8a8a}
 .purchase-tile-strike{
-  position:absolute;left:-2px;right:-2px;top:54%;height:1.5px;border-radius:2px;
-  background:#8f2f26;opacity:.9;pointer-events:none;z-index:3;
-  box-shadow:0 0 0 .5px #ffffff8c;
+  position:absolute;left:-1px;right:-1px;top:53%;height:1.5px;border-radius:2px;
+  background:#8f2f26;opacity:.85;pointer-events:none;
   transform:scaleX(0);transform-origin:left center;
 }
 
 /* ---- the timeline ---- */
-.purchase-tile-purchased.purchase-x-visible .purchase-tile-veil{
-  animation:purchaseVeil .5s var(--purchase-x-ease) var(--purchase-x-delay,0ms) both;
+.purchase-tile-purchased.purchase-x-visible .purchase-tile-badge{
+  animation:purchaseBadgePress .52s var(--purchase-x-ease) var(--purchase-x-delay,0ms) both;
 }
-.purchase-tile-purchased.purchase-x-visible .purchase-tile-stamp{
-  animation:purchaseStampLand .56s var(--purchase-x-ease) calc(var(--purchase-x-delay,0ms) + 60ms) both;
-}
-.purchase-tile-purchased.purchase-x-visible .purchase-stamp-dot{
-  animation:purchaseDot .42s var(--purchase-x-ease) calc(var(--purchase-x-delay,0ms) + 260ms) both;
-}
-.purchase-tile-purchased.purchase-x-visible .purchase-tile-stamp:after{
-  animation:purchaseWave .62s cubic-bezier(.22,.7,.3,1) calc(var(--purchase-x-delay,0ms) + 240ms) both;
+.purchase-tile-purchased.purchase-x-visible .purchase-badge-echo{
+  animation:purchaseBadgeEcho .62s cubic-bezier(.22,.7,.3,1) calc(var(--purchase-x-delay,0ms) + 120ms) both;
 }
 .purchase-tile-purchased.purchase-x-visible .purchase-tile-strike{
-  animation:purchaseStrike .26s cubic-bezier(.3,.8,.3,1) calc(var(--purchase-x-delay,0ms) + 150ms) both;
+  animation:purchaseStrike .26s cubic-bezier(.3,.8,.3,1) calc(var(--purchase-x-delay,0ms) + 130ms) both;
 }
 
-@keyframes purchaseVeil{from{opacity:0}to{opacity:1}}
-@keyframes purchaseStampLand{
-  0%{opacity:0;transform:scale(1.22)}
-  55%{opacity:1;transform:scale(.975)}
+@keyframes purchaseBadgePress{
+  0%{opacity:0;transform:scale(1.18)}
+  58%{opacity:1;transform:scale(.965)}
   100%{opacity:1;transform:scale(1)}
 }
-@keyframes purchaseDot{
-  0%{opacity:0;transform:scale(.2)}
-  40%{opacity:.9;transform:scale(1.15)}
-  100%{opacity:.55;transform:scale(1)}
-}
-@keyframes purchaseWave{
+@keyframes purchaseBadgeEcho{
   0%{opacity:0;transform:scale(1)}
-  22%{opacity:.5}
-  100%{opacity:0;transform:scale(1.5)}
+  25%{opacity:.45}
+  100%{opacity:0;transform:scale(1.42)}
 }
 @keyframes purchaseStrike{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 
 @media(prefers-reduced-motion:reduce){
-  .purchase-tile-purchased.purchase-x-visible .purchase-tile-veil,
-  .purchase-tile-purchased.purchase-x-visible .purchase-tile-stamp,
-  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-dot,
-  .purchase-tile-purchased.purchase-x-visible .purchase-tile-stamp:after,
+  .purchase-tile-purchased.purchase-x-visible .purchase-tile-badge,
+  .purchase-tile-purchased.purchase-x-visible .purchase-badge-echo,
   .purchase-tile-purchased.purchase-x-visible .purchase-tile-strike{animation:none!important}
-  .purchase-tile-veil{opacity:1}
-  .purchase-tile-stamp{opacity:1}
-  .purchase-stamp-dot{opacity:.55}
-  .purchase-tile-stamp:after{display:none}
+  .purchase-tile-badge{opacity:1}
+  .purchase-badge-echo{display:none}
   .purchase-tile-strike{transform:scaleX(1)}
 }
 
-/* narrow cards: keep the mark comfortably clear of the card edge */
+/* on narrow cards give the badge a touch more room */
 @media(max-width:600px){
-  .purchase-tile-stamp{width:56%;margin:-28% 0 0 -28%}
+  .purchase-tile-badge{width:30px;height:30px;right:9px;top:9px}
+  .purchase-tile-purchased .purchase-tile-top{padding-right:38px}
 }
 </style>
 <style id="mono-design">
@@ -1662,13 +1636,11 @@ function renderPurchaseTile(p){
   <strong class="purchase-tile-price">${esc(money(p.price))}${purchased?'<span class="purchase-tile-strike" aria-hidden="true"></span>':''}</strong>
   <div class="purchase-tile-meta"><span>${purchased?'Purchased':'Target'}</span><strong>${esc(fmtDate(p.date))}</strong></div>
   <div class="purchase-tile-progress"><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div><span>${purchased?'Completed':Math.round(pct)+'% saved'}</span></div></div>
-  ${purchased?`<span class="purchase-tile-veil" aria-hidden="true"></span>
-  <span class="purchase-tile-stamp" aria-hidden="true"><svg viewBox="0 0 120 120" preserveAspectRatio="xMidYMid meet" fill="none" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-   <circle class="purchase-stamp-disc" cx="60" cy="60" r="52"/>
-   <circle class="purchase-stamp-ring" cx="60" cy="60" r="52"/>
-   <path class="purchase-stamp-x" d="M42 42 78 78"/>
-   <path class="purchase-stamp-x" d="M78 42 42 78"/>
-   <circle class="purchase-stamp-dot" cx="60" cy="60" r="2"/>
+  ${purchased?`<span class="purchase-tile-badge" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+   <circle class="purchase-badge-echo" cx="60" cy="60" r="54"/>
+   <circle class="purchase-badge-ring" cx="60" cy="60" r="54"/>
+   <path class="purchase-badge-x" d="M34 34 86 86"/>
+   <path class="purchase-badge-x" d="M86 34 34 86"/>
   </svg></span>`:""}
  </article>`;
 }
