@@ -275,13 +275,13 @@ body{height:auto!important;min-height:100%;overflow:visible!important;overscroll
   display:grid;place-items:center;border-radius:50%;
   background:#fff;border:1px solid #d9d9d9;color:#8f2f26;
   box-shadow:0 1px 2px #0808080f;pointer-events:none;
-  transform-origin:50% 50%;
+  transform-origin:50% 50%;opacity:0;
 }
 .purchase-tile-seal svg{width:13px;height:13px;display:block;overflow:visible}
 .purchase-seal-ring{fill:none;stroke:#8f2f26;stroke-opacity:.2;stroke-width:1.6;vector-effect:non-scaling-stroke;transform-box:fill-box;transform-origin:center}
-.purchase-seal-stroke{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:0;vector-effect:non-scaling-stroke}
+.purchase-seal-stroke{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1;vector-effect:non-scaling-stroke}
 .purchase-tile-purchased .purchase-tile-price{position:relative;align-self:flex-start;max-width:100%;color:#8a8a8a}
-.purchase-tile-strike{position:absolute;left:-2px;right:-2px;top:54%;height:1.5px;border-radius:2px;background:#8f2f26;opacity:.8;transform:scaleX(1);transform-origin:left center;pointer-events:none}
+.purchase-tile-strike{position:absolute;left:-2px;right:-2px;top:54%;height:1.5px;border-radius:2px;background:#8f2f26;opacity:.8;transform:scaleX(0);transform-origin:left center;pointer-events:none}
 .purchase-tile-purchased.purchase-x-visible .purchase-tile-seal{animation:purchaseSealIn .46s cubic-bezier(.18,.82,.25,1) var(--purchase-x-delay,0ms) both}
 .purchase-tile-purchased.purchase-x-visible .purchase-seal-ring{animation:purchaseSealRing .7s cubic-bezier(.18,.82,.25,1) calc(var(--purchase-x-delay,0ms) + 120ms) both}
 .purchase-tile-purchased.purchase-x-visible .purchase-seal-stroke.purchase-seal-a{animation:purchaseSealDraw .3s cubic-bezier(.2,.75,.25,1) calc(var(--purchase-x-delay,0ms) + 90ms) both}
@@ -296,6 +296,7 @@ body{height:auto!important;min-height:100%;overflow:visible!important;overscroll
   .purchase-tile-purchased.purchase-x-visible .purchase-seal-ring,
   .purchase-tile-purchased.purchase-x-visible .purchase-seal-stroke,
   .purchase-tile-purchased.purchase-x-visible .purchase-tile-strike{animation:none!important}
+  .purchase-tile-seal{opacity:1}
   .purchase-seal-ring{opacity:0}
   .purchase-seal-stroke{stroke-dashoffset:0}
   .purchase-tile-strike{transform:scaleX(1)}
