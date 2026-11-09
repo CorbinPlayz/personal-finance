@@ -38,9 +38,6 @@
 .priority-group-purchased .purchase-tile-purchased{background:linear-gradient(145deg,#ebebeb 0%,#e4e4e4 100%);border-color:#d9d9d9;box-shadow:inset 0 1px 0 #ffffffb8,0 2px 7px #08080805}
 .priority-group-purchased .purchase-tile-purchased:hover{background:linear-gradient(145deg,#ebebeb 0%,#e4e4e4 100%);border-color:#c9c9c9;box-shadow:inset 0 1px 0 #ffffffb8,0 7px 18px #0808080b;transform:translateY(-2px)}
 .purchase-tile-purchased .purchase-complete-label{display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border:1px solid #c9c9c9;background:#e4e4e4;color:#6b6b6b;border-radius:6px;letter-spacing:.15px}
-.purchase-tile-purchased .purchase-tile-lock{gap:5px;color:#8a8a8a}
-.purchase-tile-purchased .purchase-tile-cross{width:21px;height:21px;border:1px solid #c9c9c9;background:#f2f2f2;color:#8f2f26;font-size:19px;box-shadow:0 1px 2px #7f2a220c}
-.purchase-tile-purchased:after{inset:9px;background:linear-gradient(32deg,transparent calc(50% - 1.8px),#8f2f26 calc(50% - 1.8px),#8f2f26 calc(50% + 1.8px),transparent calc(50% + 1.8px)),linear-gradient(148deg,transparent calc(50% - 1.8px),#8f2f26 calc(50% - 1.8px),#8f2f26 calc(50% + 1.8px),transparent calc(50% + 1.8px))}
 .priority-group-purchased .purchase-group-title h2{color:#6b6b6b}
 .priority-group-purchased .purchase-group-count{border-color:#d9d9d9;background:#ebebeb;color:#7a7a7a}
 .purchase-group-empty{border-radius:12px;padding:17px 18px;background:linear-gradient(145deg,#f7f7f7,#f7f7f7)}
@@ -48,7 +45,7 @@
 @media(max-width:900px){.purchase-tile-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}}
 @media(max-width:600px){.purchase-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.purchase-tile{padding:10px;border-radius:12px}.purchase-tile-price{font-size:18px}.purchase-group-head{gap:8px}.purchase-group-title h2{font-size:16px}}
 @media(prefers-reduced-motion:reduce){.purchase-tile,.purchase-tile-open{transition:none}}
-.purchase-group-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 12px;padding:0 1px}.purchase-group-title{display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:9px;row-gap:3px;min-width:0}.purchase-group-title h2{margin:0;color:#080808;font-family:Manrope,sans-serif;font-size:17px;letter-spacing:-.35px}.purchase-group-title p{grid-column:2;margin:0;color:#7a7a7a;font-size:11px;line-height:1.45}.purchase-group-count{flex-shrink:0;padding:5px 9px;border:1px solid #d9d9d9;border-radius:20px;background:#ffffff;color:#6b6b6b;font-size:10px;font-weight:600}.purchase-priority-group .purchase-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.purchase-tile-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.purchase-tile{display:flex;flex-direction:column;aspect-ratio:1/1;width:100%;min-width:0;min-height:0;overflow:hidden;text-align:left;padding:11px 12px;background:#ffffff;border:1px solid var(--border);border-radius:11px;color:#333333;cursor:pointer;transition:border-color .16s,box-shadow .16s,transform .16s;appearance:none}.purchase-tile:hover{border-color:#b8b8b8;box-shadow:0 5px 18px #08080810;transform:translateY(-1px)}.purchase-tile:focus-visible{outline:3px solid #a8a8a8;outline-offset:2px;border-color:#999999}.purchase-tile-top{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:7px}.purchase-tile .priority{padding:3px 6px;font-size:8px}.purchase-tile-open{display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;border-radius:7px;background:#f2f2f2;color:#141414;font-size:12px}.purchase-tile h3{font-size:12px;line-height:1.3;margin:0 0 6px;color:#333333;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:2.6em}.purchase-tile-price{display:block;font-family:Manrope,sans-serif;font-size:18px;line-height:1.2;letter-spacing:-.45px;color:#080808;overflow-wrap:anywhere}.purchase-tile-meta{display:flex;justify-content:space-between;align-items:baseline;gap:5px;margin-top:8px;padding-top:7px;border-top:1px solid #e4e4e4;font-size:9px;color:#7a7a7a}.purchase-tile-meta strong{color:#4d4d4d;text-align:right;overflow-wrap:anywhere}.purchase-tile-progress{margin-top:auto;padding-top:9px}.purchase-tile-progress .progress-track{height:4px}.purchase-tile-progress>div:last-child{display:flex;justify-content:flex-start;gap:8px;margin-top:5px;color:#8a8a8a;font-size:9px}.purchase-tile-purchased{background:#ebebeb;border-color:#d9d9d9;color:#7a7a7a}.purchase-tile-purchased:hover{background:#e4e4e4;border-color:#b8b8b8;box-shadow:0 4px 14px #0b0b0b0b}.purchase-tile-purchased h3,.purchase-tile-purchased .purchase-tile-price,.purchase-tile-purchased .purchase-tile-meta,.purchase-tile-purchased .purchase-tile-meta strong,.purchase-tile-purchased .purchase-tile-progress>div:last-child{color:#7a7a7a}.purchase-tile-purchased .progress-track{background:#c9c9c9}.purchase-tile-purchased .progress-fill{background:#999999}.purchase-complete-label{font-size:9px;font-weight:700;color:#6b6b6b;background:#d9d9d9;padding:4px 7px;border-radius:6px}.purchase-tile-lock{display:flex;align-items:center;gap:3px;font-size:13px}.purchase-tile-cross{display:grid;place-items:center;width:19px;height:19px;border-radius:50%;background:#ebebeb;color:#7f2a22;font-size:18px;font-weight:800;line-height:1}.purchase-tile-purchased{position:relative;isolation:isolate}.purchase-tile-purchased:after{content:"";position:absolute;inset:10px;border-radius:7px;pointer-events:none;opacity:0;background:linear-gradient(32deg,transparent calc(50% - 1.5px),#8f2f26 calc(50% - 1.5px),#8f2f26 calc(50% + 1.5px),transparent calc(50% + 1.5px)),linear-gradient(148deg,transparent calc(50% - 1.5px),#8f2f26 calc(50% - 1.5px),#8f2f26 calc(50% + 1.5px),transparent calc(50% + 1.5px));transform:scale(.94);transform-origin:center}.purchase-tile-purchased.purchase-x-visible:after{animation:purchaseXDraw .72s cubic-bezier(.2,.75,.25,1) both}.purchase-tile-purchased.purchase-x-visible .purchase-tile-cross{animation:purchaseXBadge .4s ease-out both}@keyframes purchaseXDraw{0%{opacity:0;clip-path:inset(0 100% 0 0);transform:scale(.94)}55%{opacity:.78;clip-path:inset(0 0 0 0)}100%{opacity:.58;clip-path:inset(0 0 0 0);transform:scale(1)}}@keyframes purchaseXBadge{0%{transform:scale(.4) rotate(-20deg);opacity:0}75%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}@media(prefers-reduced-motion:reduce){.purchase-tile-purchased.purchase-x-visible:after,.purchase-tile-purchased.purchase-x-visible .purchase-tile-cross{animation:none;opacity:.58}}.priority-group-purchased .purchase-group-title h2{color:#6b6b6b}.priority-group-purchased .purchase-group-count{background:#ebebeb;color:#6b6b6b}.priority-group-purchased .purchase-group-empty{background:#f2f2f2;border-color:#d9d9d9}.purchase-detail-intro{margin:0 0 14px;color:#7a7a7a;font-size:12px}.purchase-detail-intro p{margin:5px 0 0}.purchase-detail-view .purchase-card{width:100%;max-width:760px}.purchase-detail-view .purchase-card h3{overflow-wrap:anywhere}.purchase-group-empty{padding:15px 17px;background:#f7f7f7;border:1px dashed #d9d9d9;border-radius:9px;color:#8a8a8a;font-size:11px}.purchase-sort-note{display:flex;align-items:center;gap:9px;margin:0 0 20px;padding:11px 13px;border:1px solid #e4e4e4;border-radius:9px;background:#f2f2f2;color:#6b6b6b;font-size:11px;line-height:1.5}.purchase-sort-note span{font-size:16px;color:#141414;font-weight:700;flex-shrink:0}.priority-group-high .purchase-group-title h2{color:#7f2a22}.priority-group-medium .purchase-group-title h2{color:#080808}.priority-group-low .purchase-group-title h2{color:#080808}.account-card,.goal-card,.purchase-card{padding:20px;background:white;border:1px solid var(--border);border-radius:10px;min-width:0}.account-card-top,.goal-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px}.account-icon,.goal-icon{width:37px;height:37px;border-radius:10px;display:grid;place-items:center;background:#ebebeb;color:#141414;font-size:18px}.muted{color:#8a8a8a}.account-card>.muted{font-size:10px}.account-card h2{font-size:13px;margin:7px 0 13px;color:#3f3f3f}.account-balance{font-family:Manrope,sans-serif;font-size:23px;font-weight:800;letter-spacing:-.6px;overflow-wrap:anywhere}.minimum-note{font-size:10px;color:#7a7a7a;margin-top:10px}.warning-text{color:#8f2f26}.add-account-card{border:1px dashed #b8b8b8;border-radius:10px;background:#f7f7f7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:165px;color:#6b6b6b}.add-account-card:hover{border-color:#999999;background:#f2f2f2}.add-account-card>span{width:34px;height:34px;border-radius:10px;background:#ebebeb;color:#141414;display:grid;place-items:center;font-size:20px}.add-account-card strong{font-size:12px}.add-account-card small{font-size:10px;color:#8a8a8a}.stack{display:grid;gap:13px}.budget-row{padding:18px 21px}.budget-row-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px}.budget-row h3{font-size:15px;color:#333333;margin:10px 0 0}.budget-row h3 small{font-size:11px;color:#8a8a8a;font-weight:500}.budget-foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px;color:#7a7a7a;font-size:10px;gap:10px}.budget-foot strong{color:#5c5c5c}.goal-card h3,.purchase-card h3{font-size:14px;color:#333333;margin:0 0 6px}.goal-card>.muted,.purchase-card>.muted{font-size:10px;margin:0 0 20px}.goal-numbers{display:flex;align-items:baseline;gap:6px;margin:15px 0 9px;flex-wrap:wrap}.goal-numbers strong{font-family:Manrope,sans-serif;font-size:21px;letter-spacing:-.6px;color:#080808}.goal-numbers span{font-size:10px;color:#8a8a8a}.goal-card .text-btn{margin-top:12px;padding-left:0}.purchase-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:16px}.purchase-summary>div{background:white;border:1px solid var(--border);border-radius:10px;padding:16px 19px}.purchase-summary span{display:block;font-size:9px;letter-spacing:.9px;color:#7a7a7a;font-weight:700}.purchase-summary strong{display:block;font-family:Manrope,sans-serif;font-size:23px;letter-spacing:-.5px;color:#080808;margin-top:9px;overflow-wrap:anywhere}.reminder-banner{display:flex;gap:11px;align-items:center;padding:13px 15px;background:#ebebeb;border:1px solid #c9c9c9;border-radius:9px;margin-bottom:15px;color:#080808}.reminder-banner strong{display:block;font-size:12px;color:#080808}.reminder-banner span{display:block;font-size:10px;color:#141414;margin-top:4px}.purchase-card{padding:18px}.purchase-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px}.priority{padding:4px 7px;border-radius:5px;font-size:9px;font-weight:700;white-space:nowrap}.priority.high{background:#ebebeb;color:#8f2f26}.priority.medium{background:#e4e4e4;color:#141414}.priority.low{background:#e4e4e4;color:#080808}.purchase-price{font-family:Manrope,sans-serif;font-size:24px;font-weight:800;letter-spacing:-.8px;margin:0 0 18px;color:#080808}.purchase-meta{display:flex;justify-content:space-between;gap:8px;font-size:10px;margin:10px 0}.purchase-meta span{color:#8a8a8a}.purchase-meta strong{color:#4d4d4d;text-align:right}.purchase-date-note{font-size:10px;color:#7a7a7a;margin-top:12px}.purchase-notes{font-size:10px;line-height:1.5;color:#7a7a7a;background:#f2f2f2;padding:9px;border-radius:7px;margin-top:10px;max-width:100%;min-width:0;box-sizing:border-box;overflow-wrap:anywhere;word-break:break-word}.purchase-notes.is-collapsed{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}.purchase-notes-toggle{display:inline-block;margin-top:5px;padding:2px 0;border:0;background:transparent;color:#141414;font-size:10px;font-weight:700;text-align:left}.purchase-allocation-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;margin:13px 0 2px;padding:11px;border:1px solid #e4e4e4;border-radius:9px;background:#f7f7f7}.purchase-allocation-label{font-size:10px;font-weight:700;color:#5c5c5c;min-width:0}.purchase-allocation-label input{display:block;width:100%;min-height:38px;border:1px solid #c9c9c9;border-radius:7px;padding:8px 10px;margin-top:5px;font:inherit;font-size:12px;color:#080808;background:white}.purchase-allocation-form p{grid-column:1/-1;margin:0;font-size:10px;color:#7a7a7a;line-height:1.4}.purchase-allocation-form button{min-height:38px;white-space:nowrap}@media(max-width:390px){.purchase-allocation-form{grid-template-columns:minmax(0,1fr)}.purchase-allocation-form p{grid-column:auto}}.purchase-actions{display:flex;gap:7px;align-items:center;margin-top:15px}.purchase-actions select{flex:1;min-width:0}.purchase-actions select,.field-label select{appearance:auto}.settings-layout{display:grid;gap:15px;max-width:900px}.settings-layout .panel{padding:22px}.field-label{display:block;font-size:11px;font-weight:600;color:#5c5c5c;margin-bottom:15px;min-width:0}.field-label input,.field-label select,.field-label textarea,.purchase-actions select{display:block;width:100%;border:1px solid #d9d9d9;border-radius:7px;background:#ffffff;color:#333333;padding:10px 11px;margin-top:7px;font-size:12px;min-height:38px}.field-label textarea{resize:vertical}.field-label input::placeholder,.field-label textarea::placeholder{color:#999999}.field-label select:focus,.field-label input:focus,.field-label textarea:focus{border-color:#8a8a8a;outline:2px solid #e4e4e4}.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.checkbox-line{display:flex;align-items:center;gap:8px;color:#6b6b6b;font-size:11px;font-weight:500;margin:10px 0}.checkbox-line input{accent-color:#141414;width:15px;height:15px;margin:0}.form-hint{font-size:10px;color:#8a8a8a;line-height:1.5;margin:7px 0 16px}.reminder-options{display:grid;grid-template-columns:1fr 1fr;padding:5px 0 2px}.form-error{font-size:11px;color:#7f2a22;background:#ebebeb;border:1px solid #c9c9c9;padding:10px;border-radius:7px;margin:8px 0}.confirm-backdrop{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(8,20,39,.58);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);animation:confirmFadeIn .16s ease-out}
+.purchase-group-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 12px;padding:0 1px}.purchase-group-title{display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:9px;row-gap:3px;min-width:0}.purchase-group-title h2{margin:0;color:#080808;font-family:Manrope,sans-serif;font-size:17px;letter-spacing:-.35px}.purchase-group-title p{grid-column:2;margin:0;color:#7a7a7a;font-size:11px;line-height:1.45}.purchase-group-count{flex-shrink:0;padding:5px 9px;border:1px solid #d9d9d9;border-radius:20px;background:#ffffff;color:#6b6b6b;font-size:10px;font-weight:600}.purchase-priority-group .purchase-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.purchase-tile-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.purchase-tile{display:flex;flex-direction:column;aspect-ratio:1/1;width:100%;min-width:0;min-height:0;overflow:hidden;text-align:left;padding:11px 12px;background:#ffffff;border:1px solid var(--border);border-radius:11px;color:#333333;cursor:pointer;transition:border-color .16s,box-shadow .16s,transform .16s;appearance:none}.purchase-tile:hover{border-color:#b8b8b8;box-shadow:0 5px 18px #08080810;transform:translateY(-1px)}.purchase-tile:focus-visible{outline:3px solid #a8a8a8;outline-offset:2px;border-color:#999999}.purchase-tile-top{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:7px}.purchase-tile .priority{padding:3px 6px;font-size:8px}.purchase-tile-open{display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;border-radius:7px;background:#f2f2f2;color:#141414;font-size:12px}.purchase-tile h3{font-size:12px;line-height:1.3;margin:0 0 6px;color:#333333;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;min-height:2.6em}.purchase-tile-price{display:block;font-family:Manrope,sans-serif;font-size:18px;line-height:1.2;letter-spacing:-.45px;color:#080808;overflow-wrap:anywhere}.purchase-tile-meta{display:flex;justify-content:space-between;align-items:baseline;gap:5px;margin-top:8px;padding-top:7px;border-top:1px solid #e4e4e4;font-size:9px;color:#7a7a7a}.purchase-tile-meta strong{color:#4d4d4d;text-align:right;overflow-wrap:anywhere}.purchase-tile-progress{margin-top:auto;padding-top:9px}.purchase-tile-progress .progress-track{height:4px}.purchase-tile-progress>div:last-child{display:flex;justify-content:flex-start;gap:8px;margin-top:5px;color:#8a8a8a;font-size:9px}.purchase-tile-purchased{background:#ebebeb;border-color:#d9d9d9;color:#7a7a7a}.purchase-tile-purchased:hover{background:#e4e4e4;border-color:#b8b8b8;box-shadow:0 4px 14px #0b0b0b0b}.purchase-tile-purchased h3,.purchase-tile-purchased .purchase-tile-price,.purchase-tile-purchased .purchase-tile-meta,.purchase-tile-purchased .purchase-tile-meta strong,.purchase-tile-purchased .purchase-tile-progress>div:last-child{color:#7a7a7a}.purchase-tile-purchased .progress-track{background:#c9c9c9}.purchase-tile-purchased .progress-fill{background:#999999}.purchase-complete-label{font-size:9px;font-weight:700;color:#6b6b6b;background:#d9d9d9;padding:4px 7px;border-radius:6px}.purchase-tile-purchased{position:relative;isolation:isolate}.priority-group-purchased .purchase-group-title h2{color:#6b6b6b}.priority-group-purchased .purchase-group-count{background:#ebebeb;color:#6b6b6b}.priority-group-purchased .purchase-group-empty{background:#f2f2f2;border-color:#d9d9d9}.purchase-detail-intro{margin:0 0 14px;color:#7a7a7a;font-size:12px}.purchase-detail-intro p{margin:5px 0 0}.purchase-detail-view .purchase-card{width:100%;max-width:760px}.purchase-detail-view .purchase-card h3{overflow-wrap:anywhere}.purchase-group-empty{padding:15px 17px;background:#f7f7f7;border:1px dashed #d9d9d9;border-radius:9px;color:#8a8a8a;font-size:11px}.purchase-sort-note{display:flex;align-items:center;gap:9px;margin:0 0 20px;padding:11px 13px;border:1px solid #e4e4e4;border-radius:9px;background:#f2f2f2;color:#6b6b6b;font-size:11px;line-height:1.5}.purchase-sort-note span{font-size:16px;color:#141414;font-weight:700;flex-shrink:0}.priority-group-high .purchase-group-title h2{color:#7f2a22}.priority-group-medium .purchase-group-title h2{color:#080808}.priority-group-low .purchase-group-title h2{color:#080808}.account-card,.goal-card,.purchase-card{padding:20px;background:white;border:1px solid var(--border);border-radius:10px;min-width:0}.account-card-top,.goal-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;gap:8px}.account-icon,.goal-icon{width:37px;height:37px;border-radius:10px;display:grid;place-items:center;background:#ebebeb;color:#141414;font-size:18px}.muted{color:#8a8a8a}.account-card>.muted{font-size:10px}.account-card h2{font-size:13px;margin:7px 0 13px;color:#3f3f3f}.account-balance{font-family:Manrope,sans-serif;font-size:23px;font-weight:800;letter-spacing:-.6px;overflow-wrap:anywhere}.minimum-note{font-size:10px;color:#7a7a7a;margin-top:10px}.warning-text{color:#8f2f26}.add-account-card{border:1px dashed #b8b8b8;border-radius:10px;background:#f7f7f7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-height:165px;color:#6b6b6b}.add-account-card:hover{border-color:#999999;background:#f2f2f2}.add-account-card>span{width:34px;height:34px;border-radius:10px;background:#ebebeb;color:#141414;display:grid;place-items:center;font-size:20px}.add-account-card strong{font-size:12px}.add-account-card small{font-size:10px;color:#8a8a8a}.stack{display:grid;gap:13px}.budget-row{padding:18px 21px}.budget-row-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:10px}.budget-row h3{font-size:15px;color:#333333;margin:10px 0 0}.budget-row h3 small{font-size:11px;color:#8a8a8a;font-weight:500}.budget-foot{display:flex;justify-content:space-between;align-items:center;margin-top:9px;color:#7a7a7a;font-size:10px;gap:10px}.budget-foot strong{color:#5c5c5c}.goal-card h3,.purchase-card h3{font-size:14px;color:#333333;margin:0 0 6px}.goal-card>.muted,.purchase-card>.muted{font-size:10px;margin:0 0 20px}.goal-numbers{display:flex;align-items:baseline;gap:6px;margin:15px 0 9px;flex-wrap:wrap}.goal-numbers strong{font-family:Manrope,sans-serif;font-size:21px;letter-spacing:-.6px;color:#080808}.goal-numbers span{font-size:10px;color:#8a8a8a}.goal-card .text-btn{margin-top:12px;padding-left:0}.purchase-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:16px}.purchase-summary>div{background:white;border:1px solid var(--border);border-radius:10px;padding:16px 19px}.purchase-summary span{display:block;font-size:9px;letter-spacing:.9px;color:#7a7a7a;font-weight:700}.purchase-summary strong{display:block;font-family:Manrope,sans-serif;font-size:23px;letter-spacing:-.5px;color:#080808;margin-top:9px;overflow-wrap:anywhere}.reminder-banner{display:flex;gap:11px;align-items:center;padding:13px 15px;background:#ebebeb;border:1px solid #c9c9c9;border-radius:9px;margin-bottom:15px;color:#080808}.reminder-banner strong{display:block;font-size:12px;color:#080808}.reminder-banner span{display:block;font-size:10px;color:#141414;margin-top:4px}.purchase-card{padding:18px}.purchase-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px}.priority{padding:4px 7px;border-radius:5px;font-size:9px;font-weight:700;white-space:nowrap}.priority.high{background:#ebebeb;color:#8f2f26}.priority.medium{background:#e4e4e4;color:#141414}.priority.low{background:#e4e4e4;color:#080808}.purchase-price{font-family:Manrope,sans-serif;font-size:24px;font-weight:800;letter-spacing:-.8px;margin:0 0 18px;color:#080808}.purchase-meta{display:flex;justify-content:space-between;gap:8px;font-size:10px;margin:10px 0}.purchase-meta span{color:#8a8a8a}.purchase-meta strong{color:#4d4d4d;text-align:right}.purchase-date-note{font-size:10px;color:#7a7a7a;margin-top:12px}.purchase-notes{font-size:10px;line-height:1.5;color:#7a7a7a;background:#f2f2f2;padding:9px;border-radius:7px;margin-top:10px;max-width:100%;min-width:0;box-sizing:border-box;overflow-wrap:anywhere;word-break:break-word}.purchase-notes.is-collapsed{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}.purchase-notes-toggle{display:inline-block;margin-top:5px;padding:2px 0;border:0;background:transparent;color:#141414;font-size:10px;font-weight:700;text-align:left}.purchase-allocation-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:8px;margin:13px 0 2px;padding:11px;border:1px solid #e4e4e4;border-radius:9px;background:#f7f7f7}.purchase-allocation-label{font-size:10px;font-weight:700;color:#5c5c5c;min-width:0}.purchase-allocation-label input{display:block;width:100%;min-height:38px;border:1px solid #c9c9c9;border-radius:7px;padding:8px 10px;margin-top:5px;font:inherit;font-size:12px;color:#080808;background:white}.purchase-allocation-form p{grid-column:1/-1;margin:0;font-size:10px;color:#7a7a7a;line-height:1.4}.purchase-allocation-form button{min-height:38px;white-space:nowrap}@media(max-width:390px){.purchase-allocation-form{grid-template-columns:minmax(0,1fr)}.purchase-allocation-form p{grid-column:auto}}.purchase-actions{display:flex;gap:7px;align-items:center;margin-top:15px}.purchase-actions select{flex:1;min-width:0}.purchase-actions select,.field-label select{appearance:auto}.settings-layout{display:grid;gap:15px;max-width:900px}.settings-layout .panel{padding:22px}.field-label{display:block;font-size:11px;font-weight:600;color:#5c5c5c;margin-bottom:15px;min-width:0}.field-label input,.field-label select,.field-label textarea,.purchase-actions select{display:block;width:100%;border:1px solid #d9d9d9;border-radius:7px;background:#ffffff;color:#333333;padding:10px 11px;margin-top:7px;font-size:12px;min-height:38px}.field-label textarea{resize:vertical}.field-label input::placeholder,.field-label textarea::placeholder{color:#999999}.field-label select:focus,.field-label input:focus,.field-label textarea:focus{border-color:#8a8a8a;outline:2px solid #e4e4e4}.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.checkbox-line{display:flex;align-items:center;gap:8px;color:#6b6b6b;font-size:11px;font-weight:500;margin:10px 0}.checkbox-line input{accent-color:#141414;width:15px;height:15px;margin:0}.form-hint{font-size:10px;color:#8a8a8a;line-height:1.5;margin:7px 0 16px}.reminder-options{display:grid;grid-template-columns:1fr 1fr;padding:5px 0 2px}.form-error{font-size:11px;color:#7f2a22;background:#ebebeb;border:1px solid #c9c9c9;padding:10px;border-radius:7px;margin:8px 0}.confirm-backdrop{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(8,20,39,.58);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);animation:confirmFadeIn .16s ease-out}
 .confirm-dialog{width:min(470px,100%);max-height:calc(100vh - 40px);overflow:auto;background:linear-gradient(160deg,#ffffff 0%,#f7f7f7 100%);border:1px solid rgba(255,255,255,.8);border-radius:19px;padding:26px;box-shadow:0 28px 90px rgba(7,19,43,.3);animation:confirmRise .22s cubic-bezier(.2,.8,.2,1);color:#080808}
 .confirm-dialog-head{display:flex;align-items:flex-start;gap:15px;margin-bottom:19px}
 .confirm-dialog-icon{display:grid;place-items:center;width:48px;height:48px;flex:0 0 48px;border-radius:15px;background:linear-gradient(145deg,#ebebeb,#e4e4e4);color:#141414;font-size:22px;font-weight:800;box-shadow:inset 0 0 0 1px #d9d9d9}
@@ -267,26 +264,156 @@ body{height:auto!important;min-height:100%;overflow:visible!important;overscroll
 }
 
 
-/* Signature purchase completion mark: two strokes that physically intersect, followed by a contact ring. */
-.purchase-tile-purchased:after{content:none!important}
-.purchase-tile-purchased .purchase-cross-art{position:absolute;inset:0;z-index:3;width:100%;height:100%;overflow:visible;pointer-events:none}
-.purchase-cross-halo,.purchase-cross-ink{fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;stroke-dasharray:1;stroke-dashoffset:1}
-.purchase-cross-halo{stroke:#8f2f26;stroke-width:7;stroke-opacity:.22}
-.purchase-cross-ink{stroke:#7f2a22;stroke-width:2.8;stroke-opacity:.94;filter:drop-shadow(0 1px 1px #7f2a221a)}
-.purchase-tile-purchased .purchase-cross-pulse{fill:none;stroke:#8f2f26;stroke-width:1.7;stroke-opacity:.9;vector-effect:non-scaling-stroke;opacity:0;transform-box:fill-box;transform-origin:center}
-.purchase-tile-purchased .purchase-cross-center{fill:#8f2f26;opacity:0;transform-box:fill-box;transform-origin:center}
-.purchase-tile-purchased.purchase-x-visible .purchase-cross-halo.purchase-cross-a{animation:purchaseCrossDraw .66s cubic-bezier(.19,.76,.25,1) var(--purchase-x-delay,0ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-cross-ink.purchase-cross-a{animation:purchaseCrossDraw .58s cubic-bezier(.19,.76,.25,1) var(--purchase-x-delay,0ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-cross-halo.purchase-cross-b{animation:purchaseCrossDraw .64s cubic-bezier(.19,.76,.25,1) calc(var(--purchase-x-delay,0ms) + 340ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-cross-ink.purchase-cross-b{animation:purchaseCrossDraw .56s cubic-bezier(.19,.76,.25,1) calc(var(--purchase-x-delay,0ms) + 340ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-cross-pulse{animation:purchaseCrossPulse .68s cubic-bezier(.16,.72,.25,1) calc(var(--purchase-x-delay,0ms) + 900ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-cross-center{animation:purchaseCrossCenter .32s cubic-bezier(.16,.72,.25,1) calc(var(--purchase-x-delay,0ms) + 910ms) both}
-.purchase-tile-purchased.purchase-x-visible .purchase-tile-cross{animation:purchaseXBadge .46s cubic-bezier(.18,.82,.25,1) calc(var(--purchase-x-delay,0ms) + 560ms) both}
-@keyframes purchaseCrossDraw{0%{stroke-dashoffset:1;opacity:0}10%{opacity:1}72%{stroke-dashoffset:.12;opacity:1}100%{stroke-dashoffset:0;opacity:.82}}
-@keyframes purchaseCrossPulse{0%{opacity:0;transform:scale(.12)}14%{opacity:.85;transform:scale(.65)}52%{opacity:.58;transform:scale(1.8)}100%{opacity:0;transform:scale(3.15)}}
-@keyframes purchaseCrossCenter{0%{opacity:0;transform:scale(.2)}34%{opacity:.9;transform:scale(1.5)}100%{opacity:0;transform:scale(.5)}}
-@keyframes purchaseXBadge{0%{opacity:0;transform:translateY(-7px) scale(.72) rotate(-13deg)}68%{opacity:1;transform:translateY(1px) scale(1.08) rotate(2deg)}86%{transform:translateY(-1px) scale(.98) rotate(-1deg)}100%{opacity:1;transform:translateY(0) scale(1) rotate(0)}}
-@media(prefers-reduced-motion:reduce){.purchase-tile-purchased.purchase-x-visible .purchase-cross-halo,.purchase-tile-purchased.purchase-x-visible .purchase-cross-ink{animation:none!important;stroke-dashoffset:0;opacity:.82}.purchase-tile-purchased.purchase-x-visible .purchase-cross-pulse,.purchase-tile-purchased.purchase-x-visible .purchase-cross-center{animation:none!important;opacity:0}.purchase-tile-purchased.purchase-x-visible .purchase-tile-cross{animation:none!important;opacity:1;transform:none}}
+/* ============================================================
+   PURCHASE COMPLETION — full-bleed stamp, choreographed
+   A large X inside its own ring, centred on the card and never
+   clipped by the card edge. Sequence, once per card:
+   0ms    scrim fades, outer ring sweeps in, contact pulse fires
+   120ms  the X draws in simultaneously from both ends
+   300ms  a second concentric ring sweeps counter-clockwise
+   380ms  the stamp overshoots and settles
+   520ms  two rings peel off and dissipate
+   180ms  a light sweep crosses the card
+   The mark scales with the card, keeps 1:1 geometry, and uses
+   currentColor so a purchased state can print it in grey.
+   ============================================================ */
+.purchase-tile-purchased{--purchase-x-ease:cubic-bezier(.22,1,.36,1)}
+
+/* the stamp itself: square, centred, sized from the card's short side */
+.purchase-tile-stamp{
+  position:absolute;z-index:2;left:50%;top:50%;width:74%;aspect-ratio:1/1;
+  margin:-37% 0 0 -37%;pointer-events:none;color:#8f2f26;
+  transform-origin:50% 50%;opacity:0;
+}
+.purchase-tile-stamp svg{display:block;width:100%;height:100%;overflow:visible}
+.purchase-tile-bloom{
+  position:absolute;inset:-6%;z-index:1;pointer-events:none;border-radius:inherit;opacity:0;
+  background:radial-gradient(circle at 50% 50%,#ffffff 0 38%,rgba(255,255,255,.92) 52%,rgba(255,255,255,0) 76%);
+}
+.purchase-tile-purchased.purchase-x-visible .purchase-tile-bloom{
+  animation:purchaseBloom .9s var(--purchase-x-ease) var(--purchase-x-delay,0ms) both;
+}
+@keyframes purchaseBloom{0%{opacity:0}46%{opacity:1}100%{opacity:.94}}
+.purchase-stamp-ring,.purchase-stamp-x,.purchase-stamp-glint{
+  fill:none;vector-effect:non-scaling-stroke;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:1;stroke-dashoffset:1;
+}
+.purchase-stamp-ring{stroke:currentColor}
+.purchase-stamp-ring-a{stroke-width:1.6;stroke-opacity:.5}
+.purchase-stamp-ring-b{stroke-width:1.1;stroke-opacity:.34;stroke-dasharray:1;opacity:0}
+.purchase-stamp-x{stroke:currentColor;stroke-width:4.4;stroke-opacity:.9}
+.purchase-stamp-pulse{fill:none;stroke:currentColor;stroke-width:2;stroke-opacity:0;vector-effect:non-scaling-stroke;transform-box:fill-box;transform-origin:center}
+.purchase-stamp-glint{
+  stroke:#ffffff;stroke-width:2.4;stroke-opacity:0;stroke-dasharray:.16 1;
+}
+
+/* 5 — light sweep across the card */
+.purchase-tile-sheen{position:absolute;inset:0;z-index:1;pointer-events:none;border-radius:inherit;overflow:hidden;opacity:0}
+.purchase-tile-sheen:before{
+  content:"";position:absolute;top:-20%;bottom:-20%;left:0;width:52%;
+  background:linear-gradient(100deg,transparent,#ffffff00 12%,#ffffff9e 50%,#ffffff00 88%,transparent);
+  transform:translateX(-140%) skewX(-14deg);
+}
+
+/* 4 — struck price */
+.purchase-tile-purchased .purchase-tile-price{position:relative;align-self:flex-start;max-width:100%;color:#8a8a8a}
+.purchase-tile-strike{
+  position:absolute;left:-2px;right:-2px;top:54%;height:1.5px;border-radius:2px;
+  background:#8f2f26;opacity:.9;pointer-events:none;z-index:3;
+  box-shadow:0 0 0 .5px #ffffff8c;
+  transform:scaleX(0);transform-origin:left center;
+}
+.purchase-tile-strike:after{
+  content:"";position:absolute;right:-2.5px;top:50%;width:4.5px;height:4.5px;margin-top:-2.25px;
+  border-radius:50%;background:#8f2f26;opacity:0;transform:scale(.3);
+}
+
+/* ---- the timeline ---- */
+.purchase-tile-purchased.purchase-x-visible .purchase-tile-stamp{
+  animation:purchaseStampIn .9s var(--purchase-x-ease) var(--purchase-x-delay,0ms) both;
+}
+.purchase-tile-purchased.purchase-x-visible .purchase-stamp-ring-a{
+  animation:purchaseRingSweep .62s cubic-bezier(.3,.9,.3,1) calc(var(--purchase-x-delay,0ms) + 40ms) both;
+}
+.purchase-tile-purchased.purchase-x-visible .purchase-stamp-ring-b{
+  animation:purchaseRingSweep2 .78s cubic-bezier(.3,.9,.3,1) calc(var(--purchase-x-delay,0ms) + 300ms) both;
+}
+.purchase-tile-purchased.purchase-x-visible .purchase-stamp-pulse{
+  animation:purchaseStampPulse .95s cubic-bezier(.16,.72,.25,1) calc(var(--purchase-x-delay,0ms) + 60ms) both;
+}
+.purchase-tile-purchased.purchase-x-visible .purchase-stamp-x-a{
+  animation:purchaseXDraw .42s cubic-bezier(.2,.75,.25,1) calc(var(--purchase-x-delay,0ms) + 120ms) both;
+}
+.purchase-tile-purchased.purchase-x-visible .purchase-stamp-x-b{
+  animation:purchaseXDraw .42s cubic-bezier(.2,.75,.25,1) calc(var(--purchase-x-delay,0ms) + 120ms) both;
+}
+.purchase-tile-purchased.purchase-x-visible .purchase-stamp-glint{
+  animation:purchaseGlint 1.15s cubic-bezier(.3,.55,.2,1) calc(var(--purchase-x-delay,0ms) + 520ms) both;
+}
+.purchase-tile-purchased.purchase-x-visible .purchase-tile-strike{
+  animation:purchaseStrike .32s cubic-bezier(.2,.75,.25,1) calc(var(--purchase-x-delay,0ms) + 560ms) both;
+}
+.purchase-tile-purchased.purchase-x-visible .purchase-tile-strike:after{
+  animation:purchaseStrikeDot .34s var(--purchase-x-ease) calc(var(--purchase-x-delay,0ms) + 820ms) both;
+}
+.purchase-tile-purchased.purchase-x-visible .purchase-tile-sheen{
+  animation:purchaseSheenFade .9s linear calc(var(--purchase-x-delay,0ms) + 240ms) both;
+}
+.purchase-tile-purchased.purchase-x-visible .purchase-tile-sheen:before{
+  animation:purchaseSheen 1.05s cubic-bezier(.3,.55,.2,1) calc(var(--purchase-x-delay,0ms) + 240ms) both;
+}
+
+@keyframes purchaseStampIn{
+  0%{opacity:0;transform:scale(1.5) rotate(-7deg);filter:blur(3px)}
+  42%{opacity:1;filter:blur(0)}
+  62%{transform:scale(.93) rotate(1.2deg)}
+  82%{transform:scale(1.015) rotate(-.3deg)}
+  100%{opacity:1;transform:scale(1) rotate(0)}
+}
+@keyframes purchaseRingSweep{from{stroke-dashoffset:1;stroke-opacity:.5}70%{stroke-opacity:.5}to{stroke-dashoffset:-.16;stroke-opacity:.24}}
+@keyframes purchaseRingSweep2{0%{opacity:0;stroke-dashoffset:.42}18%{opacity:1}to{opacity:.55;stroke-dashoffset:-.58}}
+@keyframes purchaseStampPulse{
+  0%{opacity:0;transform:scale(.72)}
+  24%{opacity:.5}
+  100%{opacity:0;transform:scale(1.34)}
+}
+@keyframes purchaseXDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes purchaseGlint{
+  0%{opacity:0;stroke-dashoffset:.55}
+  20%{opacity:.9}
+  70%{opacity:.65}
+  100%{opacity:0;stroke-dashoffset:-.4}
+}
+@keyframes purchaseStrike{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes purchaseStrikeDot{
+  0%{opacity:0;transform:scale(.3)}
+  35%{opacity:.85;transform:scale(1.25)}
+  100%{opacity:0;transform:scale(1.9)}
+}
+@keyframes purchaseSheenFade{0%{opacity:0}14%{opacity:.8}72%{opacity:.8}100%{opacity:0}}
+@keyframes purchaseSheen{from{transform:translateX(-140%) skewX(-14deg)}to{transform:translateX(320%) skewX(-14deg)}}
+
+@media(prefers-reduced-motion:reduce){
+  .purchase-tile-purchased.purchase-x-visible .purchase-tile-stamp,
+  .purchase-tile-purchased.purchase-x-visible .purchase-tile-bloom,
+  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-ring-a,
+  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-ring-b,
+  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-pulse,
+  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-x-a,
+  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-x-b,
+  .purchase-tile-purchased.purchase-x-visible .purchase-stamp-glint,
+  .purchase-tile-purchased.purchase-x-visible .purchase-tile-strike,
+  .purchase-tile-purchased.purchase-x-visible .purchase-tile-strike:after,
+  .purchase-tile-purchased.purchase-x-visible .purchase-tile-sheen,
+  .purchase-tile-purchased.purchase-x-visible .purchase-tile-sheen:before{animation:none!important}
+  .purchase-tile-sheen,.purchase-stamp-pulse,.purchase-stamp-glint,.purchase-stamp-ring-b{display:none}
+  .purchase-tile-bloom{opacity:.94}
+  .purchase-tile-stamp{opacity:1}
+  .purchase-stamp-ring-a{stroke-dashoffset:0;stroke-opacity:.4}
+  .purchase-stamp-x{stroke-dashoffset:0}
+  .purchase-tile-strike{transform:scaleX(1)}
+  .purchase-tile-strike:after{display:none}
+}
 </style>
 <style id="mono-design">
 /* ============================================================
@@ -1571,19 +1698,21 @@ function renderPurchaseTile(p){
  const priority=['High','Medium','Low'].includes(p.priority)?p.priority:'Medium';
  const pct=Number(p.price)>0?Math.min(100,(Number(p.saved)||0)/Number(p.price)*100):0;
  return `<article class="purchase-tile${purchased?' purchase-tile-purchased':''}" role="button" tabindex="0" data-action="open-purchase" data-id="${esc(p.id)}" aria-label="${purchased?'Purchased, locked reference. ':''}Open purchase details for ${esc(p.name)}">
-  <div class="purchase-tile-top">${purchased?'<span class="purchase-complete-label">Purchased</span><span class="purchase-tile-lock" aria-label="Completed and locked"><span aria-hidden="true">🔒</span><span class="purchase-tile-cross" aria-hidden="true">×</span></span>':'<span class="priority '+esc(priority.toLowerCase())+'">'+esc(priority)+'</span><span class="purchase-tile-open" aria-hidden="true">↗</span>'}</div>
+  <div class="purchase-tile-top">${purchased?'<span class="purchase-complete-label">Purchased</span>':'<span class="priority '+esc(priority.toLowerCase())+'">'+esc(priority)+'</span><span class="purchase-tile-open" aria-hidden="true">↗</span>'}</div>
   <h3>${esc(p.name)}</h3>
-  <strong class="purchase-tile-price">${esc(money(p.price))}</strong>
+  <strong class="purchase-tile-price">${esc(money(p.price))}${purchased?'<span class="purchase-tile-strike" aria-hidden="true"></span>':''}</strong>
   <div class="purchase-tile-meta"><span>${purchased?'Purchased':'Target'}</span><strong>${esc(fmtDate(p.date))}</strong></div>
   <div class="purchase-tile-progress"><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div><span>${purchased?'Completed':Math.round(pct)+'% saved'}</span></div></div>
-  ${purchased?`<svg class="purchase-cross-art" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-   <path class="purchase-cross-halo purchase-cross-a" d="M 8 8 L 92 92" pathLength="1"/>
-   <path class="purchase-cross-ink purchase-cross-a" d="M 8 8 L 92 92" pathLength="1"/>
-   <path class="purchase-cross-halo purchase-cross-b" d="M 92 8 L 8 92" pathLength="1"/>
-   <path class="purchase-cross-ink purchase-cross-b" d="M 92 8 L 8 92" pathLength="1"/>
-   <circle class="purchase-cross-pulse" cx="50" cy="50" r="4.5"/>
-   <circle class="purchase-cross-center" cx="50" cy="50" r="1.5"/>
-  </svg>`:""}
+  ${purchased?`<span class="purchase-tile-sheen" aria-hidden="true"></span>
+  <span class="purchase-tile-bloom" aria-hidden="true"></span>
+  <span class="purchase-tile-stamp" aria-hidden="true"><svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" fill="none" stroke-linecap="round" focusable="false">
+   <circle class="purchase-stamp-ring purchase-stamp-ring-a" cx="50" cy="50" r="43" pathLength="1" transform="rotate(-90 50 50)"/>
+   <circle class="purchase-stamp-ring purchase-stamp-ring-b" cx="50" cy="50" r="36" pathLength="1" transform="rotate(-90 50 50)"/>
+   <circle class="purchase-stamp-pulse" cx="50" cy="50" r="43"/>
+   <path class="purchase-stamp-x purchase-stamp-x-a" d="M19 19 81 81" pathLength="1"/>
+   <path class="purchase-stamp-x purchase-stamp-x-b" d="M81 19 19 81" pathLength="1"/>
+   <circle class="purchase-stamp-glint" cx="50" cy="50" r="43" pathLength="1" transform="rotate(-90 50 50)"/>
+  </svg></span>`:""}
  </article>`;
 }
 function renderPurchases(){
