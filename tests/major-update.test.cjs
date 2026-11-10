@@ -131,25 +131,38 @@ test('the welcome dismissal is remembered and replay remains available', () => {
     return { add: (...names) => names.forEach(name => classes.add(name)), remove: (...names) => names.forEach(name => classes.delete(name)), contains: name => classes.has(name) };
   }
   const screen = { classList: classList(), attrs: {}, setAttribute(name, value) { this.attrs[name] = value; } };
-  const root = { classList: classList() }, storage = new Map();
-  const button = { focus() {} };
+  const root = { classList: classList() }, storage = new Map(), shell = {}, dock = {};
+  const scroll = { scrollTop: 420 }, entry = { focus() {} }, content = { focus() {} };
+  const elements = { welcomeScreen: screen, welcomeScroll: scroll, welcomeEnter: entry, content, mobileDock: dock };
+  const timers = new Map(); let nextTimer = 0;
   const context = vm.createContext({
-    $: name => name === 'welcomeScreen' ? screen : button,
-    document: { documentElement: root },
+    $: name => elements[name],
+    document: { documentElement: root, activeElement: content, querySelector: () => shell },
     localStorage: { setItem: (name, value) => storage.set(name, value), removeItem: name => storage.delete(name) },
-    window: { setTimeout: fn => fn() },
+    window: { setTimeout: fn => { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout: id => timers.delete(id) },
+    syncLoading: false, confirmResolver: null, showToast: () => {},
     updateWelcomeProgress: () => {},
   });
-  vm.runInContext(section('function dismissWelcome(){', '\nfunction openByAction('), context);
+  vm.runInContext(section('function isWelcomeVisible(){', '\nfunction setCloudLoading('), context);
+  vm.runInContext(section('let welcomeDismissTimer=', '\nfunction openByAction('), context);
+  const flush = () => { for (const [id, fn] of [...timers]) { timers.delete(id); fn(); } };
+  context.updateBackgroundAvailability();
+  assert.equal(shell.inert, true, 'background is unavailable while the intro is open');
+  assert.equal(dock.inert, true);
   context.dismissWelcome();
   assert.equal(storage.get('northstar-welcome-seen-v1'), '1');
+  flush();
   assert.equal(screen.classList.contains('hidden'), true);
   assert.equal(root.classList.contains('northstar-seen'), true);
   assert.equal(screen.attrs['aria-hidden'], 'true');
+  assert.equal(shell.inert, false);
   context.showWelcome();
+  flush();
   assert.equal(storage.has('northstar-welcome-seen-v1'), false);
   assert.equal(screen.classList.contains('hidden'), false);
   assert.equal(root.classList.contains('northstar-seen'), false);
   assert.equal(screen.attrs['aria-hidden'], 'false');
+  assert.equal(scroll.scrollTop, 0);
+  assert.equal(shell.inert, true);
   assert.match(html, /\.northstar-seen #welcomeScreen\{display:none\}/);
 });

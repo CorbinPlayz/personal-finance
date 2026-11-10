@@ -216,7 +216,6 @@ body{height:auto!important;min-height:100%;overflow:visible!important;overscroll
   .app-shell,.main-area{height:auto!important;min-height:100vh;overflow:visible!important}
   .content{height:auto!important;min-height:0;overflow:visible!important;flex:0 0 auto;padding-bottom:calc(110px + env(safe-area-inset-bottom))}
   .page-footer{margin-bottom:calc(90px + env(safe-area-inset-bottom))}
-  #welcomeScreen{position:fixed;inset:0;overflow-x:hidden!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scroll-behavior:auto!important}
 }
 @media(max-width:900px){
   html{height:auto!important;min-height:100%;overflow-x:hidden!important;overflow-y:auto!important}
@@ -1369,6 +1368,30 @@ body.nsx-grain:after{
   .purchase-tile-context{font-size:8.5px;margin-top:6px}
 }
 </style>
+<style id="welcome-access">
+/* The entry action is outside the native scroll area, so it remains visible
+   even on short/landscape screens and never depends on a swipe. */
+#welcomeScreen{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;overflow:hidden;padding:0}
+#welcomeScreen .welcome-scroll-progress{position:absolute;z-index:3}
+.welcome-starfield{position:absolute;inset:0;pointer-events:none}
+.welcome-toolbar{position:relative;z-index:2;flex:none;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:calc(9px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) 9px calc(16px + env(safe-area-inset-left, 0px));background:#101010;border-bottom:1px solid #ffffff1c}
+.welcome-toolbar-copy{flex:1 1 110px;min-width:0;color:#f2f2f2;font-size:12px;line-height:1.35}
+.welcome-toolbar-copy strong,.welcome-toolbar-copy span{display:block}
+.welcome-toolbar-copy span{color:#b8b8b8;font-size:10px;margin-top:3px}
+.welcome-enter{flex:0 1 auto;display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:48px;max-width:100%;padding:10px 15px;border:1px solid #fff;border-radius:10px;background:#fff;color:#111;font-size:12px;font-weight:700;line-height:1.25}
+.welcome-enter:hover{background:#e6e6e6;border-color:#e6e6e6}
+.welcome-enter span{font-size:16px;line-height:1}
+#welcomeScroll{flex:1 1 auto;min-height:0;width:100%;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y pinch-zoom;scroll-behavior:auto;padding:clamp(18px,4vw,44px) clamp(14px,3.5vw,36px) calc(28px + env(safe-area-inset-bottom, 0px))}
+#welcomeScroll:focus-visible{outline:2px solid #b8b8b8;outline-offset:-3px}
+#welcomeScroll .welcome-content{width:min(1060px,100%);margin:0 auto}
+@media(max-width:600px){
+  .welcome-toolbar{padding-left:calc(12px + env(safe-area-inset-left, 0px));padding-right:calc(12px + env(safe-area-inset-right, 0px))}
+  #welcomeScroll{padding:19px 14px calc(28px + env(safe-area-inset-bottom, 0px))}
+}
+/* Avoid a transformed, full-height compositing layer during phone swipes. */
+@media(max-width:900px),(pointer:coarse){#welcomeScroll .welcome-content{animation:none;transform:none}}
+@media(prefers-reduced-motion:reduce){#welcomeScreen,.welcome-leaving .welcome-content{transition:none}}
+</style>
 <style id="vault-design">
 html.northstar-vault-locked .app-shell,html.northstar-vault-locked #welcomeScreen,
 html.northstar-vault-locked .nsj-orb,html.northstar-vault-locked .nsj-panel,
@@ -1404,6 +1427,11 @@ button:disabled{opacity:.55;cursor:not-allowed}
   <div class="welcome-scroll-progress" aria-hidden="true"><span id="welcomeProgressBar"></span></div>
   <div class="welcome-glow welcome-glow-a" aria-hidden="true"></div><div class="welcome-glow welcome-glow-b" aria-hidden="true"></div>
   <div class="welcome-starfield" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <header class="welcome-toolbar">
+    <div class="welcome-toolbar-copy"><strong>Welcome to Northstar</strong><span>Intro optional · replay it in Settings</span></div>
+    <button class="welcome-enter" id="welcomeEnter" type="button" data-action="dismiss-welcome">Enter Northstar <span aria-hidden="true">↗</span></button>
+  </header>
+  <div id="welcomeScroll" role="region" aria-label="Northstar introduction" tabindex="0">
   <div class="welcome-content">
     <div class="welcome-wordmark"><span class="welcome-mini-mark"><svg class="welcome-mini-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgWelcomeMini" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarWelcomeMini" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgWelcomeMini)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarWelcomeMini)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg></span><span class="welcome-wordmark-type"><strong>Northstar</strong><small>PERSONAL FINANCE</small></span><span class="welcome-version">MAJOR UPDATE</span></div>
     <div class="welcome-main">
@@ -1414,6 +1442,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
     <div class="welcome-scroll-cue"><span class="welcome-scroll-cue-line"></span><span>SCROLL TO EXPLORE YOUR JOURNEY</span><span class="welcome-scroll-cue-arrow">↓</span></div>
     <section class="welcome-journey" id="welcomeJourney" aria-label="Your Northstar journey"><div class="welcome-journey-heading" data-welcome-reveal><span class="welcome-kicker-dot"></span> A CLEARER PATH, ONE STEP AT A TIME</div><div class="welcome-journey-grid"><article class="welcome-step" data-welcome-reveal><div class="welcome-step-number">01</div><div class="welcome-step-symbol">⌖</div><h2>Find your starting point</h2><p>Bring your accounts and spending into one calm view. No judgement, and no bank connection needed.</p><div class="welcome-step-line"><span></span></div></article><article class="welcome-step" data-welcome-reveal><div class="welcome-step-number">02</div><div class="welcome-step-symbol">✦</div><h2>Choose your North Star</h2><p>Give a name and a number to what matters. See every little contribution move your goal closer.</p><div class="welcome-step-line"><span></span></div></article><article class="welcome-step" data-welcome-reveal><div class="welcome-step-number">03</div><div class="welcome-step-symbol">↗</div><h2>Make the next move wisely</h2><p>Plan purchases, reserve money, check prices, and avoid rushing into a buy that works against your bigger goal.</p><div class="welcome-step-line"><span></span></div></article></div><div class="welcome-guide-note" data-welcome-reveal><div class="welcome-guide-orbit" aria-hidden="true">✦</div><div><span class="welcome-guide-label">YOUR PERSONAL COMPASS</span><h2>Meet the Northstar Guide</h2><p>Save your preferences and monthly plan, get personalized saving suggestions, and keep price notes for things you want to buy. Price estimates are based on the checks you log, not a promise about future market prices.</p></div></div><div class="welcome-final" data-welcome-reveal><span class="welcome-final-star" aria-hidden="true">✦</span><p class="welcome-final-eyebrow">YOUR GOALS ARE WORTH THE JOURNEY</p><h2>Every small step <em>counts.</em></h2><p>You do not need to have everything figured out today. Start where you are, and let the compass help you choose your next step.</p><button class="welcome-continue" type="button" data-action="dismiss-welcome">Set my course <span aria-hidden="true">↗</span></button><div class="welcome-privacy"><span class="welcome-check">✓</span>Your profile belongs to you. You can edit or clear it any time.</div></div></section>
     <div class="welcome-bottomline"><span>BUILT FOR YOUR FINANCIAL JOURNEY</span><span><i></i> Start wherever you are</span></div>
+  </div>
   </div>
 </section>
 <div class="app-shell">
@@ -1435,7 +1464,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <button class="scrim hidden" id="scrim" data-action="close-menu" aria-label="Close navigation"></button>
 <div class="main-area">
 <header class="topbar"><div style="display:flex;align-items:center;min-width:0"><button class="icon-btn mobile-menu" data-action="menu" aria-label="Open navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div class="breadcrumb"><span class="breadcrumb-brand"><svg class="breadcrumb-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgCrumb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarCrumb" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgCrumb)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarCrumb)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg><b>NORTHSTAR</b></span><span>/</span> <strong id="breadcrumbTitle">Overview</strong></div></div><div class="top-actions"><span class="sync-state" id="syncStatus" aria-live="polite">Local only</span><button id="signInBtn" class="secondary-btn small" data-action="signin">Connect Google</button><button id="signOutBtn" class="secondary-btn small hidden" data-action="signout">Sign out</button><div class="avatar" id="avatar" aria-label="Northstar"><svg class="avatar-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgAvatar" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarAvatar" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgAvatar)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarAvatar)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg></div></div></header>
-<main class="content" id="content"></main>
+<main class="content" id="content" tabindex="-1"></main>
 <footer class="page-footer"><span>Northstar Personal Finance</span><span>Manual tracking <b>·</b> Optional cloud sync; protection off by default</span></footer>
 </div></div>
 <nav class="mobile-dock" id="mobileDock" aria-label="Quick navigation"><button class="dock-item active" data-action="page" data-page="Overview"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.4 10.3 12 4.3l7.6 6v9.4H4.4z"/><path d="M9.8 19.7v-5.3h4.4v5.3"/></svg></span><small>Home</small></button><button class="dock-item" data-action="page" data-page="Transactions"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.5 12h3.9l2.2-5.4 3.3 10.9 2.3-5.5h5.3"/></svg></span><small>Activity</small></button><button class="dock-item" data-action="page" data-page="Goals"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7.8"/><circle cx="12" cy="12" r="3.2"/></svg></span><small>Goals</small></button><button class="dock-item" data-action="page" data-page="Purchases"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8h12l1.1 11.4H4.9z"/><path d="M9.2 8V6.4a2.8 2.8 0 0 1 5.6 0V8"/></svg></span><small>Plan</small></button><button class="dock-item" data-action="page" data-page="Guide"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11.6 3.6 13.4 9l5.4 1.8-5.4 1.8-1.8 5.4-1.8-5.4L4.4 10.8 9.8 9z"/><path d="M18.4 16.2l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/></svg></span><small>Guide</small></button></nav><div id="goalCelebrationRoot" aria-live="polite"></div><div id="modalRoot"></div><div id="confirmRoot"></div><div id="toastRoot" aria-live="polite"></div>
@@ -1642,8 +1671,14 @@ async function clearAllFinancialData(){
  const result=await showNorthstarDialog({title:'Clear all financial data?',message:'This removes all accounts, transactions, budgets, savings goals, and planned purchases from the active dataset.',detail:'This can’t be undone. Export a backup first if you might need these records later.',icon:'⌫',confirmText:'Clear all data',cancelText:'Keep my data',danger:true,label:'PASSWORD VERIFIED · DESTRUCTIVE ACTION'});
  if(result===true){data=blankData();persist();showToast('Financial data cleared')}
 }
-function updateWelcomeProgress(){const screen=$('welcomeScreen'),bar=$('welcomeProgressBar');if(!screen||!bar)return;const distance=screen.scrollHeight-screen.clientHeight;bar.style.width=(distance>0?Math.min(100,screen.scrollTop/distance*100):100).toFixed(1)+'%'}
-function initWelcomeJourney(){const screen=$('welcomeScreen');if(!screen)return;screen.addEventListener('scroll',updateWelcomeProgress,{passive:true});updateWelcomeProgress();if(!('IntersectionObserver' in window))return;document.documentElement.classList.add('welcome-motion-ready');const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target)}}),{root:screen,threshold:.12});screen.querySelectorAll('[data-welcome-reveal]').forEach(el=>observer.observe(el))}
+function updateWelcomeProgress(){const scroll=$('welcomeScroll'),bar=$('welcomeProgressBar');if(!scroll||!bar)return;const distance=scroll.scrollHeight-scroll.clientHeight;bar.style.width=(distance>0?Math.min(100,Math.max(0,scroll.scrollTop)/distance*100):100).toFixed(1)+'%'}
+function initWelcomeJourney(){const scroll=$('welcomeScroll');if(!scroll)return;scroll.addEventListener('scroll',updateWelcomeProgress,{passive:true});window.addEventListener('resize',updateWelcomeProgress,{passive:true});updateWelcomeProgress();if(!('IntersectionObserver' in window))return;document.documentElement.classList.add('welcome-motion-ready');const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target)}}),{root:scroll,threshold:.12});scroll.querySelectorAll('[data-welcome-reveal]').forEach(el=>observer.observe(el))}
+function scrollWelcomeJourney(){
+ const scroll=$('welcomeScroll'),journey=$('welcomeJourney');if(!scroll||!journey)return;
+ const top=Math.max(0,scroll.scrollTop+journey.getBoundingClientRect().top-scroll.getBoundingClientRect().top);
+ const immediate=window.matchMedia?.('(prefers-reduced-motion: reduce), (pointer: coarse)').matches;
+ try{scroll.scrollTo({top,behavior:immediate?'auto':'smooth'})}catch{scroll.scrollTop=top}
+}
 function playGoalSound(){if(data.settings?.goalSounds===false)return;try{const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;const ctx=new Ctx(),now=ctx.currentTime;[[659.25,0],[783.99,.12],[987.77,.24],[1318.51,.39]].forEach(([freq,delay])=>{const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(freq,now+delay);gain.gain.setValueAtTime(.0001,now+delay);gain.gain.exponentialRampToValueAtTime(.12,now+delay+.025);gain.gain.exponentialRampToValueAtTime(.0001,now+delay+.34);osc.connect(gain);gain.connect(ctx.destination);osc.start(now+delay);osc.stop(now+delay+.36)});setTimeout(()=>ctx.close().catch(()=>{}),1300)}catch(e){console.debug('Goal sound unavailable in this browser.',e)}}
 function celebrateGoal(goal){playGoalSound();const root=$('goalCelebrationRoot');if(!root)return;root.innerHTML='';const overlay=document.createElement('div');overlay.className='goal-celebration';overlay.setAttribute('role','status');overlay.setAttribute('aria-label','Savings goal reached');const colors=['#999999','#a8a8a8','#b8b8b8','#a8a8a8','#c9c9c9','#ffffff'];for(let i=0;i<42;i++){const bit=document.createElement('span');bit.className='goal-confetti';bit.style.setProperty('--x',Math.round(Math.random()*100)+'%');bit.style.setProperty('--w',(4+Math.random()*6)+'px');bit.style.setProperty('--h',(6+Math.random()*10)+'px');bit.style.setProperty('--c',colors[i%colors.length]);bit.style.setProperty('--d',(1.8+Math.random()*1.1)+'s');bit.style.setProperty('--delay',(Math.random()*.36)+'s');bit.style.setProperty('--r',Math.round(Math.random()*180)+'deg');bit.style.setProperty('--drift',Math.round(Math.random()*140-70)+'px');overlay.appendChild(bit)}const card=document.createElement('div');card.className='goal-celebration-card';card.innerHTML='<span class="goal-celebration-mark">✦</span><small>NORTHSTAR MILESTONE</small><h2>Look how far you’ve come.</h2><p>'+esc(goal.name)+' reached '+esc(money(goal.saved))+' of '+esc(money(goal.target))+'.<br>You made it happen, one step at a time.</p>';overlay.appendChild(card);root.appendChild(overlay);setTimeout(()=>{if(overlay.isConnected)overlay.remove()},3000)}
 function showToast(text){const root=$('toastRoot');root.innerHTML=`<div class="toast"><span>✓</span><span>${esc(text)}</span><button data-action="dismiss-toast" aria-label="Dismiss">×</button></div>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>root.replaceChildren(),3500)}
@@ -1668,7 +1703,12 @@ function firebaseErrorDetails(error,stage='Cloud sync'){
  const detail=error?.message&& !hints[code]?` Details: ${error.message}`:'';
  return `${hint} [${code}]${detail}`
 }
-function setCloudLoading(loading){syncLoading=loading;const shell=document.querySelector('.app-shell'),content=$('content');if(shell)shell.inert=loading||window.NorthstarVaultLocked;if(content)content.setAttribute('aria-busy',String(loading));const signOut=$('signOutBtn');if(signOut)signOut.disabled=loading;}
+function isWelcomeVisible(){const screen=$('welcomeScreen');return !!screen&&!screen.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen')}
+function updateBackgroundAvailability(){
+ const blocked=syncLoading||window.NorthstarVaultLocked||isWelcomeVisible();
+ const shell=document.querySelector('.app-shell'),dock=$('mobileDock');if(shell)shell.inert=blocked;if(dock)dock.inert=blocked;
+}
+function setCloudLoading(loading){syncLoading=loading;updateBackgroundAvailability();const content=$('content');if(content)content.setAttribute('aria-busy',String(loading));const signOut=$('signOutBtn');if(signOut)signOut.disabled=loading;}
 function update(mutator,toastText){data=mutator(data);persist();if(toastText)showToast(toastText)}
 function options(items,current){return items.map(v=>`<option value="${esc(v)}" ${String(v)===String(current)?'selected':''}>${esc(v)}</option>`).join('')}
 function accountOptions(current,exclude=''){return `<option value="">Choose an account</option>`+data.accounts.filter(a=>a.id!==exclude).map(a=>`<option value="${esc(a.id)}" ${a.id===current?'selected':''}>${esc(a.name)} · ${esc(money(a.balance))}</option>`).join('')}
@@ -2006,10 +2046,47 @@ function setPurchaseStatus(purchaseId,status){
  persist();showToast(`Purchase marked ${status.toLowerCase()}`);
 }
 function navigate(nextPage){if(nextPage!=='Purchases')purchaseDetailId=null;page=nextPage;$('sidebar').classList.remove('sidebar-open');$('scrim').classList.add('hidden');render();window.scrollTo({top:0,behavior:'smooth'})}
-function dismissWelcome(){const screen=$("welcomeScreen");if(!screen||screen.classList.contains("hidden"))return;screen.classList.add("welcome-leaving");try{localStorage.setItem("northstar-welcome-seen-v1","1")}catch(e){};window.setTimeout(()=>{screen.classList.add("hidden");screen.classList.remove("welcome-leaving");screen.setAttribute("aria-hidden","true");document.documentElement.classList.add("northstar-seen")},390)}
-function showWelcome(){const screen=$("welcomeScreen");if(!screen)return;document.documentElement.classList.remove("northstar-seen");screen.classList.remove("hidden","welcome-leaving");screen.setAttribute("aria-hidden","false");screen.scrollTop=0;updateWelcomeProgress();try{localStorage.removeItem("northstar-welcome-seen-v1")}catch(e){};window.setTimeout(()=>$('welcomeContinue')?.focus(),60)}
-function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':$('welcomeJourney')?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});break;case'welcome-again':showWelcome();break;case'page':navigate(b.dataset.page);break;case'menu':$('sidebar').classList.add('sidebar-open');$('scrim').classList.remove('hidden');break;case'close-menu':$('sidebar').classList.remove('sidebar-open');$('scrim').classList.add('hidden');break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':purchaseDetailId=null;render();window.scrollTo({top:0,behavior:'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
-document.addEventListener('keydown',e=>{const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
+let welcomeDismissTimer=null,welcomeReturnFocus=null;
+function focusWelcomeEntry(){
+ if(window.NorthstarVaultLocked||confirmResolver||!isWelcomeVisible()||$('welcomeScreen').classList.contains('welcome-leaving'))return;
+ const entry=$('welcomeEnter');try{entry?.focus({preventScroll:true})}catch{entry?.focus()}
+}
+function dismissWelcome(){
+ const screen=$('welcomeScreen');if(window.NorthstarVaultLocked||!screen||!isWelcomeVisible()||screen.classList.contains('welcome-leaving'))return;
+ screen.classList.add('welcome-leaving');let remembered=true;
+ try{localStorage.setItem('northstar-welcome-seen-v1','1')}catch{remembered=false}
+ const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+ welcomeDismissTimer=window.setTimeout(()=>{
+  screen.classList.add('hidden');screen.classList.remove('welcome-leaving');screen.setAttribute('aria-hidden','true');document.documentElement.classList.add('northstar-seen');
+  updateBackgroundAvailability();
+  if(!window.NorthstarVaultLocked&&!syncLoading&&!confirmResolver){
+   const target=welcomeReturnFocus?.isConnected?welcomeReturnFocus:$('content');try{target?.focus({preventScroll:true})}catch{target?.focus()}
+  }
+  if(!remembered&&!window.NorthstarVaultLocked)showToast('The intro may return on reload because browser storage is unavailable.');
+  welcomeReturnFocus=null;welcomeDismissTimer=null;
+ },reduced?0:390);
+}
+function showWelcome(trigger){
+ const screen=$('welcomeScreen');if(window.NorthstarVaultLocked||!screen)return;
+ if(welcomeDismissTimer!==null)window.clearTimeout(welcomeDismissTimer);
+ welcomeDismissTimer=null;welcomeReturnFocus=trigger||document.activeElement;
+ document.documentElement.classList.remove('northstar-seen');screen.classList.remove('hidden','welcome-leaving');screen.setAttribute('aria-hidden','false');
+ const scroll=$('welcomeScroll');if(scroll)scroll.scrollTop=0;updateWelcomeProgress();updateBackgroundAvailability();
+ try{localStorage.removeItem('northstar-welcome-seen-v1')}catch{}
+ window.setTimeout(focusWelcomeEntry,60);
+}
+function trapWelcomeTab(e){
+ if(e.key!=='Tab'||!isWelcomeVisible()||window.NorthstarVaultLocked||confirmResolver)return false;
+ const screen=$('welcomeScreen');const items=[...screen.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]')].filter(el=>el.getClientRects().length);
+ if(!items.length)return false;
+ const first=items[0],last=items[items.length-1],active=document.activeElement;
+ if(!screen.contains(active)||(e.shiftKey&&active===first)||(!e.shiftKey&&active===last)){
+  e.preventDefault();(e.shiftKey?last:first).focus();return true;
+ }
+ return false;
+}
+function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'menu':$('sidebar').classList.add('sidebar-open');$('scrim').classList.remove('hidden');break;case'close-menu':$('sidebar').classList.remove('sidebar-open');$('scrim').classList.add('hidden');break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':purchaseDetailId=null;render();window.scrollTo({top:0,behavior:'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
+document.addEventListener('keydown',e=>{if(trapWelcomeTab(e))return;const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
 document.addEventListener('click',e=>{
  const option=e.target.closest('[data-confirm-index]');
  if(option&&confirmResolver){e.preventDefault();e.stopPropagation();const index=Number(option.dataset.confirmIndex);settleNorthstarDialog(Number.isInteger(index)&&confirmChoices[index]?confirmChoices[index].value:null);return}
@@ -2036,7 +2113,7 @@ function readVaultCopy(uid){
 }
 function setVaultLocked(locked){
  window.NorthstarVaultLocked=locked;document.documentElement.classList.toggle('northstar-vault-locked',locked);
- const shell=document.querySelector('.app-shell');if(shell)shell.inert=locked||syncLoading;
+ updateBackgroundAvailability();
 }
 function protectedSaveError(error){
  vault.error=error;cloudLoaded=false;lastSyncError=error;
@@ -2184,7 +2261,7 @@ async function unlockProtectedWorkspace(e){
   data=opened;cloudLoaded=false;lastSyncError=null;setVaultLocked(false);$('vaultRoot').replaceChildren();
   if(user&&user.uid!==uid){lastSyncError=syncConflict('This protected workspace belongs to a different Google account.');setSync('Account mismatch · sync paused','err');showToast('This protected workspace belongs to a different Google account. No data was uploaded.');}
   else setSync('Protected device copy','ok');
-  render();if(user?.uid===uid&&fb)await syncProtected(user);
+  render();if(isWelcomeVisible())window.setTimeout(focusWelcomeEntry,30);if(user?.uid===uid&&fb)await syncProtected(user);
  }catch(err){
   console.warn('Protected workspace unlock failed.',err);
   error.textContent=err?.name==='OperationError'?'Incorrect passphrase or damaged encrypted data. Nothing was changed.':(err?.message||'Could not unlock this protected copy. Nothing was changed.');
@@ -2210,7 +2287,10 @@ function renderVaultPanel(){
 }
 ['click','submit','input','change','keydown'].forEach(type=>document.addEventListener(type,e=>{
  if(!window.NorthstarVaultLocked){
-  if(syncLoading&&!$('confirmRoot')?.contains(e.target)){e.preventDefault();e.stopImmediatePropagation()}
+  // Cloud loading must not trap a visitor in the optional intro. The vault
+  // guard below still takes precedence over every welcome action.
+  const inWelcome=isWelcomeVisible()&&$('welcomeScreen')?.contains(e.target);
+  if(syncLoading&&!inWelcome&&!$('confirmRoot')?.contains(e.target)){e.preventDefault();e.stopImmediatePropagation()}
   return;
  }
  const root=$('vaultRoot');
@@ -2492,7 +2572,7 @@ try{
   });
 }catch(e){}
 if(document.documentElement.classList.contains('northstar-seen')){const screen=$('welcomeScreen');screen?.classList.add('hidden');screen?.setAttribute('aria-hidden','true')}
-render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJourney();if(vault.state!=='locked'&&!document.documentElement.classList.contains('northstar-seen'))window.setTimeout(()=>$('welcomeContinue')?.focus(),140);
+render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJourney();updateBackgroundAvailability();if(vault.state!=='locked'&&isWelcomeVisible())window.setTimeout(focusWelcomeEntry,140);
 </script>
 <script>
 /* Each purchased tile animates once when it first enters view. Returning to it does not replay the mark. */
@@ -3038,6 +3118,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   function closeCheat() { if (cheat) { cheat.classList.remove('open'); Sound.close(); } }
 
   document.addEventListener('keydown', function (e) {
+    if (!document.documentElement.classList.contains('northstar-seen')) return;
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
     var k = e.key.toLowerCase();
