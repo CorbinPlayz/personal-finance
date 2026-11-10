@@ -24,7 +24,7 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | Mobile layout and navigation | Implemented |
 | Mobile vertical scrolling | User reports scrolling still fails and the page is laggy in Chrome on iPhone 13 (2026-11-04). Earlier fixes left both `html` and `body` as scroll containers at mobile sizes; now `html` is the document scroller and `body`/app sections stay in normal flow. Expensive animated blur/ink/canvas effects are disabled on small/coarse-pointer devices. Parser checks pass; physical-device confirmation is still required. |
 | Visual design | Monochrome black/white system in the `#mono-design` layer (2026-11-03) |
-| Local persistence | Implemented with browser `localStorage` |
+| Local persistence | Browser `localStorage`; plaintext by default. Optional passphrase-protected workspace uses a separate encrypted device copy. |
 | Google sign-in / Firestore sync | Implemented in the front end. The user previously reported that Google sign-in and cloud sync worked; this has not been freshly tested during this handoff update. |
 | Transactions, accounts, budgets, goals, purchases | Implemented in the main app |
 | Purchase priority sorting and compact tile/detail flow | Implemented |
@@ -32,21 +32,23 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | Guide | Implemented as a **local rules-based planner**, not an external generative AI model |
 | Jarvis cloud brain (BYOK) | Implemented. Visitors paste their own key in the panel's Connections sheet; key is per-browser, excluded from data/backups; local engine is the default and fallback. Reliability fixes, honest verification status, source labels, and provider diagnostics are in 4g. Local review-before-save finance-action drafts are documented in 4i |
 | Manual price research/history | Implemented; no live retailer feed or automatic price monitoring |
-| JSON backup / restore | Implemented |
+| JSON backup / restore | Implemented; protected workspaces export encrypted JSON, others export plaintext after a warning. |
 | Cloudflare AI Worker | Worker code and setup notes exist, but the website is **not wired to call it** and deployment is not confirmed. The visitor-key (BYOK) path in 4f is what shipped instead |
-| Automated test suite / build pipeline | Focused Node built-in tests in `tests/purchase-expenses.test.cjs`; no `package.json` or React/Vite build is required |
+| Automated test suite / build pipeline | Focused dependency-free Node tests in `tests/` cover purchases, crypto, and mocked sync/storage failures; no `package.json` or React/Vite build is required |
 
 ## 3. Repository inventory — verified
 
 | File | Purpose and important notes |
 |---|---|
-| `index.html` | The complete static app entry point and primary implementation. It contains the HTML shell, extensive CSS, app state, render functions, forms, event handling, local persistence, Firebase integration, and the purchased-card animation observer. It is large (about 370 KB). Make focused edits; do not replace the whole file casually. |
+| `index.html` | The complete static app entry point and primary implementation. It contains the HTML shell, extensive CSS, app state, render functions, forms, event handling, local persistence, Firebase integration, and the purchased-card animation observer. It is large (about 410 KB). Make focused edits; do not replace the whole file casually. |
 | `README.md` | Product overview, feature summary, GitHub Pages publishing steps, Firebase setup, data-path notes, and privacy/security warnings. It currently describes the Guide as rules-based. |
-| `firestore.rules` | Firestore rules intended to let an authenticated user read/write only their own Northstar finance document. Publishing this file to Firebase Console is a separate deployment step. |
+| `firestore.rules` | User-scoped Firestore rules with a guard against plaintext merges into a protected document. Publishing and testing these rules in Firebase Console is a separate, unverified deployment step. |
+| `vault-crypto.mjs` | Browser/Node Web Crypto envelope helpers: PBKDF2-SHA-256, AES-256-GCM, fresh IV, strict encrypted-format validation. It must be deployed alongside `index.html`. |
 | `cloudflare-worker/README.md` | Setup, deployment, quota, and privacy notes for an optional Cloudflare Workers AI backend. |
 | `cloudflare-worker/src/index.js` | Worker endpoint. Restricts origin, checks a Firebase ID token, validates the request, sends the question and supplied context to Workers AI, and returns an advisory response. |
 | `cloudflare-worker/wrangler.toml` | Wrangler configuration; Worker name is `northstar-finance-ai`, entry point is `src/index.js`, and AI binding is named `AI`. |
-| `tests/purchase-expenses.test.cjs` | Dependency-free Node rendering regression tests for the purchase planner expense history. Run `node --test tests/purchase-expenses.test.cjs`. |
+| `tests/purchase-expenses.test.cjs` | Node tests for completed purchase projections, explicit ID links, price/date labels, finance edits, and duplicate-charge regressions. |
+| `tests/vault-crypto.test.mjs`, `tests/vault-sync.test.cjs` | Node crypto round-trip/tamper tests and mocked cloud/device save conflict tests. Run `node --test tests/*.test.*`. These do not verify live Firebase or published rules. |
 | `PROJECT-HANDOFF.md` | This document. Keep it current after meaningful project or requirement changes. |
 
 **Not present in the current repo tree:** `package.json`, `src/`, `tsconfig.json`, or a React/Vite app scaffold. Older discussions about React, TypeScript, Vite, an offline USB desktop app, or npm launch scripts are not the architecture of this repository. Do not tell the user to run npm commands for this static-site repo unless the architecture is intentionally changed later.
@@ -60,16 +62,16 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 - **Accounts:** create and manage tracked accounts, account types, balances, optional minimum balances, and purchase allocations. Purchase funds can be shown separately from available funds.
 - **Budgets:** user-defined category limits.
 - **Goals:** savings goals with target and saved amounts, progress states, and a completion celebration. Goal-completion sound can be disabled in Settings.
-- **Purchases:** planned-purchase list with priority, date, saved amount, funding account, category, notes, and reminders. Purchases are automatically organized rather than relying on the user to manually drag/reorder everything. It also displays all recorded expense transactions in a separate history section; income and transfers are excluded.
+- **Purchases:** planned-purchase list with priority, date, saved amount, funding account, category, notes, and reminders. Purchases are automatically organized rather than relying on the user to manually drag/reorder everything. Recorded expenses appear in the Purchased tile group, not a separate history; income and transfers are excluded.
 - **Northstar Guide:** profile-based and record-aware planning suggestions, price-history context, and a suggested-next-moves section.
-- **Settings:** Google account/cloud sync controls, display currency, JSON backup/restore, data clearing, welcome-screen replay, and goal-sound preference.
+- **Settings:** Google account/cloud sync controls, optional passphrase protection, display currency, JSON backup/restore, data clearing, welcome-screen replay, and goal-sound preference.
 
 ### Purchase planner — important latest behavior
 
 This area has received multiple rounds of detailed user feedback and should not be simplified or reverted without discussion.
 
-- Purchase tiles are compact square cards intended to keep a long list manageable.
-- Selecting a tile opens a separate detail view; editing is available from that view.
+- Purchase tiles are compact cards intended to keep a long list manageable; completed cards are shorter on wide screens and tall enough for content on narrow phones.
+- Selecting a plan tile opens its detail view. An expense-only completed tile opens the existing transaction edit form; a linked plan detail also links to its original expense.
 - Active purchases are automatically grouped/sorted by priority and target date.
 - Purchased items have their own **Purchased** group and a muted/greyed, locked-looking visual treatment.
 - The purchased marker stays red while the rest of the completed card is muted.
@@ -240,13 +242,27 @@ This is a typed local intent path, not an unlimited natural-language model and n
 
 **Verification:** both runtime scripts pass Node syntax parsing. A jsdom integration harness exercised transaction, explicit-save, balance, budget, goal, planned-purchase creation/editing, transfer direction, bare-amount, and balance-question cases; it verified modal prefills and no persistence before Save. No browser visual QA or live provider call was performed.
 
-## 4j. Expense transactions on the Purchase Planner (2026-11-09)
+## 4j. Completed expense tiles and finance integrity (2026-11-09)
 
-The user asked for transactions to show on the Purchase Planner too, but **only expenses**. The page now has an **Expense transactions** section and a count/jump shortcut near the top. All `data.transactions` with `type === 'Expense'` appear there, using the same newest-first ordering as Transactions, regardless of the Transactions page's search, type, or month filters. Each row shows the recorded description, category, account, amount, and date. The history and its empty state also render when there are no planned purchases.
+The separate expense history/shortcut shipped in PR #20 was rejected by the user and has been removed. Every existing or future `Expense` is now projected into the existing **Purchased** tile group; income and transfers are excluded. It is a read-only projection, not another purchase or charge. Expense-only tiles open the original transaction editor. A plan and expense with an explicit `transactionId` or `purchaseId` are shown once, and the plan detail links to the expense editor. Never infer a link from matching name or amount: identical purchases can be legitimate. If a linked plan is still active, its completed expense is shown once; the plan's existing allocation still counts until its status changes, and this is explained on the page.
 
-This is a **view of the existing ledger**, not a second copy or an automatic purchase plan: rendering it never changes accounts, transactions, purchase allocations, or plan totals. Expenses recorded by marking a plan bought are included as well; a `Linked plan` label is shown when the existing purchase/transaction IDs identify a link, and the page explains that the linked plan is not another charge. The shortcut scrolls to the history (respecting reduced motion and the mobile top bar) and moves focus to its heading. The history panel is exempt from the global scaling entrance animation: otherwise a quick jump to a long, animating list lands with its heading hidden. **Record expense** prefills the existing transaction form; **Manage expenses** opens Transactions with an expense filter and resets its search/month filters so the whole expense history is accessible. Normal add, edit, delete, persistence and cloud-sync paths remain the source of truth.
+Completed tiles use the recorded transaction amount and actual transaction date. If the expense date is missing, the tile says **No date** rather than borrowing the plan's target date; a completed plan without a linked expense labels its own date as **Target**. The original compact, complete circled X, one-shot entry, price strike, keyboard interaction, and reduced-motion treatment remain; completed items have a local search, clearer context, a smaller wide-screen footprint, and sufficient height at 320px. Marks already seen in the current session stay settled after edits or returning to the planner instead of replaying; newly seen tiles still animate. Confirmation dialogs trap focus, and toasts avoid covering the assistant or phone navigation.
 
-**Verification:** `node --test tests/purchase-expenses.test.cjs` passes five dependency-free rendering tests, including mixed transaction types, empty/no-plan state, linked records, unchanged data/totals, escaping, and long history. Headless Chromium exercised adding an expense, changing its type, deleting an expense, marking a purchase bought and toggling its status without a duplicate charge, reloading, edited amounts and display currency, independent page filters, an immediate jump to 500 expenses, missing fields, reduced motion, keyboard navigation, and badge geometry. Screenshots were inspected at 320, 390 and 1100 CSS pixels, and geometry was checked at 320, 390, 768, 1100 and 1440 CSS pixels; a separate 390px coarse-pointer/touch emulation tested the jump and a scroll gesture. Scoped axe checks found no violations (the contrast rule was incomplete); primary text colors were separately checked against white. HTML/CSS parsing and syntax checks passed. The user's physical iPhone and live Firebase/Firestore sync were **not** tested in this sandbox.
+Transaction edits now preserve `purchaseId` and other existing metadata; purchase edits preserve `transactionId`, `priceHistory`, and other existing metadata. If a linked transaction is changed to Income/Transfer, the link is retained and Bought fails safely rather than recording a second expense. Transaction edits still reverse the old account effect before applying the new one; rendering never calls these actions. A stale edit form for a record that no longer exists is rejected instead of silently creating an expense or changing a balance.
+
+**Verification:** `node --test tests/*.test.*` passes 29 focused tests, including read-only rendering, both link directions, identical unlinked expenses, actual/missing/malformed dates, stale edit forms, price history, reclassification, transfer edits, one-shot marks across rerenders, and no duplicate charge after editing and toggling status. Headless Chromium with fictional data exercised desktop/phone tiles, editable expenses, search, keyboard activation, screenshots at 320/390/1440 CSS pixels, animation-frame badge geometry, a 500-tile filtered re-render, toast placement, focus trapping, and reduced motion. Scoped axe reported no definite violations after fixes; color contrast remains partly incomplete. No physical iPhone or live Firebase was tested.
+
+## 4k. Optional protected workspace (2026-11-09)
+
+Protection is **off by default**; no existing data is encrypted until the user explicitly enables it in Settings. Setup currently requires HTTPS, Web Crypto, Web Locks, Google sign-in, and a successfully synced cloud document. It warns about unrecoverable passphrases, requires explicit acknowledgement, and asks the user to close other tabs/devices. `vault-crypto.mjs` uses PBKDF2-SHA-256 (600,000 iterations, random salt) to derive a non-extractable AES-256-GCM key; every save gets a random 96-bit IV and authenticated ciphertext. The passphrase is not persisted or deliberately sent to Firebase.
+
+The encrypted device copy is `northstar-vault-v1:{uid}` and an active-workspace marker makes the app lock before financial UI renders on reload. The lock screen can unlock the device offline; the Jarvis bridge/fallback returns no ledger while locked. Auth account mismatch never uploads the protected workspace to a different UID. A new device unlocks the existing cloud envelope and retains any older plaintext browser workspace. Protected JSON backups use the same passphrase; an emergency encrypted export can include unsaved in-memory changes. Plaintext exports and restores into an unprotected workspace are explicitly warned about.
+
+Setup stages and verifies device ciphertext before replacing the entire Firestore document, without `merge:true`. Cloud writes serialize and compare a canonical fingerprint of the observed document inside a Firestore transaction; unsupported values and unsafe integers fail closed, and ordinary plaintext writes use Firestore's native merge to preserve unrelated fields. Conflict, mixed/invalid ciphertext, account changes, storage failures, and uncertain results pause sync instead of silently overwriting. Device writes serialize, use Web Locks, compare the previous stored envelope, and surface quota/cross-tab failures. If setup fails after staging, both old plaintext copies and the encrypted stage are retained; cloud protection is explicitly unconfirmed until reviewed/retried. Setup can optionally remove only exact matching old browser copies **after** both new copies are confirmed. Distinct local workspaces, downloaded backups, other browsers/devices, and provider backups/history may remain unencrypted.
+
+The updated `firestore.rules` add a protected-document update guard intended to reject older clients that merge plaintext into an encrypted document. They must be published and tested in Firebase separately; neither their deployment nor actual live Firestore behavior has been verified. Do not claim a security audit, independent cryptographic review, recovery of lost passphrases, protection against malicious code/extensions/unlocked devices, rollback of an older valid ciphertext, or protection of historical provider backups. The optional Jarvis cloud feature can still send selected data when the user enables it.
+
+**Verification:** Node tests cover crypto round trips, unique IVs, wrong passphrases, tampering, strict envelope format, plaintext merge preservation, SDK-value fingerprints, transaction retries, full encrypted replacement, mocked server conflicts, account switches, queued writes, storage quota, and local copy conflicts. An offline check with the real Firebase SDK 13.1.0 verified merge field masks and fingerprints for its timestamp, geopoint, bytes, reference, and vector values; it did not contact Firebase. Headless Chromium used a **mocked** Firebase SDK to exercise explicit opt-in, cleanup, wrong/right unlock, protected edits, failed cloud conversion and explicit retry, divergent cloud copies, a new device, storage quota failure, emergency encrypted export, encrypted restore, cross-tab device conflict, and flushing an immediate edit before locking or sign-out. No live Firebase project/rules, independent security audit, or physical phone was tested. A real Firebase test project and security review are recommended before trusting real financial data.
 
 ## 5. User requirements and non-negotiable design constraints
 
@@ -293,7 +309,7 @@ The current `index.html` includes document-level vertical overflow rules, iOS mo
 - Firebase browser configuration is public client configuration, not a Firebase Admin/service-account credential. Never put service-account JSON, private API keys, or other admin secrets in `index.html` or any public repository file.
 - The code in the repository is not proof that Firestore rules are currently published in the Firebase Console, nor proof that all production settings are correct.
 - The user previously reported that Google sign-in and cloud sync were working. Treat that as user-reported history, not a fresh end-to-end verification during this handoff update.
-- The Settings UI itself warns that browser data is not encrypted. Do not describe localStorage as encrypted or treat client-side UI safeguards as a substitute for proper authorization.
+- Browser/cloud data is plaintext unless protection is explicitly enabled. Even with a protected active copy, old copies/backups and an unlocked session can expose data. Do not treat passphrase encryption or client UI as a substitute for published, tested Firestore authorization.
 - Do not use real financial details for testing unless the user explicitly chooses to do so. Never ask for bank passwords, full card numbers, or credentials.
 
 ## 8. Optional Cloudflare Worker — prepared, not integrated
@@ -331,11 +347,12 @@ The file is large and contains mostly long CSS/JavaScript lines. Use targeted se
 | `showNorthstarDialog` | Reusable styled confirmation/choice dialogs |
 | `initWelcomeJourney`, `updateWelcomeProgress` | Intro scroll progress and reveal effects |
 | `render`, `renderOverview`, `renderTransactions`, `renderAccounts`, `renderBudgets`, `renderGoals` | Main page rendering |
-| `renderPurchases`, `renderPurchaseTile`, `renderPurchaseExpenses`, `setPurchaseStatus` | Purchase planner, expense-only ledger view, tile/detail display, and bought flow |
+| `renderPurchases`, `renderPurchaseTile`, `completedPurchaseEntries`, `setPurchaseStatus` | Read-only completed expense projections, explicit-ID deduplication, tile/detail display, and bought flow |
 | `safePriceHistory`, `estimatePriceTrend`, `renderPurchasePriceTools`, `savePriceCheck` | Manual price logs and local trend estimate |
 | `renderGuide`, `saveGuideProfile`, `answerGuide` | Rules-based Guide and saved profile/memory |
 | `renderSettings`, `exportBackup`, `importBackup` | Preferences and JSON backup/restore |
-| `initFirebase`, `onAuthChanged`, `writeCloudNow`, `queueCloudSave` | Authentication and Firestore synchronization |
+| `initFirebase`, `onAuthChanged`, `writeCloudNow`, `cloudWritePayload`, `syncProtected` | Authentication, conditional Firestore writes, and protected sync conflicts |
+| `enableVault`, `showVaultUnlock`, `queueProtectedLocalSave`, `vault-crypto.mjs` | Explicit protection setup, lock/unlock, serialized encrypted device writes, cryptographic envelope |
 | Final purchased-card observer IIFE | Plays each purchased card's entry animation when it first intersects the viewport |
 
 ## 11. Recent repository history worth preserving
@@ -348,20 +365,21 @@ The most relevant code-history milestones on `main` include:
 - 2026-10-26: iPhone document-scrolling improvement; purchase planner descriptions and clear-data safeguards; automatic purchase priority sorting; compact square tiles and detail view; separate Purchased group; muted completed cards; one-time animated X; subsequent X/ring alignment refinements.
 - 2026-11-03: initial project handoff added.
  
-The latest code-focused work added local Jarvis review-before-save finance-action drafts; see section 4i. The feature landed in PR #12.
+Recent work includes local Jarvis review-before-save drafts (PR #12), the compact purchased badge, and the completed expense tiles and optional protected workspace documented in 4j–4k.
 
 ## 12. Recommended next steps for a new AI/developer
 
 1. Read this handoff and the root `README.md`, then inspect the exact current `index.html` before editing.
 2. Mobile scroll and performance are not yet confirmed on the user's iPhone 13 Chrome after the 2026-11-04 viewport/performance changes. Verify both the first-visit welcome overlay and the main app page on-device before calling them resolved.
-3. Ask what feature or improvement the user wants next; do not assume the Cloudflare Worker should be integrated just because its files exist.
+3. Publish and test the new Firestore rules and protected sync against a non-production Firebase project; get independent security review before treating this as fully verified. Do not assume the Cloudflare Worker should be integrated just because its files exist.
 4. For visual refinements, preserve the existing premium Northstar design language and the compact Purchase Planner behavior. For the dashboard, prioritize useful information density over simply enlarging cards.
 5. Protect data integrity: keep user-entered amounts intact, preserve the local/cloud conflict flow, respect account minimums and purchase allocations, and do not add sample balances.
 6. After each meaningful change, validate the relevant flows, state precisely what was tested, and update this handoff.
 
 ## Work log
 
-- 2026-11-09: Added an expense-only transaction history to the Purchase Planner, with a jump shortcut, linked-plan labels, and actions to record/manage expenses; the list is a read-only view of the existing records and does not affect balances or plan totals. Added dependency-free Node rendering tests and checked desktop/mobile layouts and transaction flows in headless Chromium. No physical iPhone or live Firebase test was performed; see 4j.
+- 2026-11-09: Replaced the rejected expense-history panel with completed expense tiles, fixed lost links/price history and misleading dates, and added optional passphrase-protected device/cloud workspaces. Tests and limitations are in 4j–4k; Firebase rules still require separate deployment and live verification.
+- 2026-11-09 (superseded by 4j): Added an expense-only transaction history to the Purchase Planner, with a jump shortcut, linked-plan labels, and actions to record/manage expenses; the list is a read-only view of the existing records and does not affect balances or plan totals. Added dependency-free Node rendering tests and checked desktop/mobile layouts and transaction flows in headless Chromium. No physical iPhone or live Firebase test was performed; see 4j.
 - 2026-11-09: After rejected full-card, drawn-stroke, and veiled iterations, shipped the compact corner badge: a complete circle and X with a price strike. The final badge was checked frame-by-frame in headless Chromium at desktop and phone widths, including reduced motion; older attempts had only structural checks before browser rendering became available. See the purchase-planner section for the design constraints.
 - 2026-11-03: Added the BYOK cloud brain — paste-in key slot in a Connections sheet, Gemini/OpenAI/Anthropic/Groq/OpenRouter/custom adapters, session-by-default key storage isolated from finance data, principal-free brief, silent local fallback with per-message source labels. Widened the `safe` intent. 27 BYOK + 11 local-brain jsdom assertions pass; no live API call or visual QA was possible.
 - 2026-11-03: Fixed BYOK reliability issues reported during visitor testing: stale model defaults, false `Connected` status, hidden-field CSS leak, short probe tokens, truncated upstream errors, and no transient retry. All assistant replies now identify their source; see 4g. Focused jsdom/parser checks pass; live provider access and visual QA were not available.
