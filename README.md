@@ -2,24 +2,30 @@
 
 Northstar is a static, mobile-friendly personal finance planner with an animated compass-themed welcome journey.
 
+## Major update — purchases and optional protection
+
+Recorded expenses now appear as completed purchase tiles, with explicitly linked plans shown once. This update also adds completed-purchase search, safer editing and sync, responsive refinements, and optional passphrase protection for the active device and cloud workspace. [Read the two-page major update](MAJOR-UPDATE.md) for what changed and how it affects your data.
+
+**Protection is off by default.** Before enabling cloud protection, publish and test the updated Firestore rules separately. A lost passphrase can make encrypted data unrecoverable; older copies may remain readable. Live Firebase behavior and an independent security review are still unverified.
+
 ## Included features
 
 - Overview, transactions, accounts, budgets, savings goals, and planned purchases.
 - Goal progress states and optional sound/visual celebration when a goal is first reached.
-- Responsive phone navigation and a scrollable animated introduction.
+- Responsive phone navigation and a scrollable animated introduction that can be replayed from Settings.
 - Northstar Guide with a saved planning profile, remembered preferences, and rule-based saving/purchase suggestions.
 - Purchase priority ordering, links to search current shopping listings, and manual price-history logging.
 - Recorded expenses appear as completed purchase tiles. Linked expense/plan pairs appear once; selecting an expense-only tile edits the original transaction. Income and transfers are excluded.
 - A simple 30-day price trend estimate after at least three price checks on different dates. This estimate uses only prices you enter; it is not a live retailer feed or guaranteed prediction.
 - JSON backup and restore, browser storage, optional Google sign-in and Firestore sync, and optional passphrase protection for the active device/cloud workspace.
 
-The Guide is a local rules-based helper, not an external generative AI service. Jarvis also has an optional visitor-supplied cloud connection; if enabled, data selected for a request may be sent to that provider. The separate Cloudflare Worker is not wired into the site. Do not put private API keys in this static site.
+The Guide is a local rules-based helper, not an external generative AI service. Jarvis also has an optional visitor-supplied cloud connection; if enabled, selected data and the key are sent to the chosen provider. Its key is stored separately in browser storage (session by default, optionally remembered), not encrypted by workspace protection or included in finance backups. The separate Cloudflare Worker is not wired into the site. Do not put private API keys in this static site.
 
 Northstar does not connect to bank accounts or verify your real balance. Figures depend on information you enter. Double-check your actual accounts before spending.
 
 ## Passphrase protection and backups
 
-**Protection is off by default.** Existing browser and cloud data remains readable unless you explicitly enable it in Settings. Enabling protection currently requires a secure HTTPS page, a browser with Web Crypto and Web Locks, Google sign-in, and a successful cloud sync. It creates a protected device copy and replaces the current cloud document with ciphertext. The passphrase stays in the browser; PBKDF2-SHA-256 derives a non-extractable AES-256-GCM key, with a fresh random IV for each encryption. A new device needs the same Google account and passphrase to unlock the protected cloud copy.
+**Protection is off by default.** Existing browser and cloud data remains readable unless you explicitly enable it in Settings. Enabling protection currently requires a secure HTTPS page, a browser with Web Crypto and Web Locks, Google sign-in, and a successful cloud sync. It creates a protected device copy and replaces the current cloud document with ciphertext. The passphrase is not stored or deliberately sent to Firebase; PBKDF2-SHA-256 derives a non-extractable AES-256-GCM key, with a fresh random IV for each encryption. A new device needs the same Google account and passphrase to unlock the protected cloud copy.
 
 - **There is no passphrase recovery.** Losing it can make the encrypted copy and encrypted backups unrecoverable. Keep a secure backup and record the passphrase somewhere safe.
 - **Publish and test the updated `firestore.rules` before enabling cloud protection**, and close other Northstar tabs/devices first. The rules are intended to restrict each user to their own document and reject older clients that try to add plaintext to a protected document. Merely merging this repository does **not** publish Firebase rules. Their deployment and live Firebase behavior have not been verified in this change.
@@ -30,7 +36,7 @@ Northstar does not connect to bank accounts or verify your real balance. Figures
 
 ## Optional developer checks
 
-Run `node --test tests/*.test.*` with Node.js 18 or later. These dependency-free tests cover purchase projections, transaction/link integrity, encryption, and mocked sync/storage conflicts. They do not validate deployed Firestore rules. The website itself remains a static page and does not require Node.js or a build step.
+Run `node --test tests/*.test.*` with Node.js 18 or later. These dependency-free tests cover the release links and interface states, purchase projections, transaction/link integrity, encryption, and mocked sync/storage conflicts. They do not validate deployed Firestore rules. The website itself remains a static page and does not require Node.js or a build step.
 
 ## GitHub Pages publishing
 
