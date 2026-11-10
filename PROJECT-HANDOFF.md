@@ -1,6 +1,7 @@
 # Northstar Personal Finance — Current Project Handoff
 
-> Last reviewed: 2026-11-03 (America/New_York)  
+> Last reviewed: 2026-11-09 (UTC)
+>
 > Purpose: give a new AI/developer the current product requirements, real repository architecture, implemented behavior, history, and honest next steps without relying on chat history.
 
 ## 1. Project identity and product direction
@@ -33,18 +34,19 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | Manual price research/history | Implemented; no live retailer feed or automatic price monitoring |
 | JSON backup / restore | Implemented |
 | Cloudflare AI Worker | Worker code and setup notes exist, but the website is **not wired to call it** and deployment is not confirmed. The visitor-key (BYOK) path in 4f is what shipped instead |
-| Automated test suite / build pipeline | No `package.json`, test runner, or React/Vite build was found in the current repository inventory |
+| Automated test suite / build pipeline | Focused Node built-in tests in `tests/purchase-expenses.test.cjs`; no `package.json` or React/Vite build is required |
 
 ## 3. Repository inventory — verified
 
 | File | Purpose and important notes |
 |---|---|
-| `index.html` | The complete static app entry point and primary implementation. It contains the HTML shell, extensive CSS, app state, render functions, forms, event handling, local persistence, Firebase integration, and the purchased-card animation observer. It is large (about 203 KB). Make focused edits; do not replace the whole file casually. |
+| `index.html` | The complete static app entry point and primary implementation. It contains the HTML shell, extensive CSS, app state, render functions, forms, event handling, local persistence, Firebase integration, and the purchased-card animation observer. It is large (about 370 KB). Make focused edits; do not replace the whole file casually. |
 | `README.md` | Product overview, feature summary, GitHub Pages publishing steps, Firebase setup, data-path notes, and privacy/security warnings. It currently describes the Guide as rules-based. |
 | `firestore.rules` | Firestore rules intended to let an authenticated user read/write only their own Northstar finance document. Publishing this file to Firebase Console is a separate deployment step. |
 | `cloudflare-worker/README.md` | Setup, deployment, quota, and privacy notes for an optional Cloudflare Workers AI backend. |
 | `cloudflare-worker/src/index.js` | Worker endpoint. Restricts origin, checks a Firebase ID token, validates the request, sends the question and supplied context to Workers AI, and returns an advisory response. |
 | `cloudflare-worker/wrangler.toml` | Wrangler configuration; Worker name is `northstar-finance-ai`, entry point is `src/index.js`, and AI binding is named `AI`. |
+| `tests/purchase-expenses.test.cjs` | Dependency-free Node rendering regression tests for the purchase planner expense history. Run `node --test tests/purchase-expenses.test.cjs`. |
 | `PROJECT-HANDOFF.md` | This document. Keep it current after meaningful project or requirement changes. |
 
 **Not present in the current repo tree:** `package.json`, `src/`, `tsconfig.json`, or a React/Vite app scaffold. Older discussions about React, TypeScript, Vite, an offline USB desktop app, or npm launch scripts are not the architecture of this repository. Do not tell the user to run npm commands for this static-site repo unless the architecture is intentionally changed later.
@@ -58,7 +60,7 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 - **Accounts:** create and manage tracked accounts, account types, balances, optional minimum balances, and purchase allocations. Purchase funds can be shown separately from available funds.
 - **Budgets:** user-defined category limits.
 - **Goals:** savings goals with target and saved amounts, progress states, and a completion celebration. Goal-completion sound can be disabled in Settings.
-- **Purchases:** planned-purchase list with priority, date, saved amount, funding account, category, notes, and reminders. Purchases are automatically organized rather than relying on the user to manually drag/reorder everything.
+- **Purchases:** planned-purchase list with priority, date, saved amount, funding account, category, notes, and reminders. Purchases are automatically organized rather than relying on the user to manually drag/reorder everything. It also displays all recorded expense transactions in a separate history section; income and transfers are excluded.
 - **Northstar Guide:** profile-based and record-aware planning suggestions, price-history context, and a suggested-next-moves section.
 - **Settings:** Google account/cloud sync controls, display currency, JSON backup/restore, data clearing, welcome-screen replay, and goal-sound preference.
 
@@ -84,7 +86,7 @@ This area has received multiple rounds of detailed user feedback and should not 
 - The `#purchase-x-visible` class only applies when the card is observed; a purchased group below the fold renders with `opacity:0` on the badge until scrolled into view. That is intended (the mark animates on arrival), but it means a tile can legitimately look unmarked in a screenshot taken without scrolling.
 - The mark is drawn with `currentColor`, so a future "completed but archived" state can print it in grey by overriding one colour. It is the deliberate exception to the monochrome palette.
 - Behaviour is unchanged and must stay that way: the mark animates once when a purchased card first scrolls into view (`IntersectionObserver`, 0.22 threshold, unobserved after firing), keeps the per-column stagger via `--purchase-x-delay`, keeps the `purchase-x-visible` class hook, keeps the red `#8f2f26` accent as the one intentional non-monochrome component, keeps the muted card treatment, and honours `prefers-reduced-motion` by rendering the final mark with no animation.
-- CSS classes for the new mark live in the style block at the end of `<head>`: `.purchase-tile-seal`, `.purchase-seal-ring`, `.purchase-seal-stroke` (`.purchase-seal-a` / `.purchase-seal-b`), `.purchase-tile-strike`, with `purchaseBadgePress`, `purchaseBadgeEcho` and `purchaseStrike`, on `.purchase-tile-badge`, `.purchase-badge-ring`, `.purchase-badge-x`, `.purchase-badge-echo` and `.purchase-tile-strike`. Each mark has a hidden pre-animation state (seal `opacity:0`, strokes `stroke-dashoffset:1`, strike `scaleX(0)`) so a card waiting out its stagger delay does not flash the finished mark and then retract it; do not switch those back to the final values. The old `.purchase-cross-*`, `.purchase-tile-cross`, `.purchase-tile-lock`, `purchaseXDraw` and `purchaseXBadge` rules were deleted rather than overridden. Reuse these names instead of reintroducing a full-tile overlay.
+- The mark CSS lives in the first `<style>` block under `PURCHASE COMPLETION — compact badge`. It uses `.purchase-tile-badge`, `.purchase-badge-ring`, `.purchase-badge-x`, `.purchase-badge-echo` and `.purchase-tile-strike` with `purchaseBadgePress`, `purchaseBadgeEcho` and `purchaseStrike`. The badge starts at `opacity:0` and the strike at `scaleX(0)` until the observer makes the card visible; the circle and X are whole shapes throughout, never dash-drawn. Do not reintroduce the old full-tile `.purchase-cross-*` art, extra glyph, or lock emoji.
 - Marking a planned purchase as bought records a matching expense against its funding account. Existing purchase-linked transactions are checked to avoid duplicate expenses.
 - Purchase allocation and purchase completion validate against account minimum balances and amounts already reserved for other planned purchases.
 - Reminder offsets in the current data logic include 30 days, 7 days, 1 day, and the target day.
@@ -238,6 +240,14 @@ This is a typed local intent path, not an unlimited natural-language model and n
 
 **Verification:** both runtime scripts pass Node syntax parsing. A jsdom integration harness exercised transaction, explicit-save, balance, budget, goal, planned-purchase creation/editing, transfer direction, bare-amount, and balance-question cases; it verified modal prefills and no persistence before Save. No browser visual QA or live provider call was performed.
 
+## 4j. Expense transactions on the Purchase Planner (2026-11-09)
+
+The user asked for transactions to show on the Purchase Planner too, but **only expenses**. The page now has an **Expense transactions** section and a count/jump shortcut near the top. All `data.transactions` with `type === 'Expense'` appear there, using the same newest-first ordering as Transactions, regardless of the Transactions page's search, type, or month filters. Each row shows the recorded description, category, account, amount, and date. The history and its empty state also render when there are no planned purchases.
+
+This is a **view of the existing ledger**, not a second copy or an automatic purchase plan: rendering it never changes accounts, transactions, purchase allocations, or plan totals. Expenses recorded by marking a plan bought are included as well; a `Linked plan` label is shown when the existing purchase/transaction IDs identify a link, and the page explains that the linked plan is not another charge. The shortcut scrolls to the history (respecting reduced motion and the mobile top bar) and moves focus to its heading. The history panel is exempt from the global scaling entrance animation: otherwise a quick jump to a long, animating list lands with its heading hidden. **Record expense** prefills the existing transaction form; **Manage expenses** opens Transactions with an expense filter and resets its search/month filters so the whole expense history is accessible. Normal add, edit, delete, persistence and cloud-sync paths remain the source of truth.
+
+**Verification:** `node --test tests/purchase-expenses.test.cjs` passes five dependency-free rendering tests, including mixed transaction types, empty/no-plan state, linked records, unchanged data/totals, escaping, and long history. Headless Chromium exercised adding an expense, changing its type, deleting an expense, marking a purchase bought and toggling its status without a duplicate charge, reloading, edited amounts and display currency, independent page filters, an immediate jump to 500 expenses, missing fields, reduced motion, keyboard navigation, and badge geometry. Screenshots were inspected at 320, 390 and 1100 CSS pixels, and geometry was checked at 320, 390, 768, 1100 and 1440 CSS pixels; a separate 390px coarse-pointer/touch emulation tested the jump and a scroll gesture. Scoped axe checks found no violations (the contrast rule was incomplete); primary text colors were separately checked against white. HTML/CSS parsing and syntax checks passed. The user's physical iPhone and live Firebase/Firestore sync were **not** tested in this sandbox.
+
 ## 5. User requirements and non-negotiable design constraints
 
 These requirements come from prior Northstar discussions and should guide future work.
@@ -321,7 +331,7 @@ The file is large and contains mostly long CSS/JavaScript lines. Use targeted se
 | `showNorthstarDialog` | Reusable styled confirmation/choice dialogs |
 | `initWelcomeJourney`, `updateWelcomeProgress` | Intro scroll progress and reveal effects |
 | `render`, `renderOverview`, `renderTransactions`, `renderAccounts`, `renderBudgets`, `renderGoals` | Main page rendering |
-| `renderPurchases`, `renderPurchaseTile`, `setPurchaseStatus` | Purchase planner, tile/detail display, and bought flow |
+| `renderPurchases`, `renderPurchaseTile`, `renderPurchaseExpenses`, `setPurchaseStatus` | Purchase planner, expense-only ledger view, tile/detail display, and bought flow |
 | `safePriceHistory`, `estimatePriceTrend`, `renderPurchasePriceTools`, `savePriceCheck` | Manual price logs and local trend estimate |
 | `renderGuide`, `saveGuideProfile`, `answerGuide` | Rules-based Guide and saved profile/memory |
 | `renderSettings`, `exportBackup`, `importBackup` | Preferences and JSON backup/restore |
@@ -351,7 +361,8 @@ The latest code-focused work added local Jarvis review-before-save finance-actio
 
 ## Work log
 
-- 2026-11-09: Purchase mark, fourth build and the shipped one: a compact 34px corner badge with a complete circle and complete X, no veil, ~520 ms press-in. Earlier full-bleed attempts were rejected after real Chromium screenshots showed a blanketed card, an illegible veil, and a strike that appeared to stop mid-price. Verified frame-by-frame in headless Chromium (see the visual verification note above). The previous choreographed version shipped but was caught in a user screenshot mid-animation as a half-drawn X with broken dashed arcs and a half-struck price. Replaced with a whole-shape stamp (complete circle + complete X + centre dot over a content veil), ~560 ms, nothing drawn piecewise. Verified: parse5 0 errors, css-tree 0 errors, 5/5 scripts parse, jsdom renders 2 purchased tiles with the full mark, no dasharray/dashoffset in the mark CSS, no preserveAspectRatio="none", stagger intact. No browser in this sandbox — visual confirmation still user-side. The previous full-tile SVG cross (`preserveAspectRatio="none"`) stretched two diagonals across the card's title and price and was duplicated by a `×` chip and a 🔒 emoji. The new mark is a small top-right seal with sequentially drawn strokes and a contact ring, plus a single strike through the price. Animation trigger, stagger, `purchase-x-visible` hook, red accent, muted card state and reduced-motion behaviour are all preserved; the old CSS was deleted. Verified with parse5 (0 HTML errors), css-tree (all 6 style blocks parse), `node --check` on the module body, and a jsdom boot that rendered the Purchases page with 3 purchased tiles and confirmed seal + strike present, old SVG and emoji absent, stagger delays applied, and no runtime errors. No browser is available in this sandbox, so no visual QA is claimed.
+- 2026-11-09: Added an expense-only transaction history to the Purchase Planner, with a jump shortcut, linked-plan labels, and actions to record/manage expenses; the list is a read-only view of the existing records and does not affect balances or plan totals. Added dependency-free Node rendering tests and checked desktop/mobile layouts and transaction flows in headless Chromium. No physical iPhone or live Firebase test was performed; see 4j.
+- 2026-11-09: After rejected full-card, drawn-stroke, and veiled iterations, shipped the compact corner badge: a complete circle and X with a price strike. The final badge was checked frame-by-frame in headless Chromium at desktop and phone widths, including reduced motion; older attempts had only structural checks before browser rendering became available. See the purchase-planner section for the design constraints.
 - 2026-11-03: Added the BYOK cloud brain — paste-in key slot in a Connections sheet, Gemini/OpenAI/Anthropic/Groq/OpenRouter/custom adapters, session-by-default key storage isolated from finance data, principal-free brief, silent local fallback with per-message source labels. Widened the `safe` intent. 27 BYOK + 11 local-brain jsdom assertions pass; no live API call or visual QA was possible.
 - 2026-11-03: Fixed BYOK reliability issues reported during visitor testing: stale model defaults, false `Connected` status, hidden-field CSS leak, short probe tokens, truncated upstream errors, and no transient retry. All assistant replies now identify their source; see 4g. Focused jsdom/parser checks pass; live provider access and visual QA were not available.
 - 2026-11-03: Moved ambient ink out of Jarvis to a page-wide grayscale background per user clarification. It drifts independently of pointer movement, runs on coarse pointers, pauses in hidden tabs, and is disabled for reduced motion.

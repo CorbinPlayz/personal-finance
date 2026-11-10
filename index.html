@@ -1302,6 +1302,65 @@ body.nsx-grain:after{
 }
 
 </style>
+<style id="purchase-expense-design">
+/* Expense history is a view of the ledger, not a second set of purchases. */
+.purchase-expense-jump{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin:0 0 15px;padding:11px 14px;text-align:left;color:#141414;
+  background:#fff;border:1px solid #d9d9d9;border-radius:14px;
+  box-shadow:0 4px 18px #08080808;transition:border-color .18s ease,box-shadow .18s ease;
+}
+.purchase-expense-jump:hover{border-color:#b8b8b8;box-shadow:0 6px 20px #08080810}
+.purchase-expense-jump-main{display:flex;align-items:center;gap:11px;min-width:0}
+.purchase-expense-jump-icon{
+  width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;
+  border-radius:10px;color:#4d4d4d;background:#f2f2f2;
+}
+.purchase-expense-jump-copy{display:grid;gap:3px;min-width:0}
+.purchase-expense-jump-copy strong{font-size:12px;color:#141414}
+.purchase-expense-jump-copy small{font-size:10px;color:#737373}
+.purchase-expense-jump-end{display:flex;align-items:center;gap:12px;flex-shrink:0;color:#5c5c5c;font-size:10px;font-weight:700}
+.purchase-expense-jump-end span:last-child{font-size:16px;color:#333}
+.purchase-expense-panel{margin-top:25px;scroll-margin-top:20px}
+/* A scaling entrance shifts long lists while a shortcut scroll is in progress. */
+.purchase-expense-panel.nsx-enter{animation:none!important;will-change:auto}
+.purchase-expense-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
+.purchase-expense-head .eyebrow{color:#737373}
+.purchase-expense-head h2{margin:5px 0 5px;font:800 17px Manrope,sans-serif;letter-spacing:-.35px;color:#080808}
+.purchase-expense-head h2:focus{outline:none}
+.purchase-expense-head h2:focus-visible{outline:2px solid #b8b8b8;outline-offset:3px;border-radius:2px}
+.purchase-expense-head p{margin:0;color:#737373;font-size:11px;line-height:1.5}
+.purchase-expense-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.purchase-expense-actions .secondary-btn{min-height:36px}
+.purchase-expense-list{list-style:none;margin:0;padding:0}
+.purchase-expense-row{
+  display:grid;grid-template-columns:34px minmax(0,1fr) minmax(95px,auto);
+  align-items:center;gap:12px;padding:13px 0;border-top:1px solid #ededed;
+}
+.purchase-expense-copy,.purchase-expense-value{min-width:0}
+.purchase-expense-copy strong{display:block;color:#262626;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+.purchase-expense-meta{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:4px;color:#737373;font-size:10.5px;line-height:1.4;overflow-wrap:anywhere}
+.purchase-expense-linked{padding:2px 6px;border:1px solid #dedede;border-radius:5px;color:#5c5c5c;font-size:9px;font-weight:700;white-space:nowrap}
+.purchase-expense-value{text-align:right}
+.purchase-expense-value strong{display:block;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+.purchase-expense-value span{display:block;margin-top:4px;color:#737373;font-size:10px;line-height:1.4}
+.purchase-expense-empty{padding:22px 10px;text-align:center;border-top:1px solid #ededed}
+.purchase-expense-empty strong{display:block;color:#4d4d4d;font-size:12px}
+.purchase-expense-empty p{margin:6px 0 0;color:#737373;font-size:11px;line-height:1.5}
+.purchase-expense-note{margin:6px 0 0;padding-top:13px;border-top:1px solid #ededed;color:#737373;font-size:10px;line-height:1.5}
+.purchase-expense-panel + .small-disclaimer{margin:15px 2px 0;color:#737373;font-size:10px;line-height:1.55}
+@media(max-width:760px){.purchase-expense-panel{scroll-margin-top:76px}}
+@media(max-width:600px){
+  .purchase-expense-jump{padding:10px 12px}
+  .purchase-expense-jump-end{gap:7px}
+  .purchase-expense-panel{padding:16px;margin-top:20px}
+  .purchase-expense-head{flex-direction:column;gap:12px}
+  .purchase-expense-actions{justify-content:flex-start}
+  .purchase-expense-row{grid-template-columns:30px minmax(0,1fr) minmax(75px,auto);gap:9px}
+  .purchase-expense-row .tx-icon{width:30px;height:30px}
+}
+@media(prefers-reduced-motion:reduce){.purchase-expense-jump{transition:none}}
+</style>
 </head>
 <body>
 <section class="welcome-screen" id="welcomeScreen" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
@@ -1644,19 +1703,38 @@ function renderPurchaseTile(p){
   </svg></span>`:""}
  </article>`;
 }
+function renderPurchaseExpenses(expenses){
+ const purchaseIds=new Set(data.purchases.map(p=>p.id));
+ const linkedTransactionIds=new Set(data.purchases.map(p=>p.transactionId).filter(Boolean));
+ const rows=expenses.map(t=>{
+  const linked=linkedTransactionIds.has(t.id)||(t.purchaseId&&purchaseIds.has(t.purchaseId));
+  const date=typeof t.date==='string'?t.date:'';
+  return `<li class="purchase-expense-row" data-transaction-id="${esc(t.id)}">
+   <span class="tx-icon expense" aria-hidden="true">${ICON.arrowUp}</span>
+   <div class="purchase-expense-copy"><strong>${esc(t.description||'Expense')}</strong><div class="purchase-expense-meta"><span>${esc(t.category||'Uncategorized')}</span><span aria-hidden="true">·</span><span>${esc(accountName(t.accountId))}</span>${linked?'<span class="purchase-expense-linked">Linked plan</span>':''}</div></div>
+   <div class="purchase-expense-value"><strong class="negative">−${esc(money(t.amount))}</strong><span>${esc(fmtDate(date))}</span></div>
+  </li>`;
+ }).join('');
+ return `<section class="panel purchase-expense-panel" id="purchaseExpenseHistory" aria-labelledby="purchaseExpenseTitle">
+  <div class="purchase-expense-head"><div><span class="eyebrow">RECORDED SPENDING</span><h2 id="purchaseExpenseTitle" tabindex="-1">Expense transactions</h2><p>${expenses.length} recorded ${expenses.length===1?'expense':'expenses'} · Newest first</p></div><div class="purchase-expense-actions"><button type="button" class="secondary-btn small" data-action="add-transaction" data-prefill="expense">+ Record expense</button><button type="button" class="text-btn" data-action="manage-expenses">Manage expenses ↗</button></div></div>
+  ${expenses.length?`<ul class="purchase-expense-list">${rows}</ul>`:`<div class="purchase-expense-empty"><strong>No expenses yet</strong><p>Expense transactions you record will appear here automatically.</p></div>`}
+  <p class="purchase-expense-note">These are the same expenses as in Transactions. A linked purchase plan may also appear above; it isn't an extra charge.</p>
+ </section>`;
+}
 function renderPurchases(){
  const live=data.purchases.filter(p=>!['Purchased','Cancelled'].includes(p.status));
  const total=live.reduce((s,p)=>s+(Number(p.price)||0),0),saved=live.reduce((s,p)=>s+Math.min(Number(p.saved)||0,Number(p.price)||0),0),rem=getReminders().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
  const detail=purchaseDetailId?data.purchases.find(p=>p.id===purchaseDetailId):null;
  if(purchaseDetailId&&!detail)purchaseDetailId=null;
  if(detail)return `${pageHeading('Purchase details',`<button class="secondary-btn" data-action="back-to-purchases">← All purchases</button>`)}<div class="purchase-detail-view"><div class="purchase-detail-intro"><span class="eyebrow">PURCHASE PLANNER</span><p>Review the details, update what you have saved, or edit the full plan.</p></div>${renderPurchaseCard(detail)}</div>`;
+ const expenses=sortedTransactions(data.transactions.filter(t=>t.type==='Expense'));
  const priorities=[{name:'High',description:'Focus on these first.'},{name:'Medium',description:'Important, but not as urgent.'},{name:'Low',description:'Nice to have for later.'}];
  const renderPurchaseGroup=(name,description,items,completed=false)=>`<section class="purchase-priority-group ${completed?'priority-group-purchased':'priority-group-'+name.toLowerCase()}" aria-labelledby="purchaseGroup${name}"><div class="purchase-group-head"><div class="purchase-group-title">${completed?'<span class="purchase-complete-label">✓ Purchased</span>':'<span class="priority '+name.toLowerCase()+'">'+name+' priority</span>'}<h2 id="purchaseGroup${name}">${name}</h2><p>${description}</p></div><span class="purchase-group-count">${items.length} ${items.length===1?'item':'items'}</span></div>${items.length?`<div class="purchase-tile-grid">${items.map(renderPurchaseTile).join('')}</div>`:`<div class="purchase-group-empty">No ${name.toLowerCase()} purchases yet</div>`}</section>`;
  const groupsHtml=priorities.map(group=>{
   const items=data.purchases.filter(p=>p.status!=='Purchased'&&(group.name===('High')?p.priority==='High':group.name==='Medium'?!['High','Low'].includes(p.priority):p.priority==='Low')).sort(sortPurchaseItems);
   return renderPurchaseGroup(group.name,group.description,items);
  }).join('')+renderPurchaseGroup('Purchased','Completed purchases, kept here for reference.',data.purchases.filter(p=>p.status==='Purchased').sort(sortPurchaseItems),true);
- return `${pageHeading('Purchases',`<button class="primary-btn" data-action="add-purchase">＋ Plan a purchase</button>`)}<div class="purchase-summary"><div><span>PLANNED PURCHASE VALUE</span><strong>${esc(money(total))}</strong></div><div><span>ALREADY SET ASIDE</span><strong>${esc(money(saved))}</strong></div><div><span>UPCOMING ITEMS</span><strong>${live.length}</strong></div></div>${rem.length?`<div class="reminder-banner"><span style="font-size:20px">♧</span><div><strong>${rem.length} purchase reminder${rem.length===1?'':'s'} due</strong><span>${rem.map(p=>esc(p.name)).join(' · ')}</span></div></div>`:''}<div class="purchase-sort-note"><span aria-hidden="true">↕</span> Sorted automatically by soonest target date. If dates match, the lower price comes first.</div>${data.purchases.length?`<div class="purchase-priority-groups">${groupsHtml}</div>`:emptyState('Nothing on the list yet','Plan an upcoming purchase, track how much you have set aside, and get reminders while Northstar is open.','Plan a purchase','add-purchase')}<p class="small-disclaimer">Reminders are checked while this dashboard is open; notifications while the app is closed are not configured. Planned purchases do not automatically change account balances.</p>`;
+ return `${pageHeading('Purchases',`<button class="primary-btn" data-action="add-purchase">＋ Plan a purchase</button>`)}<div class="purchase-summary"><div><span>PLANNED PURCHASE VALUE</span><strong>${esc(money(total))}</strong></div><div><span>ALREADY SET ASIDE</span><strong>${esc(money(saved))}</strong></div><div><span>UPCOMING ITEMS</span><strong>${live.length}</strong></div></div><button type="button" class="purchase-expense-jump" data-action="show-purchase-expenses" aria-controls="purchaseExpenseHistory"><span class="purchase-expense-jump-main"><span class="purchase-expense-jump-icon" aria-hidden="true">${ICON.arrowUp}</span><span class="purchase-expense-jump-copy"><strong>Expense transactions</strong><small>View all recorded expenses</small></span></span><span class="purchase-expense-jump-end"><span>${expenses.length} ${expenses.length===1?'expense':'expenses'}</span><span aria-hidden="true">↓</span></span></button>${rem.length?`<div class="reminder-banner"><span style="font-size:20px">♧</span><div><strong>${rem.length} purchase reminder${rem.length===1?'':'s'} due</strong><span>${rem.map(p=>esc(p.name)).join(' · ')}</span></div></div>`:''}<div class="purchase-sort-note"><span aria-hidden="true">↕</span> Sorted automatically by soonest target date. If dates match, the lower price comes first.</div>${data.purchases.length?`<div class="purchase-priority-groups">${groupsHtml}</div>`:emptyState('Nothing on the list yet','Plan an upcoming purchase, track how much you have set aside, and get reminders while Northstar is open.','Plan a purchase','add-purchase')}${renderPurchaseExpenses(expenses)}<p class="small-disclaimer">Reminders are checked while this dashboard is open; notifications while the app is closed are not configured. Planned purchases do not automatically change account balances.</p>`;
 }
 function getGuideProfile(){return {monthlyIncome:'',essentialBills:'',cushion:'250',payFrequency:'monthly',payDay:'',goalFocus:'',notes:'',...(data.settings?.profile||{})}}
 function safePriceHistory(p){return (Array.isArray(p.priceHistory)?p.priceHistory:[]).filter(h=>h&&Number.isFinite(Number(h.price))&&Number(h.price)>0&&/^\d{4}-\d{2}-\d{2}$/.test(String(h.date||''))).sort((a,b)=>a.date.localeCompare(b.date))}
@@ -1789,7 +1867,7 @@ function setPurchaseStatus(purchaseId,status){
 function navigate(nextPage){if(nextPage!=='Purchases')purchaseDetailId=null;page=nextPage;$('sidebar').classList.remove('sidebar-open');$('scrim').classList.add('hidden');render();window.scrollTo({top:0,behavior:'smooth'})}
 function dismissWelcome(){const screen=$("welcomeScreen");if(!screen||screen.classList.contains("hidden"))return;screen.classList.add("welcome-leaving");try{localStorage.setItem("northstar-welcome-seen-v1","1")}catch(e){};window.setTimeout(()=>{screen.classList.add("hidden");screen.classList.remove("welcome-leaving");screen.setAttribute("aria-hidden","true");document.documentElement.classList.add("northstar-seen")},390)}
 function showWelcome(){const screen=$("welcomeScreen");if(!screen)return;document.documentElement.classList.remove("northstar-seen");screen.classList.remove("hidden","welcome-leaving");screen.setAttribute("aria-hidden","false");screen.scrollTop=0;updateWelcomeProgress();try{localStorage.removeItem("northstar-welcome-seen-v1")}catch(e){};window.setTimeout(()=>$('welcomeContinue')?.focus(),60)}
-function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':$('welcomeJourney')?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});break;case'welcome-again':showWelcome();break;case'page':navigate(b.dataset.page);break;case'menu':$('sidebar').classList.add('sidebar-open');$('scrim').classList.remove('hidden');break;case'close-menu':$('sidebar').classList.remove('sidebar-open');$('scrim').classList.add('hidden');break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':openModal('transaction',data.transactions.find(t=>t.id===itemId));break;case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':purchaseDetailId=null;render();window.scrollTo({top:0,behavior:'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
+function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':$('welcomeJourney')?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});break;case'welcome-again':showWelcome();break;case'page':navigate(b.dataset.page);break;case'show-purchase-expenses':{$('purchaseExpenseHistory')?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});$('purchaseExpenseTitle')?.focus({preventScroll:true});break;}case'manage-expenses':query='';txTypeFilter='Expense';txMonthFilter='All';navigate('Transactions');break;case'menu':$('sidebar').classList.add('sidebar-open');$('scrim').classList.remove('hidden');break;case'close-menu':$('sidebar').classList.remove('sidebar-open');$('scrim').classList.add('hidden');break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':openModal('transaction',data.transactions.find(t=>t.id===itemId));break;case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':purchaseDetailId=null;render();window.scrollTo({top:0,behavior:'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
 document.addEventListener('keydown',e=>{const purchaseTile=e.target.closest?.('.purchase-tile[data-action="open-purchase"]');if(purchaseTile&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
 document.addEventListener('click',e=>{
  const option=e.target.closest('[data-confirm-index]');

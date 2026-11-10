@@ -9,12 +9,17 @@ Northstar is a static, mobile-friendly personal finance planner with an animated
 - Responsive phone navigation and a scrollable animated introduction.
 - Northstar Guide with a saved planning profile, remembered preferences, and rule-based saving/purchase suggestions.
 - Purchase priority ordering, links to search current shopping listings, and manual price-history logging.
+- Expense-only transaction history on the purchase planner, separate from planned-purchase totals.
 - A simple 30-day price trend estimate after at least three price checks on different dates. This estimate uses only prices you enter; it is not a live retailer feed or guaranteed prediction.
 - JSON backup and restore, local storage, and optional Google sign-in plus user-scoped Firestore sync.
 
 The Guide is a local rules-based helper, not an external generative AI service. An actual AI service or automatic price monitor would need a secure backend/API integration; do not put private API keys in this static site.
 
 Northstar does not connect to bank accounts or verify your real balance. Figures depend on information you enter. Double-check your actual accounts before spending.
+
+## Optional developer checks
+
+Run `node --test tests/purchase-expenses.test.cjs` with Node.js 18 or later to check the expense-history rendering. The website itself remains a static page and does not require Node.js or a build step.
 
 ## GitHub Pages publishing
 
