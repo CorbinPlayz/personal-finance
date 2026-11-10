@@ -1,10 +1,36 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0b0b0b">
+<meta charset="utf-8">
+<!--
+  NORTHSTAR CODE MAP
+  This is a static, manual-entry finance app; it does not connect to banks.
+  The style blocks define the base layout, monochrome/liquid visual layers,
+  assistant styling, money colors, and completed-purchase controls.
+  The HTML below them contains the welcome screen, navigation, and app shell.
+
+  The module script owns `data` (accounts, transactions, budgets, goals,
+  purchases, and settings). `render()` draws the active page; `submitModal()`
+  validates forms; `applyTransaction()` updates manually tracked balances.
+  `persist()` stores JSON by default and queues Firestore sync when ready.
+  Optional passphrase protection encrypts the active device/cloud workspace;
+  older browser copies and backups can remain readable and need separate care.
+
+  The purchase planner separates active plans from completed plans.
+  `setPurchaseStatus()` can record a linked expense when a plan is bought;
+  purchased tiles use an animated circle/X and a price strike. Recorded
+  expenses are projected into the completed-purchases group without creating
+  new purchase records; linked plan/expense pairs are displayed only once.
+  Displaying a record must never create another transaction or change balances.
+
+  Later scripts handle the purchased-tile observer, visual effects, and Jarvis.
+  The optional Cloudflare Worker is separate and is not wired into this page.
+  See PROJECT-HANDOFF.md for the data model, open audit findings, and history.
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0b0b0b">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%23081730'/%3E%3Cstop offset='1' stop-color='%233a6cf4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='url(%23b)'/%3E%3Ccircle cx='32' cy='32' r='23' fill='none' stroke='%23a9eafa' stroke-opacity='.42'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='%23a9eafa' stroke-opacity='.45' stroke-dasharray='2 4'/%3E%3Cpath d='M32 5 37 26 59 32 37 37 32 59 27 37 5 32 27 26Z' fill='%23c4f7ff' stroke='%23f4fdff' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpath d='M32 5 32 59 37 37 59 32 37 26Z' fill='%234d8cff' fill-opacity='.48'/%3E%3Ccircle cx='32' cy='32' r='4' fill='white'/%3E%3C/svg%3E">
 <meta name="apple-mobile-web-app-title" content="Northstar">
-<script>try{if(localStorage.getItem('northstar-welcome-seen-v1')==='1')document.documentElement.classList.add('northstar-seen')}catch(e){}</script>
+<script>try{if(localStorage.getItem('northstar-welcome-seen-v1')==='1')document.documentElement.classList.add('northstar-seen');if(localStorage.getItem('northstar-vault-active-v1'))document.documentElement.classList.add('northstar-vault-locked')}catch(e){}</script>
 <title>Northstar | Personal Finance</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
@@ -320,6 +346,10 @@ body{height:auto!important;min-height:100%;overflow:visible!important;overscroll
 .purchase-tile-purchased.purchase-x-visible .purchase-tile-strike{
   animation:purchaseStrike .26s cubic-bezier(.3,.8,.3,1) calc(var(--purchase-x-delay,0ms) + 130ms) both;
 }
+/* A completed tile that was already seen stays marked after a re-render. */
+.purchase-tile-purchased.purchase-x-settled .purchase-tile-badge{animation:none;opacity:1;transform:none;will-change:auto}
+.purchase-tile-purchased.purchase-x-settled .purchase-badge-echo{animation:none;opacity:0}
+.purchase-tile-purchased.purchase-x-settled .purchase-tile-strike{animation:none;transform:scaleX(1)}
 
 @keyframes purchaseBadgePress{
   0%{opacity:0;transform:scale(1.18)}
@@ -1302,64 +1332,69 @@ body.nsx-grain:after{
 }
 
 </style>
-<style id="purchase-expense-design">
-/* Expense history is a view of the ledger, not a second set of purchases. */
-.purchase-expense-jump{
-  width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;
-  margin:0 0 15px;padding:11px 14px;text-align:left;color:#141414;
-  background:#fff;border:1px solid #d9d9d9;border-radius:14px;
-  box-shadow:0 4px 18px #08080808;transition:border-color .18s ease,box-shadow .18s ease;
-}
-.purchase-expense-jump:hover{border-color:#b8b8b8;box-shadow:0 6px 20px #08080810}
-.purchase-expense-jump-main{display:flex;align-items:center;gap:11px;min-width:0}
-.purchase-expense-jump-icon{
-  width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;
-  border-radius:10px;color:#4d4d4d;background:#f2f2f2;
-}
-.purchase-expense-jump-copy{display:grid;gap:3px;min-width:0}
-.purchase-expense-jump-copy strong{font-size:12px;color:#141414}
-.purchase-expense-jump-copy small{font-size:10px;color:#737373}
-.purchase-expense-jump-end{display:flex;align-items:center;gap:12px;flex-shrink:0;color:#5c5c5c;font-size:10px;font-weight:700}
-.purchase-expense-jump-end span:last-child{font-size:16px;color:#333}
-.purchase-expense-panel{margin-top:25px;scroll-margin-top:20px}
-/* A scaling entrance shifts long lists while a shortcut scroll is in progress. */
-.purchase-expense-panel.nsx-enter{animation:none!important;will-change:auto}
-.purchase-expense-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px}
-.purchase-expense-head .eyebrow{color:#737373}
-.purchase-expense-head h2{margin:5px 0 5px;font:800 17px Manrope,sans-serif;letter-spacing:-.35px;color:#080808}
-.purchase-expense-head h2:focus{outline:none}
-.purchase-expense-head h2:focus-visible{outline:2px solid #b8b8b8;outline-offset:3px;border-radius:2px}
-.purchase-expense-head p{margin:0;color:#737373;font-size:11px;line-height:1.5}
-.purchase-expense-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
-.purchase-expense-actions .secondary-btn{min-height:36px}
-.purchase-expense-list{list-style:none;margin:0;padding:0}
-.purchase-expense-row{
-  display:grid;grid-template-columns:34px minmax(0,1fr) minmax(95px,auto);
-  align-items:center;gap:12px;padding:13px 0;border-top:1px solid #ededed;
-}
-.purchase-expense-copy,.purchase-expense-value{min-width:0}
-.purchase-expense-copy strong{display:block;color:#262626;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
-.purchase-expense-meta{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:4px;color:#737373;font-size:10.5px;line-height:1.4;overflow-wrap:anywhere}
-.purchase-expense-linked{padding:2px 6px;border:1px solid #dedede;border-radius:5px;color:#5c5c5c;font-size:9px;font-weight:700;white-space:nowrap}
-.purchase-expense-value{text-align:right}
-.purchase-expense-value strong{display:block;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
-.purchase-expense-value span{display:block;margin-top:4px;color:#737373;font-size:10px;line-height:1.4}
-.purchase-expense-empty{padding:22px 10px;text-align:center;border-top:1px solid #ededed}
-.purchase-expense-empty strong{display:block;color:#4d4d4d;font-size:12px}
-.purchase-expense-empty p{margin:6px 0 0;color:#737373;font-size:11px;line-height:1.5}
-.purchase-expense-note{margin:6px 0 0;padding-top:13px;border-top:1px solid #ededed;color:#737373;font-size:10px;line-height:1.5}
-.purchase-expense-panel + .small-disclaimer{margin:15px 2px 0;color:#737373;font-size:10px;line-height:1.55}
-@media(max-width:760px){.purchase-expense-panel{scroll-margin-top:76px}}
+<style id="purchase-completed-design">
+/* Completed expenses share the existing purchased tiles; no new ledger records. */
+.purchase-completed-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.purchase-completed-search{display:flex;align-items:center;gap:7px;min-height:34px;padding:0 10px;border:1px solid #d9d9d9;border-radius:9px;background:#fff;color:#666;font-size:13px}
+.purchase-completed-search input{width:145px;min-width:0;padding:7px 0;border:0;outline:0;background:transparent;color:#262626;font-size:11px}
+.purchase-completed-search:focus-within{outline:2px solid #a8a8a8;outline-offset:2px}
+.purchase-completed-search input::placeholder{color:#737373}
+.purchase-tile[hidden],.purchase-filter-empty[hidden]{display:none!important}
+.purchase-tile-context{margin-top:8px;color:#595959;font-size:9px;line-height:1.35;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.priority-group-purchased .purchase-tile-purchased h3{color:#5c5c5c}
+.priority-group-purchased .purchase-tile-purchased .purchase-tile-price{color:#595959}
+.priority-group-purchased .purchase-tile-purchased .purchase-tile-meta,
+.priority-group-purchased .purchase-tile-purchased .purchase-tile-meta strong{color:#595959}
+.priority-group-purchased .purchase-tile-purchased .purchase-tile-progress>div:last-child{color:#595959}
+.priority-group-purchased .purchase-group-title>.purchase-complete-label{color:#4b4b4b}
+.priority-group-purchased .purchase-group-count{color:#555}
+.priority-group-purchased .purchase-tile-purchased .purchase-complete-label{color:#555}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.purchase-filter-empty{margin-top:10px}
+/* Avoid animating one enormous composited layer for long histories. */
+.purchase-long-list.nsx-enter{animation:none!important;will-change:auto!important}
+.purchase-long-list .purchase-tile-purchased{content-visibility:auto}
+.purchase-priority-groups + .small-disclaimer{margin:16px 2px 0;color:#737373;font-size:10px;line-height:1.55}
+@media(min-width:901px){.priority-group-purchased .purchase-tile-purchased{aspect-ratio:auto;min-height:186px}}
+@media(max-width:760px){.priority-group-purchased{scroll-margin-top:76px}.priority-group-purchased .purchase-group-title .purchase-complete-label{justify-self:start}}
+@media(max-width:350px){.priority-group-purchased .purchase-tile-purchased{aspect-ratio:auto;min-height:166px}}
+.purchase-linked-note{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:14px 16px;border:1px solid #dadada;border-radius:12px;background:#fff}.purchase-linked-note strong,.purchase-linked-note span{display:block}.purchase-linked-note strong{color:#333;font-size:11px}.purchase-linked-note span{margin-top:4px;color:#666;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
 @media(max-width:600px){
-  .purchase-expense-jump{padding:10px 12px}
-  .purchase-expense-jump-end{gap:7px}
-  .purchase-expense-panel{padding:16px;margin-top:20px}
-  .purchase-expense-head{flex-direction:column;gap:12px}
-  .purchase-expense-actions{justify-content:flex-start}
-  .purchase-expense-row{grid-template-columns:30px minmax(0,1fr) minmax(75px,auto);gap:9px}
-  .purchase-expense-row .tx-icon{width:30px;height:30px}
+  .purchase-completed-controls{justify-content:flex-start;width:100%}
+  .priority-group-purchased .purchase-group-head{align-items:flex-start;flex-wrap:wrap}
+  .purchase-completed-search{flex:1;min-width:140px}
+  .purchase-completed-search input{width:100%}
+  .purchase-tile-context{font-size:8.5px;margin-top:6px}
 }
-@media(prefers-reduced-motion:reduce){.purchase-expense-jump{transition:none}}
+</style>
+<style id="vault-design">
+html.northstar-vault-locked .app-shell,html.northstar-vault-locked #welcomeScreen,
+html.northstar-vault-locked .nsj-orb,html.northstar-vault-locked .nsj-panel,
+html.northstar-vault-locked #modalRoot,html.northstar-vault-locked #confirmRoot,
+html.northstar-vault-locked #goalCelebrationRoot,html.northstar-vault-locked #toastRoot{visibility:hidden!important;pointer-events:none!important}
+/* Dialogs stay above the assistant; toasts leave the orb and phone dock usable. */
+.confirm-backdrop{z-index:4000}.modal-backdrop{z-index:3500}
+.toast{right:92px}.toast span{min-width:0;overflow-wrap:anywhere}.toast button{flex:none}
+@media(max-width:600px){.toast{left:12px;right:80px;bottom:calc(84px + env(safe-area-inset-bottom));max-width:none;max-height:calc(100dvh - 170px);overflow:auto}}
+.vault-confirm-dialog{background:#fff!important;-webkit-backdrop-filter:none;backdrop-filter:none}
+.vault-screen.vault-loading{display:none}html.northstar-vault-locked .vault-screen.vault-loading{display:grid}
+.vault-screen{position:fixed;inset:0;z-index:99999;overflow:auto;display:grid;place-items:center;padding:24px;background:#f2f2f2;color:#262626}
+.vault-card{width:min(100%,460px);padding:28px;border:1px solid #d9d9d9;border-radius:20px;background:#fff;box-shadow:0 18px 60px #08080812}
+.vault-mark{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:#111;color:#fff;font-size:20px}
+.vault-card h1{margin:18px 0 8px;font:800 24px/1.15 Manrope,system-ui,sans-serif;letter-spacing:-.7px;color:#111}
+.vault-card p{color:#5c5c5c;font-size:12px;line-height:1.65}.vault-card .eyebrow,.vault-card .muted-small{color:#666}.vault-card form{display:grid;gap:13px;margin-top:19px}
+.vault-card label,.vault-dialog-form label{display:grid;gap:7px;color:#404040;font-size:11px;font-weight:700}
+.vault-card input[type=password],.vault-dialog-form input[type=password]{width:100%;min-width:0;border:1px solid #c9c9c9;border-radius:9px;padding:12px;background:#fff;color:#222;font:inherit;font-size:14px}
+.vault-error{margin:0!important;color:#8f2f26!important;font-size:11px!important;line-height:1.5}
+.vault-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:14px}
+.vault-foot button{white-space:normal;text-align:left}.vault-dialog-form{display:grid;gap:12px;margin-top:16px}
+.vault-dialog-form .checkbox-line{display:flex;align-items:flex-start;gap:9px;font-weight:500;line-height:1.5}
+.vault-dialog-form .checkbox-line input{margin-top:3px;flex:none}
+.vault-warning{padding:12px 14px;border:1px solid #e1d2c8;border-radius:10px;background:#fbf6f2;color:#65483a;font-size:11px;line-height:1.6}
+button:disabled{opacity:.55;cursor:not-allowed}
+.vault-status{display:flex;align-items:center;gap:7px;color:#4d4d4d;font-size:11px;font-weight:700}.vault-status:before{content:'';width:7px;height:7px;border-radius:50%;background:#207a59}.vault-status-error:before{background:#8f2f26}
+@media(max-width:600px){.vault-screen{padding:18px}.vault-card{padding:22px}.vault-card h1{font-size:22px}.vault-foot{align-items:flex-start;flex-direction:column}}
+@media(prefers-reduced-motion:reduce){.vault-screen *{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -1402,8 +1437,10 @@ body.nsx-grain:after{
 <footer class="page-footer"><span>Northstar Personal Finance</span><span>Manual tracking <b>·</b> Private account-scoped cloud sync when connected</span></footer>
 </div></div>
 <nav class="mobile-dock" id="mobileDock" aria-label="Quick navigation"><button class="dock-item active" data-action="page" data-page="Overview"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.4 10.3 12 4.3l7.6 6v9.4H4.4z"/><path d="M9.8 19.7v-5.3h4.4v5.3"/></svg></span><small>Home</small></button><button class="dock-item" data-action="page" data-page="Transactions"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.5 12h3.9l2.2-5.4 3.3 10.9 2.3-5.5h5.3"/></svg></span><small>Activity</small></button><button class="dock-item" data-action="page" data-page="Goals"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7.8"/><circle cx="12" cy="12" r="3.2"/></svg></span><small>Goals</small></button><button class="dock-item" data-action="page" data-page="Purchases"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8h12l1.1 11.4H4.9z"/><path d="M9.2 8V6.4a2.8 2.8 0 0 1 5.6 0V8"/></svg></span><small>Plan</small></button><button class="dock-item" data-action="page" data-page="Guide"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11.6 3.6 13.4 9l5.4 1.8-5.4 1.8-1.8 5.4-1.8-5.4L4.4 10.8 9.8 9z"/><path d="M18.4 16.2l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/></svg></span><small>Guide</small></button></nav><div id="goalCelebrationRoot" aria-live="polite"></div><div id="modalRoot"></div><div id="confirmRoot"></div><div id="toastRoot" aria-live="polite"></div>
+<div id="vaultRoot"><div class="vault-screen vault-loading" role="status"><div class="vault-card"><div class="vault-mark" aria-hidden="true">✦</div><h1>Opening your protected workspace</h1><p>If this screen does not change, make sure Northstar is loaded over HTTPS and <code>vault-crypto.mjs</code> is deployed next to the page. Reload without clearing browser data; your protected copy has not been changed.</p></div></div></div>
 <input id="backupFile" type="file" accept="application/json,.json" class="hidden">
 <script type="module">
+import { looksEncrypted, validateEnvelope, newKdf, deriveVaultKey, encryptLedger, decryptLedger, sameKdf } from './vault-crypto.mjs';
 const FIREBASE_VERSION='13.1.0';
 const firebaseConfig={apiKey:'AIzaSyC8f5T4LzZRuhii3SwgFDrf8tpLZNEqnKw',authDomain:'northstar-personal-finan-ca543.firebaseapp.com',projectId:'northstar-personal-finan-ca543',storageBucket:'northstar-personal-finan-ca543.firebasestorage.app',messagingSenderId:'1009926915952',appId:'1:1009926915952:web:4c0027a0b1082c770971b5',measurementId:'G-S3DTKY24TP'};
 const CATEGORIES=['Housing','Food','Transport','Shopping','Entertainment','Bills','Health','Education','Income','Other'];
@@ -1435,22 +1472,19 @@ const ICON={
 const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 const monthNow=()=>today().slice(0,7);
 const monthName=m=>{if(!m)return '';const [y,mo]=m.split('-').map(Number);return new Date(y,mo-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'})};
-const money=(n,currency=data.settings.currency||'USD')=>{try{return new Intl.NumberFormat('en-US',{style:'currency',currency,maximumFractionDigits:2}).format(Number.isFinite(Number(n))?Number(n):0)}catch{return '$'+(Number(n)||0).toFixed(2)}};
+const money=(n,currency=data.settings.currency||'USD')=>{try{money.formatters??=new Map();if(!money.formatters.has(currency))money.formatters.set(currency,new Intl.NumberFormat('en-US',{style:'currency',currency,maximumFractionDigits:2}));return money.formatters.get(currency).format(Number.isFinite(Number(n))?Number(n):0)}catch{return '$'+(Number(n)||0).toFixed(2)}};
 const roundMoney=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
-const fmtDate=d=>{if(!d)return 'No date';const p=d.split('-').map(Number);return p.length===3?new Date(p[0],p[1]-1,p[2]).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):d};
+const fmtDate=d=>{if(typeof d!=='string'||!d.trim())return 'No date';const p=d.split('-').map(Number);if(p.length!==3||!p.every(Number.isInteger))return d;const date=new Date(p[0],p[1]-1,p[2]);if(p[0]>=0&&p[0]<100)date.setFullYear(p[0]);return date.getFullYear()===p[0]&&date.getMonth()===p[1]-1&&date.getDate()===p[2]?date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):d};
 const hasRecords=d=>!!d&&(d.accounts?.length+d.transactions?.length+d.budgets?.length+d.goals?.length+d.purchases?.length)>0;
-let data=loadLocal('local'),page='Overview',purchaseDetailId=null,query='',txTypeFilter='All',txMonthFilter='All',modalState=null,toastTimer=null,saveTimer=null,user=null,fb=null,cloudLoaded=false,authReady=false,signingIn=false,lastSyncError=null,confirmResolver=null,confirmChoices=[];
+const VAULT_MARKER='northstar-vault-active-v1';
+function readVaultMarker(){try{const raw=localStorage.getItem(VAULT_MARKER);if(!raw)return null;const value=JSON.parse(raw);return value&&typeof value.uid==='string'&&value.uid?value:{uid:''}}catch{return {uid:''}}}
+const initialVaultMarker=readVaultMarker();
+let vault={state:initialVaultMarker?'locked':'off',uid:initialVaultMarker?.uid||'',key:null,kdf:null,localRaw:null,session:0,editSeq:0,savedSeq:0,error:null,pendingCloud:null};
+window.NorthstarVaultLocked=vault.state==='locked';
+let data=vault.state==='locked'?blankData():loadLocal('local'),page='Overview',purchaseDetailId=null,completedPurchaseQuery='',query='',txTypeFilter='All',txMonthFilter='All',modalState=null,toastTimer=null,saveTimer=null,user=null,fb=null,cloudLoaded=false,authReady=false,signingIn=false,lastSyncError=null,confirmResolver=null,confirmChoices=[],confirmCleanup=null;
+let cloudEpoch=0,cloudFingerprint=undefined,cloudWriteTail=Promise.resolve(),vaultWriteTail=Promise.resolve(),syncLoading=false;
 function localKey(key){return `northstar-finance-v1:${key}`}
-function stableDataValue(value){
- if(Array.isArray(value))return value.map(stableDataValue);
- if(value&&typeof value==='object'){
-  const stable={};
-  Object.keys(value).sort().forEach(key=>{if(value[key]!==undefined)stable[key]=stableDataValue(value[key])});
-  return stable;
- }
- return value;
-}
-function dataSignature(value){return JSON.stringify(stableDataValue(normalizeData(value)))}
+function dataSignature(value){return cloudSignature(removeUndefinedValues(normalizeData(value)))}
 function normalizeData(input){
  if(Array.isArray(input)){return migrateSimpleTransactions(input)}
  if(!input||typeof input!=='object')return blankData();
@@ -1465,11 +1499,19 @@ function migrateSimpleTransactions(old){
  d.accounts[0].balance=d.transactions.reduce((sum,t)=>sum+(t.type==='Income'?t.amount:t.type==='Expense'?-t.amount:0),0);return d;
 }
 function loadLocal(key){try{let raw=localStorage.getItem(localKey(key));if(!raw&&key==='local')raw=localStorage.getItem('northstar-finance-v1');return raw?normalizeData(JSON.parse(raw)):blankData()}catch{return blankData()}}
-function persist(){try{localStorage.setItem(localKey(user?user.uid:'local'),JSON.stringify(data))}catch(e){showToast('Browser storage is full. Export a backup and remove older records.')}if(user&&cloudLoaded)queueCloudSave();render()}
+function persist(){
+ if(vault.state==='unlocked'){queueProtectedLocalSave();render();return}
+ if(vault.state!=='off'){showToast('Unlock the protected workspace before making changes.');return}
+ try{localStorage.setItem(localKey(user?user.uid:'local'),JSON.stringify(data))}catch(e){showToast('Browser storage is full. Export a backup and remove older records.')}
+ if(user&&cloudLoaded)queueCloudSave();render();
+}
 function accountName(aid){return data.accounts.find(a=>a.id===aid)?.name||'Unknown account'}
+/* Apply an income, expense, or transfer to the tracked account balances.
+   Edits reverse the original transaction before applying a replacement;
+   deletions reverse it without replacement. Renderers must not call this. */
 function applyTransaction(accounts,tx,reverse=false){const sign=reverse?-1:1;return accounts.map(a=>{let balance;if(tx.type==='Income'&&a.id===tx.accountId)balance=Number(a.balance)+Number(tx.amount)*sign;else if(tx.type==='Expense'&&a.id===tx.accountId)balance=Number(a.balance)-Number(tx.amount)*sign;else if(tx.type==='Transfer'&&a.id===tx.accountId)balance=Number(a.balance)-Number(tx.amount)*sign;else if(tx.type==='Transfer'&&a.id===tx.toAccountId)balance=Number(a.balance)+Number(tx.amount)*sign;else return a;return{...a,balance:roundMoney(balance)}})}
 function sortedTransactions(list=data.transactions){return [...list].sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.id).localeCompare(String(a.id)))}
-function thisMonthTx(type){return data.transactions.filter(t=>t.date?.startsWith(monthNow())&&(!type||t.type===type))}
+function thisMonthTx(type){return data.transactions.filter(t=>typeof t.date==='string'&&t.date.startsWith(monthNow())&&(!type||t.type===type))}
 function monthSpend(category){return thisMonthTx('Expense').filter(t=>t.category===category).reduce((s,t)=>s+Number(t.amount||0),0)}
 function totalBalance(){return data.accounts.reduce((s,a)=>s+Number(a.balance||0),0)}
 function reservedFunds(){
@@ -1515,7 +1557,7 @@ function getReminders(){return data.purchases.filter(p=>['Planning','Saving','Re
 function showNorthstarDialog(config={}){
  const root=$('confirmRoot');
  if(!root)return Promise.resolve(null);
- if(confirmResolver){const previous=confirmResolver;confirmResolver=null;previous(null)}
+ if(confirmResolver)settleNorthstarDialog(null);
  const choices=config.choices||[
   {value:true,label:config.confirmText||'Confirm',style:config.danger?'danger':'primary'},
   {value:false,label:config.cancelText||'Cancel',style:'secondary'}
@@ -1533,11 +1575,14 @@ function showNorthstarDialog(config={}){
    const klass=primary||'secondary-btn';
    return '<button type="button" class="'+klass+'" data-confirm-index="'+index+'">'+esc(choice.label)+'</button>'
   }).join('');
+  const previous=document.activeElement;
   root.innerHTML='<div class="confirm-backdrop" role="presentation"><section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmDialogTitle" aria-describedby="confirmDialogMessage"><div class="confirm-dialog-head"><div class="confirm-dialog-icon '+(config.danger?'danger':'')+'" aria-hidden="true">'+icon+'</div><div><div class="eyebrow">'+label+'</div><h2 id="confirmDialogTitle">'+title+'</h2></div></div><p class="confirm-dialog-message" id="confirmDialogMessage">'+message+'</p>'+detail+'<div class="confirm-dialog-actions">'+buttons+'</div></section></div>';
+  const untrap=trapDialogFocus(root,()=>settleNorthstarDialog(null));
+  confirmCleanup=()=>{untrap();if(previous?.isConnected)previous.focus()};
   setTimeout(()=>root.querySelector('[data-confirm-index]')?.focus(),10)
  })
 }
-function settleNorthstarDialog(value){if(!confirmResolver)return;const resolve=confirmResolver;confirmResolver=null;confirmChoices=[];$('confirmRoot').innerHTML='';resolve(value)}
+function settleNorthstarDialog(value){if(!confirmResolver)return;const resolve=confirmResolver,cleanup=confirmCleanup;confirmResolver=null;confirmChoices=[];confirmCleanup=null;$('confirmRoot').innerHTML='';cleanup?.();resolve(value)}
 const CLEAR_PASSWORD_KEY='northstar-clear-password-v1';
 async function clearPasswordHash(password,salt){
  const bytes=new TextEncoder().encode(salt+'|'+password);
@@ -1550,7 +1595,7 @@ function showClearPasswordDialog({setup=false}={}){
  if(confirmResolver){const previous=confirmResolver;confirmResolver=null;previous(null)}
  return new Promise(resolve=>{
   const title=setup?'Create your Clear data password':'Unlock Clear data';
-  const message=setup?'Create a separate password to protect your financial data. Use at least 8 characters and do not reuse your Google password.':'Enter your Northstar password to continue. Your financial data will not change unless you confirm deletion afterward.';
+  const message=setup?'Create a separate password for confirming data deletion. It does not encrypt your financial data. Use at least 8 characters and do not reuse your Google password.':'Enter your Northstar password to continue. Your financial data will not change unless you confirm deletion afterward.';
   root.innerHTML='<div class="confirm-backdrop" role="presentation"><section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="clearPasswordTitle"><div class="confirm-dialog-head"><div class="confirm-dialog-icon" aria-hidden="true">⌑</div><div><div class="eyebrow">NORTHSTAR SECURITY</div><h2 id="clearPasswordTitle">'+title+'</h2></div></div><p class="confirm-dialog-message">'+message+'</p><form id="clearPasswordForm" style="margin-top:18px;display:grid;gap:12px"><label style="display:grid;gap:6px;color:#4d4d4d;font-size:11px;font-weight:600"> '+(setup?'New password':'Northstar password')+'<input id="clearPasswordInput" type="password" autocomplete="'+(setup?'new-password':'current-password')+'" minlength="'+(setup?'8':'1')+'" required style="width:100%;min-width:0;border:1px solid #d9d9d9;border-radius:9px;padding:12px 13px;background:#ffffff;color:#262626;font:inherit" placeholder="Enter password"></label>'+(setup?'<label style="display:grid;gap:6px;color:#4d4d4d;font-size:11px;font-weight:600">Confirm password<input id="clearPasswordConfirm" type="password" autocomplete="new-password" minlength="8" required style="width:100%;min-width:0;border:1px solid #d9d9d9;border-radius:9px;padding:12px 13px;background:#ffffff;color:#262626;font:inherit" placeholder="Re-enter password"></label>':'')+'<p id="clearPasswordError" role="alert" style="display:none;color:#7f2a22;font-size:11px;margin:0"></p><div class="confirm-dialog-actions"><button type="button" class="secondary-btn" id="clearPasswordCancel">Cancel</button><button type="submit" class="primary-btn">'+(setup?'Save password':'Unlock')+'</button></div></form></section></div>';
   const form=$('clearPasswordForm'),input=$('clearPasswordInput'),error=$('clearPasswordError');
   const finish=value=>{root.innerHTML='';resolve(value)};
@@ -1621,7 +1666,7 @@ function firebaseErrorDetails(error,stage='Cloud sync'){
  const detail=error?.message&& !hints[code]?` Details: ${error.message}`:'';
  return `${hint} [${code}]${detail}`
 }
-function setCloudLoading(loading){const content=$('content');if(content){content.inert=loading;content.setAttribute('aria-busy',String(loading))}const signOut=$('signOutBtn');if(signOut)signOut.disabled=loading;}
+function setCloudLoading(loading){syncLoading=loading;const shell=document.querySelector('.app-shell'),content=$('content');if(shell)shell.inert=loading||window.NorthstarVaultLocked;if(content)content.setAttribute('aria-busy',String(loading));const signOut=$('signOutBtn');if(signOut)signOut.disabled=loading;}
 function update(mutator,toastText){data=mutator(data);persist();if(toastText)showToast(toastText)}
 function options(items,current){return items.map(v=>`<option value="${esc(v)}" ${String(v)===String(current)?'selected':''}>${esc(v)}</option>`).join('')}
 function accountOptions(current,exclude=''){return `<option value="">Choose an account</option>`+data.accounts.filter(a=>a.id!==exclude).map(a=>`<option value="${esc(a.id)}" ${a.id===current?'selected':''}>${esc(a.name)} · ${esc(money(a.balance))}</option>`).join('')}
@@ -1653,7 +1698,7 @@ function renderFundsAllocation(){
 function renderOverview(){
  const income=thisMonthTx('Income').reduce((s,t)=>s+t.amount,0),spending=thisMonthTx('Expense').reduce((s,t)=>s+t.amount,0),rate=income>0?Math.round((income-spending)/income*100):null;
  const sums=EXPENSE_CATEGORIES.map(category=>({category,amount:monthSpend(category)})).filter(x=>x.amount>0).sort((a,b)=>b.amount-a.amount).slice(0,6),max=Math.max(1,...sums.map(x=>x.amount));
- const recent=sortedTransactions().slice(0,5),reminders=getReminders().sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3),upcoming=data.purchases.filter(p=>!['Purchased','Cancelled','Postponed'].includes(p.status)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
+ const recent=sortedTransactions().slice(0,5),reminders=getReminders().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).slice(0,3),upcoming=data.purchases.filter(p=>!['Purchased','Cancelled','Postponed'].includes(p.status)).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).slice(0,3);
  return `${pageHeading('Overview',`<button class="primary-btn" data-action="add-transaction">＋ New transaction</button>`)}
  <div class="welcome-strip"><div class="welcome-icon">↗</div><div><strong>Build your financial picture, one entry at a time.</strong><span>Add accounts and record transactions to turn your activity into useful insights.</span></div><button class="text-btn" data-action="page" data-page="Settings">Data & privacy ↗</button></div>
  <div class="metric-grid">${metric('Total tracked balance',money(totalBalance()),ICON.card,`${data.accounts.length} accounts tracked`,'navy')}${metric('Income this month',money(income),ICON.arrowDown,monthName(monthNow()),'green')}${metric('Spending this month',money(spending),ICON.arrowUp,monthName(monthNow()),'orange')}${metric('Savings rate',rate===null?'—':`${rate}%`,ICON.percent,income>0?'Based on recorded income and expenses':'Add income to calculate','purple')}</div>
@@ -1665,8 +1710,8 @@ function renderOverview(){
  <div class="disclaimer"><span>ⓘ</span><span><strong>Estimates, not financial advice.</strong> Numbers and insights are only as accurate as the information you enter. Northstar does not connect to bank accounts.</span></div>`;
 }
 function renderTransactions(){
- const months=[...new Set(data.transactions.map(t=>(t.date||'').slice(0,7)).filter(Boolean))].sort().reverse();
- const list=sortedTransactions().filter(t=>`${t.description} ${t.category} ${t.type} ${accountName(t.accountId)}`.toLowerCase().includes(query.toLowerCase())&&(txTypeFilter==='All'||t.type===txTypeFilter)&&(txMonthFilter==='All'||t.date?.startsWith(txMonthFilter)));
+ const months=[...new Set(data.transactions.map(t=>typeof t.date==='string'?t.date.slice(0,7):'').filter(Boolean))].sort().reverse();
+ const list=sortedTransactions().filter(t=>`${t.description} ${t.category} ${t.type} ${accountName(t.accountId)}`.toLowerCase().includes(query.toLowerCase())&&(txTypeFilter==='All'||t.type===txTypeFilter)&&(txMonthFilter==='All'||(typeof t.date==='string'&&t.date.startsWith(txMonthFilter))));
  return `${pageHeading('Transactions',`<button class="primary-btn" data-action="add-transaction">＋ Add transaction</button>`)}<section class="panel"><div class="panel-head"><div><h2>Transaction history</h2><p>${list.length} matching ${list.length===1?'transaction':'transactions'} · income, expenses, and transfers</p></div><div class="inline-tools"><label class="search-box">⌕ <input id="txSearch" value="${esc(query)}" placeholder="Search activity…" aria-label="Search transactions"></label><select class="filter-select" id="txTypeFilter" aria-label="Filter type">${options(['All','Income','Expense','Transfer'],txTypeFilter)}</select><select class="filter-select" id="txMonthFilter" aria-label="Filter month">${options(['All',...months],txMonthFilter)}</select></div></div>${list.length?`<div class="table-wrap"><table class="tx-table"><thead><tr><th>Date</th><th>Transaction</th><th>Account</th><th>Type</th><th>Amount</th><th style="text-align:right">Actions</th></tr></thead><tbody>${list.map(t=>`<tr><td>${esc(fmtDate(t.date))}</td><td class="description-cell"><strong>${esc(t.description)}</strong><span>${esc(t.category)}${t.type==='Transfer'&&t.toAccountId?' · to '+esc(accountName(t.toAccountId)):''}</span></td><td>${esc(accountName(t.accountId))}</td><td><span class="type-pill ${t.type.toLowerCase()}">${esc(t.type)}</span></td><td class="${t.type==='Income'?'positive':t.type==='Expense'?'negative':''}">${t.type==='Expense'?'−':t.type==='Income'?'+':''}${esc(money(t.amount))}</td><td><div class="row-actions"><button class="action-btn" data-action="edit-transaction" data-id="${esc(t.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="transactions" data-id="${esc(t.id)}">Delete</button></div></td></tr>`).join('')}</tbody></table></div>`:emptyState('No matching transactions','Try another search or add a transaction to get started.','Add transaction','add-transaction')}</section>`;
 }
 function renderAccountBalanceBreakdown(){
@@ -1683,17 +1728,27 @@ function renderAccountBalanceBreakdown(){
 function renderAccounts(){return `${pageHeading('Accounts',`<button class="primary-btn" data-action="add-account">＋ Create account</button>`)}<div class="welcome-strip"><div class="welcome-icon">▣</div><div><strong>You control every starting balance.</strong><span>Create accounts you want to track manually. Northstar never assumes or imports a balance.</span></div></div>${data.accounts.length?`<div class="account-grid">${data.accounts.map(a=>`<article class="account-card"><div class="account-card-top"><div class="account-icon">${a.type==='Savings'?ICON.bank:a.type==='Credit'?ICON.card:a.type==='Investment'?ICON.trend:ICON.wallet}</div><div class="row-actions"><button class="action-btn" data-action="edit-account" data-id="${esc(a.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="accounts" data-id="${esc(a.id)}">Delete</button></div></div><div class="muted">${esc(a.type)}</div><h2>${esc(a.name)}</h2><div class="account-balance ${a.minimumBalance!=null&&a.balance<a.minimumBalance?'negative':''}">${esc(money(a.balance))}</div>${renderAccountBalanceBar(a,true)}${a.minimumBalance!=null?`<div class="minimum-note ${a.balance<a.minimumBalance?'warning-text':''}">${a.balance<a.minimumBalance?'Below your minimum balance':'Minimum balance'} · ${esc(money(a.minimumBalance))}</div>`:''}${a.protectFromSpending?`<div style="margin-top:10px"><span class="category-pill">♧ Protected (informational)</span></div>`:''}</article>`).join('')}<button class="add-account-card" data-action="add-account"><span>＋</span><strong>Add another account</strong><small>Checking, savings, cash, and more</small></button></div>`:emptyState('Start with your accounts','Add a checking account, savings account, cash wallet, or any balance you want to track.','Create account','add-account')}<p class="small-disclaimer">Balances are manually tracked. Protection and minimum-balance labels are reminders only; they do not block withdrawals.</p>`}
 function renderBudgets(){const list=[...data.budgets].sort((a,b)=>a.category.localeCompare(b.category));return `${pageHeading('Budgets',`<button class="primary-btn" data-action="add-budget">＋ Set a budget</button>`)}<div class="welcome-strip"><div class="welcome-icon">▤</div><div><strong>Set a limit for your spending.</strong><span>Budget progress uses recorded expenses from the current calendar month.</span></div></div>${list.length?`<div class="stack">${list.map(b=>{const spent=monthSpend(b.category),pct=b.limit>0?spent/b.limit*100:0,remaining=b.limit-spent;return `<section class="panel budget-row"><div class="budget-row-top"><div><span class="category-pill">${esc(b.category)}</span><h3>${esc(money(spent))} <small>spent of ${esc(money(b.limit))}</small></h3></div><div class="row-actions"><button class="action-btn" data-action="edit-budget" data-id="${esc(b.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="budgets" data-id="${esc(b.id)}">Delete</button></div></div><div class="progress-track"><div class="progress-fill ${pct>100?'over':''}" style="width:${Math.min(100,pct)}%"></div></div><div class="budget-foot"><span>${pct>100?`Over budget by ${esc(money(-remaining))}`:`${esc(money(Math.max(0,remaining)))} remaining`}</span><strong>${Math.round(pct)}% used</strong></div></section>`}).join('')}</div>`:emptyState('No budgets yet','Choose categories and give yourself a monthly spending limit.','Set a budget','add-budget')}<p class="small-disclaimer">This version tracks category budgets for the current month. It does not automatically connect to bank or card transactions.</p>`}
 function renderGoals(){return `${pageHeading('Goals',`<button class="primary-btn" data-action="add-goal">＋ Create savings goal</button>`)}<div class="welcome-strip"><div class="welcome-icon">◎</div><div><strong>Give your savings a destination.</strong><span>Update the amount saved as you make progress toward each goal.</span></div></div>${data.goals.length?`<div class="goal-grid">${data.goals.map(g=>{const p=g.target>0?Math.min(100,g.saved/g.target*100):0,complete=p>=100;return `<article class="goal-card goal-card-journey ${complete?'goal-complete':''}"><div class="goal-card-top"><div class="goal-icon">${complete?ICON.check:ICON.target}</div><div class="row-actions">${complete?'<span class="goal-achieved-badge">★ Goal reached</span>':""}<button class="action-btn" data-action="edit-goal" data-id="${esc(g.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="goals" data-id="${esc(g.id)}">Delete</button></div></div><h3>${esc(g.name)}</h3><p class="muted">${g.dueDate?'Target date · '+esc(fmtDate(g.dueDate)):'No target date set'}</p><div class="goal-numbers"><strong>${esc(money(g.saved))}</strong><span>of ${esc(money(g.target))}</span></div><div class="progress-track goal-progress-track" role="progressbar" aria-label="${esc(g.name)} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p)}"><div class="progress-fill ${complete?"goal-progress-complete":""}" style="width:${p}%"></div></div><div class="budget-foot"><span>${complete?"A milestone worth celebrating":esc(money(Math.max(0,g.target-g.saved))+" to go")}</span><strong>${Math.round(p)}%</strong></div><button class="text-btn" data-action="edit-goal" data-id="${esc(g.id)}">${complete?"Update goal ↗":"Add to this goal ↗"}</button></article>`}).join('')}</div>`:emptyState('No savings goals yet','Create an emergency fund, trip, new PC, or another goal and track your progress.','Create savings goal','add-goal')}`}
-function renderPurchaseCard(p){const priority=['High','Medium','Low'].includes(p.priority)?p.priority:'Medium';const pct=p.price>0?Math.min(100,(p.saved||0)/p.price*100):0;const days=reminderDaysLeft(p);return `<article class="purchase-card"><div class="purchase-card-head"><span class="priority ${esc(priority.toLowerCase())}">${esc(priority)} priority</span><div class="row-actions"><button class="action-btn" data-action="edit-purchase" data-id="${esc(p.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="purchases" data-id="${esc(p.id)}">Delete</button></div></div><h3>${esc(p.name)}</h3><p class="muted">${esc(p.category)} · ${esc(accountName(p.accountId))}</p><div class="purchase-price">${esc(money(p.price))}</div>${renderPurchasePriceTools(p)}<div class="purchase-meta"><span>Target date</span><strong>${esc(fmtDate(p.date))}</strong></div><div class="purchase-meta"><span>Saved so far</span><strong>${esc(money(p.saved||0))}</strong></div><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div class="budget-foot"><span>${Math.round(pct)}% saved</span><strong>${esc(money(Math.max(0,p.price-(p.saved||0))))} left</strong></div><form class='purchase-allocation-form' data-purchase-id='${esc(p.id)}'><label class='purchase-allocation-label'>Amount allocated<input name='allocatedAmount' type='number' min='0' max='${esc(['Purchased','Cancelled'].includes(p.status)?p.price:maxPurchaseAllocation(p.accountId,p.id))}' step='0.01' required inputmode='decimal' value='${esc((Number(p.saved)||0).toFixed(2))}'></label><button class='secondary-btn small' type='submit'>Update allocation</button><p>Set the amount saved for this purchase directly on its card.</p></form>${p.date&&['Planning','Saving','Ready'].includes(p.status)?`<div class="purchase-date-note">${days<0?`${Math.abs(days)} days overdue`:days===0?'Target date is today':`${days} days until target`}${getReminders().includes(p)?' · Reminder due':''}</div>`:''}${p.notes?`<div class="purchase-notes is-collapsed" data-notes-preview>${esc(p.notes)}</div><button class="purchase-notes-toggle" type="button" data-action="toggle-purchase-notes" aria-expanded="false">Expand description</button>`:''}<div class="purchase-actions"><select aria-label="Purchase status" data-action="purchase-status" data-id="${esc(p.id)}">${options(['Planning','Saving','Ready','Purchased','Postponed','Cancelled'],p.status)}</select>${p.status!=='Purchased'?`<button class="bought-btn" data-action="purchase-bought" data-id="${esc(p.id)}">Bought</button>`:''}</div></article>`}
+function renderPurchaseCard(p){const priority=['High','Medium','Low'].includes(p.priority)?p.priority:'Medium';const pct=p.price>0?Math.min(100,(p.saved||0)/p.price*100):0;const days=reminderDaysLeft(p);return `<article class="purchase-card"><div class="purchase-card-head"><span class="priority ${esc(priority.toLowerCase())}">${esc(priority)} priority</span><div class="row-actions"><button class="action-btn" data-action="edit-purchase" data-id="${esc(p.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="purchases" data-id="${esc(p.id)}">Delete</button></div></div><h3>${esc(p.name)}</h3><p class="muted">${esc(p.category)} · ${esc(accountName(p.accountId))}</p><div class="purchase-price">${esc(money(p.price))}</div>${renderPurchasePriceTools(p)}<div class="purchase-meta"><span>Target date</span><strong>${esc(fmtDate(p.date))}</strong></div><div class="purchase-meta"><span>Saved so far</span><strong>${esc(money(p.saved||0))}</strong></div><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div class="budget-foot"><span>${Math.round(pct)}% saved</span><strong>${esc(money(Math.max(0,p.price-(p.saved||0))))} left</strong></div><form class='purchase-allocation-form' data-purchase-id='${esc(p.id)}'><label class='purchase-allocation-label'>Amount allocated<input name='allocatedAmount' type='number' min='0' max='${esc(['Purchased','Cancelled'].includes(p.status)?p.price:maxPurchaseAllocation(p.accountId,p.id))}' step='0.01' required inputmode='decimal' value='${esc((Number(p.saved)||0).toFixed(2))}'></label><button class='secondary-btn small' type='submit'>Update allocation</button><p>Set the amount saved for this purchase directly on its card.</p></form>${p.date&&Number.isFinite(days)&&['Planning','Saving','Ready'].includes(p.status)?`<div class="purchase-date-note">${days<0?`${Math.abs(days)} days overdue`:days===0?'Target date is today':`${days} days until target`}${getReminders().includes(p)?' · Reminder due':''}</div>`:''}${p.notes?`<div class="purchase-notes is-collapsed" data-notes-preview>${esc(p.notes)}</div><button class="purchase-notes-toggle" type="button" data-action="toggle-purchase-notes" aria-expanded="false">Expand description</button>`:''}<div class="purchase-actions"><select aria-label="Purchase status" data-action="purchase-status" data-id="${esc(p.id)}">${options(['Planning','Saving','Ready','Purchased','Postponed','Cancelled'],p.status)}</select>${p.status!=='Purchased'?`<button class="bought-btn" data-action="purchase-bought" data-id="${esc(p.id)}">Bought</button>`:''}</div></article>`}
 function sortPurchaseItems(a,b){const da=/^\d{4}-\d{2}-\d{2}$/.test(String(a.date||''))?String(a.date):'9999-12-31';const db=/^\d{4}-\d{2}-\d{2}$/.test(String(b.date||''))?String(b.date):'9999-12-31';return da.localeCompare(db)||(Number(a.price)||0)-(Number(b.price)||0)||String(a.name||'').localeCompare(String(b.name||''))}
-function renderPurchaseTile(p){
+/* Completed tiles are projections of plans or existing expenses, never new records. */
+function renderPurchaseTile(p,transaction=null,expenseOnly=false){
  const purchased=p.status==='Purchased';
  const priority=['High','Medium','Low'].includes(p.priority)?p.priority:'Medium';
- const pct=Number(p.price)>0?Math.min(100,(Number(p.saved)||0)/Number(p.price)*100):0;
- return `<article class="purchase-tile${purchased?' purchase-tile-purchased':''}" role="button" tabindex="0" data-action="open-purchase" data-id="${esc(p.id)}" aria-label="${purchased?'Purchased, locked reference. ':''}Open purchase details for ${esc(p.name)}">
+ const amount=purchased&&transaction?transaction.amount:p.price;
+ const pct=purchased?100:(Number(p.price)>0?Math.min(100,(Number(p.saved)||0)/Number(p.price)*100):0);
+ const date=transaction?(typeof transaction.date==='string'?transaction.date:''):p.date;
+ const dateLabel=purchased&&transaction?'Purchased':'Target';
+ const action=expenseOnly?'edit-transaction':'open-purchase';
+ const account=accountName(transaction?.accountId||p.accountId),formattedAmount=money(amount);
+ const context=purchased?[transaction?.category||p.category,account,p.originalStatus&&p.originalStatus!=='Purchased'?'Plan: '+p.originalStatus:''].filter(Boolean).join(' · '):'';
+ const searchText=[p.name,transaction?.description,transaction?.category||p.category,account,formattedAmount,date,p.originalStatus].filter(Boolean).join(' ').toLowerCase();
+ const hidden=purchased&&completedPurchaseQuery&&!searchText.includes(completedPurchaseQuery.toLowerCase());
+ return `<article class="purchase-tile${purchased?' purchase-tile-purchased':''}" role="button" tabindex="0" data-action="${action}" data-id="${esc(p.id)}"${transaction?` data-transaction-id="${esc(transaction.id)}"`:''}${purchased?` data-completed-search="${esc(searchText)}"`:''}${hidden?' hidden':''}>
   <div class="purchase-tile-top">${purchased?'<span class="purchase-complete-label">Purchased</span>':'<span class="priority '+esc(priority.toLowerCase())+'">'+esc(priority)+'</span><span class="purchase-tile-open" aria-hidden="true">↗</span>'}</div>
   <h3>${esc(p.name)}</h3>
-  <strong class="purchase-tile-price">${esc(money(p.price))}${purchased?'<span class="purchase-tile-strike" aria-hidden="true"></span>':''}</strong>
-  <div class="purchase-tile-meta"><span>${purchased?'Purchased':'Target'}</span><strong>${esc(fmtDate(p.date))}</strong></div>
+  <strong class="purchase-tile-price">${esc(formattedAmount)}${purchased?'<span class="purchase-tile-strike" aria-hidden="true"></span>':''}</strong>
+  <div class="purchase-tile-meta"><span>${dateLabel}</span><strong>${esc(fmtDate(date))}</strong></div>
+  ${context?`<div class="purchase-tile-context" title="${esc(context)}">${esc(context)}</div>`:''}
   <div class="purchase-tile-progress"><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div><span>${purchased?'Completed':Math.round(pct)+'% saved'}</span></div></div>
   ${purchased?`<span class="purchase-tile-badge" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke-linecap="round" stroke-linejoin="round" focusable="false">
    <circle class="purchase-badge-echo" cx="60" cy="60" r="54"/>
@@ -1701,43 +1756,66 @@ function renderPurchaseTile(p){
    <path class="purchase-badge-x" d="M34 34 86 86"/>
    <path class="purchase-badge-x" d="M86 34 34 86"/>
   </svg></span>`:""}
+  <span class="sr-only">${expenseOnly?'Opens transaction editor.':'Opens purchase details.'}</span>
  </article>`;
 }
-function renderPurchaseExpenses(expenses){
- const purchaseIds=new Set(data.purchases.map(p=>p.id));
- const linkedTransactionIds=new Set(data.purchases.map(p=>p.transactionId).filter(Boolean));
- const rows=expenses.map(t=>{
-  const linked=linkedTransactionIds.has(t.id)||(t.purchaseId&&purchaseIds.has(t.purchaseId));
-  const date=typeof t.date==='string'?t.date:'';
-  return `<li class="purchase-expense-row" data-transaction-id="${esc(t.id)}">
-   <span class="tx-icon expense" aria-hidden="true">${ICON.arrowUp}</span>
-   <div class="purchase-expense-copy"><strong>${esc(t.description||'Expense')}</strong><div class="purchase-expense-meta"><span>${esc(t.category||'Uncategorized')}</span><span aria-hidden="true">·</span><span>${esc(accountName(t.accountId))}</span>${linked?'<span class="purchase-expense-linked">Linked plan</span>':''}</div></div>
-   <div class="purchase-expense-value"><strong class="negative">−${esc(money(t.amount))}</strong><span>${esc(fmtDate(date))}</span></div>
-  </li>`;
- }).join('');
- return `<section class="panel purchase-expense-panel" id="purchaseExpenseHistory" aria-labelledby="purchaseExpenseTitle">
-  <div class="purchase-expense-head"><div><span class="eyebrow">RECORDED SPENDING</span><h2 id="purchaseExpenseTitle" tabindex="-1">Expense transactions</h2><p>${expenses.length} recorded ${expenses.length===1?'expense':'expenses'} · Newest first</p></div><div class="purchase-expense-actions"><button type="button" class="secondary-btn small" data-action="add-transaction" data-prefill="expense">+ Record expense</button><button type="button" class="text-btn" data-action="manage-expenses">Manage expenses ↗</button></div></div>
-  ${expenses.length?`<ul class="purchase-expense-list">${rows}</ul>`:`<div class="purchase-expense-empty"><strong>No expenses yet</strong><p>Expense transactions you record will appear here automatically.</p></div>`}
-  <p class="purchase-expense-note">These are the same expenses as in Transactions. A linked purchase plan may also appear above; it isn't an extra charge.</p>
- </section>`;
+/* Match by stored IDs only: similar names/prices are not proof of a link. */
+function completedPurchaseEntries(){
+ const expenses=sortedTransactions(data.transactions.filter(t=>t.type==='Expense'));
+ const byId=new Map(expenses.map(t=>[t.id,t])),byPurchase=new Map(),used=new Set();
+ expenses.forEach(t=>{if(t.purchaseId){const items=byPurchase.get(t.purchaseId)||[];items.push(t);byPurchase.set(t.purchaseId,items)}});
+ // Prefer already-completed plans if corrupted/imported data claims one expense twice.
+ const plans=[...data.purchases].sort((a,b)=>(b.status==='Purchased')-(a.status==='Purchased'));
+ const entries=[];
+ plans.forEach(p=>{
+  let transaction=p.transactionId?byId.get(p.transactionId):null;
+  if(transaction&&used.has(transaction.id))transaction=null;
+  if(!transaction)transaction=(byPurchase.get(p.id)||[]).find(t=>!used.has(t.id))||null;
+  if(transaction)used.add(transaction.id);
+  if(transaction||p.status==='Purchased')entries.push({plan:transaction&&p.status!=='Purchased'?{...p,originalStatus:p.status,status:'Purchased'}:p,transaction,expenseOnly:false});
+ });
+ expenses.forEach(t=>{if(!used.has(t.id))entries.push({plan:{id:t.id,name:t.description||'Expense',price:t.amount,saved:t.amount,status:'Purchased',date:t.date,category:t.category,accountId:t.accountId},transaction:t,expenseOnly:true})});
+ return entries.sort((a,b)=>String(b.transaction?.date||'').localeCompare(String(a.transaction?.date||''))||String(a.plan.name||'').localeCompare(String(b.plan.name||''))||String(a.plan.id).localeCompare(String(b.plan.id)));
+}
+function filterCompletedPurchases(value){
+ completedPurchaseQuery=value;
+ const group=document.querySelector('.priority-group-purchased');if(!group)return;
+ const cards=[...group.querySelectorAll('.purchase-tile-purchased')],needle=value.toLowerCase();
+ let visible=0;cards.forEach(card=>{const show=(card.dataset.completedSearch||'').includes(needle);card.hidden=!show;if(show)visible++});
+ const count=group.querySelector('[data-completed-count]');if(count)count.textContent=value?`${visible} of ${cards.length} items`:`${cards.length} ${cards.length===1?'item':'items'}`;
+ const empty=group.querySelector('.purchase-filter-empty');if(empty)empty.hidden=visible>0||!cards.length;
 }
 function renderPurchases(){
  const live=data.purchases.filter(p=>!['Purchased','Cancelled'].includes(p.status));
  const total=live.reduce((s,p)=>s+(Number(p.price)||0),0),saved=live.reduce((s,p)=>s+Math.min(Number(p.saved)||0,Number(p.price)||0),0),rem=getReminders().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
  const detail=purchaseDetailId?data.purchases.find(p=>p.id===purchaseDetailId):null;
  if(purchaseDetailId&&!detail)purchaseDetailId=null;
- if(detail)return `${pageHeading('Purchase details',`<button class="secondary-btn" data-action="back-to-purchases">← All purchases</button>`)}<div class="purchase-detail-view"><div class="purchase-detail-intro"><span class="eyebrow">PURCHASE PLANNER</span><p>Review the details, update what you have saved, or edit the full plan.</p></div>${renderPurchaseCard(detail)}</div>`;
- const expenses=sortedTransactions(data.transactions.filter(t=>t.type==='Expense'));
+ const completed=completedPurchaseEntries();
+ if(detail){
+  const linked=completed.find(entry=>!entry.expenseOnly&&entry.plan.id===detail.id)?.transaction;
+  const linkedNote=linked?`<div class="purchase-linked-note"><div><strong>Linked expense</strong><span>${esc(money(linked.amount))} · ${esc(fmtDate(linked.date))} · ${esc(accountName(linked.accountId))}</span></div><button class="secondary-btn small" data-action="edit-transaction" data-id="${esc(linked.id)}">Edit expense ↗</button></div>`:'';
+  return `${pageHeading('Purchase details',`<button class="secondary-btn" data-action="back-to-purchases">← All purchases</button>`)}<div class="purchase-detail-view"><div class="purchase-detail-intro"><span class="eyebrow">PURCHASE PLANNER</span><p>Review the details, update what you have saved, or edit the full plan.</p></div>${linkedNote}${renderPurchaseCard(detail)}</div>`;
+ }
+ const completedPlanIds=new Set(completed.filter(entry=>!entry.expenseOnly).map(entry=>entry.plan.id));
+ const linkedActive=completed.some(entry=>!entry.expenseOnly&&entry.plan.originalStatus&&!['Purchased','Cancelled'].includes(entry.plan.originalStatus));
  const priorities=[{name:'High',description:'Focus on these first.'},{name:'Medium',description:'Important, but not as urgent.'},{name:'Low',description:'Nice to have for later.'}];
- const renderPurchaseGroup=(name,description,items,completed=false)=>`<section class="purchase-priority-group ${completed?'priority-group-purchased':'priority-group-'+name.toLowerCase()}" aria-labelledby="purchaseGroup${name}"><div class="purchase-group-head"><div class="purchase-group-title">${completed?'<span class="purchase-complete-label">✓ Purchased</span>':'<span class="priority '+name.toLowerCase()+'">'+name+' priority</span>'}<h2 id="purchaseGroup${name}">${name}</h2><p>${description}</p></div><span class="purchase-group-count">${items.length} ${items.length===1?'item':'items'}</span></div>${items.length?`<div class="purchase-tile-grid">${items.map(renderPurchaseTile).join('')}</div>`:`<div class="purchase-group-empty">No ${name.toLowerCase()} purchases yet</div>`}</section>`;
- const groupsHtml=priorities.map(group=>{
-  const items=data.purchases.filter(p=>p.status!=='Purchased'&&(group.name===('High')?p.priority==='High':group.name==='Medium'?!['High','Low'].includes(p.priority):p.priority==='Low')).sort(sortPurchaseItems);
+ const renderPurchaseGroup=(name,description,items)=>`<section class="purchase-priority-group priority-group-${name.toLowerCase()}" aria-labelledby="purchaseGroup${name}"><div class="purchase-group-head"><div class="purchase-group-title"><span class="priority ${name.toLowerCase()}">${name} priority</span><h2 id="purchaseGroup${name}">${name}</h2><p>${description}</p></div><span class="purchase-group-count">${items.length} ${items.length===1?'item':'items'}</span></div>${items.length?`<div class="purchase-tile-grid">${items.map(p=>renderPurchaseTile(p)).join('')}</div>`:`<div class="purchase-group-empty">No ${name.toLowerCase()} purchases yet</div>`}</section>`;
+ const activeGroups=priorities.map(group=>{
+  const items=data.purchases.filter(p=>!completedPlanIds.has(p.id)&&(group.name==='High'?p.priority==='High':group.name==='Medium'?!['High','Low'].includes(p.priority):p.priority==='Low')).sort(sortPurchaseItems);
   return renderPurchaseGroup(group.name,group.description,items);
- }).join('')+renderPurchaseGroup('Purchased','Completed purchases, kept here for reference.',data.purchases.filter(p=>p.status==='Purchased').sort(sortPurchaseItems),true);
- return `${pageHeading('Purchases',`<button class="primary-btn" data-action="add-purchase">＋ Plan a purchase</button>`)}<div class="purchase-summary"><div><span>PLANNED PURCHASE VALUE</span><strong>${esc(money(total))}</strong></div><div><span>ALREADY SET ASIDE</span><strong>${esc(money(saved))}</strong></div><div><span>UPCOMING ITEMS</span><strong>${live.length}</strong></div></div><button type="button" class="purchase-expense-jump" data-action="show-purchase-expenses" aria-controls="purchaseExpenseHistory"><span class="purchase-expense-jump-main"><span class="purchase-expense-jump-icon" aria-hidden="true">${ICON.arrowUp}</span><span class="purchase-expense-jump-copy"><strong>Expense transactions</strong><small>View all recorded expenses</small></span></span><span class="purchase-expense-jump-end"><span>${expenses.length} ${expenses.length===1?'expense':'expenses'}</span><span aria-hidden="true">↓</span></span></button>${rem.length?`<div class="reminder-banner"><span style="font-size:20px">♧</span><div><strong>${rem.length} purchase reminder${rem.length===1?'':'s'} due</strong><span>${rem.map(p=>esc(p.name)).join(' · ')}</span></div></div>`:''}<div class="purchase-sort-note"><span aria-hidden="true">↕</span> Sorted automatically by soonest target date. If dates match, the lower price comes first.</div>${data.purchases.length?`<div class="purchase-priority-groups">${groupsHtml}</div>`:emptyState('Nothing on the list yet','Plan an upcoming purchase, track how much you have set aside, and get reminders while Northstar is open.','Plan a purchase','add-purchase')}${renderPurchaseExpenses(expenses)}<p class="small-disclaimer">Reminders are checked while this dashboard is open; notifications while the app is closed are not configured. Planned purchases do not automatically change account balances.</p>`;
+ }).join('');
+ const completedTiles=completed.map(entry=>renderPurchaseTile(entry.plan,entry.transaction,entry.expenseOnly)).join('');
+ const visibleCompleted=completedPurchaseQuery?completed.filter(entry=>{
+  const p=entry.plan,t=entry.transaction,amount=t?t.amount:p.price,date=t?(typeof t.date==='string'?t.date:''):p.date;
+  return [p.name,t?.description,t?.category||p.category,accountName(t?.accountId||p.accountId),money(amount),date,p.originalStatus].filter(Boolean).join(' ').toLowerCase().includes(completedPurchaseQuery.toLowerCase());
+ }).length:completed.length;
+ const countText=completedPurchaseQuery?`${visibleCompleted} of ${completed.length} items`:`${completed.length} ${completed.length===1?'item':'items'}`;
+ const completedGroup=`<section class="purchase-priority-group priority-group-purchased" aria-labelledby="purchaseGroupPurchased"><div class="purchase-group-head"><div class="purchase-group-title"><span class="purchase-complete-label">✓ Purchased</span><h2 id="purchaseGroupPurchased">Purchased</h2><p>Completed plans and recorded expenses, newest first.</p></div><div class="purchase-completed-controls">${completed.length?`<label class="purchase-completed-search"><span aria-hidden="true">⌕</span><input id="purchaseCompletedSearch" type="search" value="${esc(completedPurchaseQuery)}" placeholder="Search purchases…" aria-label="Search completed purchases"></label>`:''}<span class="purchase-group-count" data-completed-count aria-live="polite">${esc(countText)}</span></div></div>${completed.length?`<div class="purchase-tile-grid">${completedTiles}</div><div class="purchase-group-empty purchase-filter-empty" ${visibleCompleted?'hidden':''}>No matching completed purchases</div>`:`<div class="purchase-group-empty">No purchased items yet</div>`}</section>`;
+ const planSection=data.purchases.some(p=>!completedPlanIds.has(p.id))?activeGroups:(!completed.length?emptyState('Nothing on the list yet','Plan an upcoming purchase, track how much you have set aside, and get reminders while Northstar is open.','Plan a purchase','add-purchase'):'');
+ return `${pageHeading('Purchases',`<button class="primary-btn" data-action="add-purchase">＋ Plan a purchase</button>`)}<div class="purchase-summary"><div><span>PLANNED PURCHASE VALUE</span><strong>${esc(money(total))}</strong></div><div><span>ALREADY SET ASIDE</span><strong>${esc(money(saved))}</strong></div><div><span>UPCOMING ITEMS</span><strong>${live.length}</strong></div></div>${rem.length?`<div class="reminder-banner"><span style="font-size:20px">♧</span><div><strong>${rem.length} purchase reminder${rem.length===1?'':'s'} due</strong><span>${rem.map(p=>esc(p.name)).join(' · ')}</span></div></div>`:''}<div class="purchase-sort-note"><span aria-hidden="true">↕</span> Plans are sorted by target date; completed expenses use their recorded date.${linkedActive?' Active plans with a linked expense appear once below; their saved amounts still count until their status changes.':''}</div><div class="purchase-priority-groups${completed.length>80?' purchase-long-list':''}">${planSection}${(data.purchases.length||completed.length)?completedGroup:''}</div><p class="small-disclaimer">Reminders are checked while this dashboard is open; notifications while the app is closed are not configured. Planned purchases do not automatically change account balances.</p>`;
 }
 function getGuideProfile(){return {monthlyIncome:'',essentialBills:'',cushion:'250',payFrequency:'monthly',payDay:'',goalFocus:'',notes:'',...(data.settings?.profile||{})}}
-function safePriceHistory(p){return (Array.isArray(p.priceHistory)?p.priceHistory:[]).filter(h=>h&&Number.isFinite(Number(h.price))&&Number(h.price)>0&&/^\d{4}-\d{2}-\d{2}$/.test(String(h.date||''))).sort((a,b)=>a.date.localeCompare(b.date))}
+function safePriceHistory(p){return (Array.isArray(p.priceHistory)?p.priceHistory:[]).filter(h=>h&&Number.isFinite(Number(h.price))&&Number(h.price)>0&&/^\d{4}-\d{2}-\d{2}$/.test(String(h.date||''))).sort((a,b)=>String(a.date).localeCompare(String(b.date)))}
 function estimatePriceTrend(p){const history=safePriceHistory(p);if(history.length<3||new Set(history.map(h=>h.date)).size<3)return null;const start=Date.parse(history[0].date+'T00:00:00Z');if(!Number.isFinite(start))return null;const pts=history.map(h=>({x:(Date.parse(h.date+'T00:00:00Z')-start)/86400000,y:Number(h.price)})).filter(v=>Number.isFinite(v.x)&&Number.isFinite(v.y));if(pts.length<3)return null;const avgX=pts.reduce((a,v)=>a+v.x,0)/pts.length,avgY=pts.reduce((a,v)=>a+v.y,0)/pts.length,den=pts.reduce((a,v)=>a+(v.x-avgX)*(v.x-avgX),0);if(!den)return null;const slope=pts.reduce((a,v)=>a+(v.x-avgX)*(v.y-avgY),0)/den,latest=pts[pts.length-1],latestDay=Date.parse(latest.date+'T00:00:00Z'),futureX=latest.x+30,prediction=Math.max(0,avgY+slope*(futureX-avgX));return {prediction:roundMoney(prediction),latest:latest.y,change:latest.y?(prediction-latest.y)/latest.y*100:0,count:pts.length,lastDate:latest.date}}
 function findPurchaseLink(p){
  const text=String(p?.description||'')+' '+String(p?.notes||'');
@@ -1753,7 +1831,7 @@ function renderPurchasePriceTools(p){const h=safePriceHistory(p),last=h[h.length
 function renderGuide(){
  const p=getGuideProfile(),income=Number(p.monthlyIncome)||0,bills=Number(p.essentialBills)||0,cushion=Number(p.cushion)||0,monthlyRoom=income>0?Math.max(0,income-bills-cushion):0;
  const spendable=Math.max(0,totalBalance()-reservedFunds()-bills-cushion);
- const active=[...data.purchases].filter(x=>!['Purchased','Cancelled'].includes(x.status)).sort((a,b)=>({High:0,Medium:1,Low:2}[a.priority]??1)-({High:0,Medium:1,Low:2}[b.priority]??1)||(a.date||'9999').localeCompare(b.date||'9999'));
+ const active=[...data.purchases].filter(x=>!['Purchased','Cancelled'].includes(x.status)).sort((a,b)=>({High:0,Medium:1,Low:2}[a.priority]??1)-({High:0,Medium:1,Low:2}[b.priority]??1)||String(a.date||'9999').localeCompare(String(b.date||'9999')));
  const goal=data.goals.find(g=>p.goalFocus&&g.name===p.goalFocus)||[...data.goals].sort((a,b)=>(Number(a.saved)||0)/(Number(a.target)||1)-(Number(b.saved)||0)/(Number(b.target)||1))[0];
  const memory=data.settings?.guideMemory||null;let focusOptions='<option value="">Choose a focus goal (optional)</option>';
  data.goals.forEach(g=>{focusOptions+='<option value="'+esc(g.name)+'"'+(g.name===p.goalFocus?' selected':'')+'>'+esc(g.name)+'</option>'});
@@ -1781,7 +1859,7 @@ function renderGuide(){
 }
 async function clearGuideProfile(){const result=await showNorthstarDialog({title:'Clear your Guide profile?',message:'This removes the personal planning preferences and saved Guide answer from Northstar.',detail:'Your accounts, transactions, budgets, goals, and planned purchases will stay untouched.',icon:'✦',confirmText:'Clear profile',cancelText:'Keep profile',danger:true,label:'PROFILE & MEMORY'});if(result!==true)return;data={...data,settings:{...data.settings,profile:{monthlyIncome:'',essentialBills:'',cushion:'250',payFrequency:'monthly',payDay:'',goalFocus:'',notes:''},guideMemory:null}};persist();showToast('Guide profile and saved answer cleared')}
 function saveGuideProfile(e){e.preventDefault();const f=new FormData(e.target);const vals=['monthlyIncome','essentialBills','cushion','payDay'];for(const name of vals){const value=String(f.get(name)||'').trim();if(value!==''&&(!Number.isFinite(Number(value))||Number(value)<0)){showToast('Enter a valid non-negative amount for '+name+'.');return}}const day=String(f.get('payDay')||'').trim();if(day!==''&&(!Number.isInteger(Number(day))||Number(day)<1||Number(day)>31)){showToast('Payday must be a day from 1 to 31.');return}const profile={monthlyIncome:String(f.get('monthlyIncome')||'').trim(),essentialBills:String(f.get('essentialBills')||'').trim(),cushion:String(f.get('cushion')||'0').trim(),payDay:day,payFrequency:String(f.get('payFrequency')||'monthly'),goalFocus:String(f.get('goalFocus')||''),notes:String(f.get('notes')||'').trim().slice(0,1200)};data={...data,settings:{...data.settings,profile}};persist();showToast('Your Guide profile has been saved')}
-function answerGuide(e){e.preventDefault();const question=String(new FormData(e.target).get('question')||'').trim();if(!question)return;const p=getGuideProfile(),income=Number(p.monthlyIncome)||0,bills=Number(p.essentialBills)||0,cushion=Number(p.cushion)||0,monthlyRoom=Math.max(0,income-bills-cushion),spendable=Math.max(0,totalBalance()-reservedFunds()-bills-cushion),q=question.toLowerCase();const goal=[...data.goals].sort((a,b)=>(Number(a.saved)||0)/(Number(a.target)||1)-(Number(b.saved)||0)/(Number(b.target)||1))[0];const purchase=[...data.purchases].filter(x=>!['Purchased','Cancelled'].includes(x.status)).sort((a,b)=>({High:0,Medium:1,Low:2}[a.priority]??1)-({High:0,Medium:1,Low:2}[b.priority]??1)||(a.date||'9999').localeCompare(b.date||'9999'))[0];let answer='';if(/goal|save|saving|saved|contribut|emergency|fund/.test(q)){answer=goal?(Number(goal.saved)>=Number(goal.target)?'“'+goal.name+'” reached its target. Celebrate the progress, then choose your next priority.':'Your current lead goal is “'+goal.name+'”: '+money(goal.saved)+' of '+money(goal.target)+', with '+money(Math.max(0,goal.target-goal.saved))+' left. '+(monthlyRoom>0?'Your profile suggests up to '+money(monthlyRoom)+' monthly room after your bills and buffer; this is a ceiling, not a required contribution.':'Add your monthly income and essential bills before choosing a contribution.')):'Create a goal with a target amount and track contributions to make your progress visible.'}else if(/buy|purchase|afford|spend|laptop|computer|phone/.test(q)){answer=purchase?(spendable>=Math.max(0,purchase.price-(purchase.saved||0))?'For “'+purchase.name+'”, your tracked figures suggest the remaining '+money(Math.max(0,purchase.price-(purchase.saved||0)))+' may fit after the bills and buffer you entered. Check your real balance before buying.':'For “'+purchase.name+'”, '+money(Math.max(0,purchase.price-(purchase.saved||0)))+' remains, while the simple spendable estimate is '+money(spendable)+'. I would keep saving and compare listings rather than force it now.'):'Add the item to your Purchase Planner, including its target date, priority, and saved amount, so we can compare its remaining cost with your plan.'}else if(/price|deal|sale|wait|cheap|drop|cost/.test(q)){answer=purchase?(function(){const h=safePriceHistory(purchase),t=estimatePriceTrend(purchase);return h.length?'For “'+purchase.name+'”, the latest price you logged is '+money(h[h.length-1].price)+' on '+fmtDate(h[h.length-1].date)+'. '+(t?'Your simple 30-day trend estimate is '+money(t.prediction)+' ('+(t.change>0?'+':'')+t.change.toFixed(1)+'% vs the latest check).':'Log prices on at least three different dates to estimate a trend.')+' Search current listings from the Purchase Planner; those search results are not automatically imported.':'Search current listings, then record the observed prices on different dates. Northstar does not automatically monitor retailer prices.'})():'Plan the purchase first, then search listings and log at least three price checks over time.'}else if(/budget|bill|income|payday|paycheck|month/.test(q)){answer=income>0?'Your saved profile lists '+money(income)+' monthly income, '+money(bills)+' in essential monthly bills, and a '+money(cushion)+' buffer. That leaves an estimated '+money(monthlyRoom)+' monthly room. Compare with real spending before committing.':'Add monthly take-home income, essential bills and your buffer in your profile, then ask again for a more personal plan.'}else{answer='I’m using your saved profile and Northstar records. '+(goal?'Your goal to watch is “'+goal.name+'”. ':'Add a goal so your plan has a destination. ')+(purchase?'Your next planned purchase is “'+purchase.name+'”. ':'Add a planned purchase if you want help ordering future buys. ')+(income>0?'Your profile estimates '+money(monthlyRoom)+' monthly room after the bills and buffer you entered.':'Fill in your monthly profile to make this more specific.')};if(p.notes){answer+=' I’ll keep your preference in mind: '+p.notes+'.'}data={...data,settings:{...data.settings,guideMemory:{question,answer,at:new Date().toISOString()}}};persist()}
+function answerGuide(e){e.preventDefault();const question=String(new FormData(e.target).get('question')||'').trim();if(!question)return;const p=getGuideProfile(),income=Number(p.monthlyIncome)||0,bills=Number(p.essentialBills)||0,cushion=Number(p.cushion)||0,monthlyRoom=Math.max(0,income-bills-cushion),spendable=Math.max(0,totalBalance()-reservedFunds()-bills-cushion),q=question.toLowerCase();const goal=[...data.goals].sort((a,b)=>(Number(a.saved)||0)/(Number(a.target)||1)-(Number(b.saved)||0)/(Number(b.target)||1))[0];const purchase=[...data.purchases].filter(x=>!['Purchased','Cancelled'].includes(x.status)).sort((a,b)=>({High:0,Medium:1,Low:2}[a.priority]??1)-({High:0,Medium:1,Low:2}[b.priority]??1)||String(a.date||'9999').localeCompare(String(b.date||'9999')))[0];let answer='';if(/goal|save|saving|saved|contribut|emergency|fund/.test(q)){answer=goal?(Number(goal.saved)>=Number(goal.target)?'“'+goal.name+'” reached its target. Celebrate the progress, then choose your next priority.':'Your current lead goal is “'+goal.name+'”: '+money(goal.saved)+' of '+money(goal.target)+', with '+money(Math.max(0,goal.target-goal.saved))+' left. '+(monthlyRoom>0?'Your profile suggests up to '+money(monthlyRoom)+' monthly room after your bills and buffer; this is a ceiling, not a required contribution.':'Add your monthly income and essential bills before choosing a contribution.')):'Create a goal with a target amount and track contributions to make your progress visible.'}else if(/buy|purchase|afford|spend|laptop|computer|phone/.test(q)){answer=purchase?(spendable>=Math.max(0,purchase.price-(purchase.saved||0))?'For “'+purchase.name+'”, your tracked figures suggest the remaining '+money(Math.max(0,purchase.price-(purchase.saved||0)))+' may fit after the bills and buffer you entered. Check your real balance before buying.':'For “'+purchase.name+'”, '+money(Math.max(0,purchase.price-(purchase.saved||0)))+' remains, while the simple spendable estimate is '+money(spendable)+'. I would keep saving and compare listings rather than force it now.'):'Add the item to your Purchase Planner, including its target date, priority, and saved amount, so we can compare its remaining cost with your plan.'}else if(/price|deal|sale|wait|cheap|drop|cost/.test(q)){answer=purchase?(function(){const h=safePriceHistory(purchase),t=estimatePriceTrend(purchase);return h.length?'For “'+purchase.name+'”, the latest price you logged is '+money(h[h.length-1].price)+' on '+fmtDate(h[h.length-1].date)+'. '+(t?'Your simple 30-day trend estimate is '+money(t.prediction)+' ('+(t.change>0?'+':'')+t.change.toFixed(1)+'% vs the latest check).':'Log prices on at least three different dates to estimate a trend.')+' Search current listings from the Purchase Planner; those search results are not automatically imported.':'Search current listings, then record the observed prices on different dates. Northstar does not automatically monitor retailer prices.'})():'Plan the purchase first, then search listings and log at least three price checks over time.'}else if(/budget|bill|income|payday|paycheck|month/.test(q)){answer=income>0?'Your saved profile lists '+money(income)+' monthly income, '+money(bills)+' in essential monthly bills, and a '+money(cushion)+' buffer. That leaves an estimated '+money(monthlyRoom)+' monthly room. Compare with real spending before committing.':'Add monthly take-home income, essential bills and your buffer in your profile, then ask again for a more personal plan.'}else{answer='I’m using your saved profile and Northstar records. '+(goal?'Your goal to watch is “'+goal.name+'”. ':'Add a goal so your plan has a destination. ')+(purchase?'Your next planned purchase is “'+purchase.name+'”. ':'Add a planned purchase if you want help ordering future buys. ')+(income>0?'Your profile estimates '+money(monthlyRoom)+' monthly room after the bills and buffer you entered.':'Fill in your monthly profile to make this more specific.')};if(p.notes){answer+=' I’ll keep your preference in mind: '+p.notes+'.'}data={...data,settings:{...data.settings,guideMemory:{question,answer,at:new Date().toISOString()}}};persist()}
 function savePurchaseAllocation(e){
  e.preventDefault();
  const form=e.target,id=form.dataset.purchaseId,raw=String(new FormData(form).get('allocatedAmount')??'').trim(),amount=Number(raw),item=data.purchases.find(p=>p.id===id);
@@ -1798,12 +1876,13 @@ function savePurchaseAllocation(e){
 function savePriceCheck(e){e.preventDefault();const form=e.target,id=form.dataset.purchaseId,raw=String(new FormData(form).get('observedPrice')||'').trim(),price=Number(raw);if(!Number.isFinite(price)||price<=0){showToast('Enter a price greater than zero.');return}const item=data.purchases.find(p=>p.id===id);if(!item){showToast('This planned purchase could not be found.');return}const history=safePriceHistory(item);if(history.length&&history[history.length-1].date===today()){history[history.length-1]={price:roundMoney(price),date:today()} }else{history.push({price:roundMoney(price),date:today()})}data={...data,purchases:data.purchases.map(p=>p.id===id?{...p,priceHistory:history.slice(-24)}:p)};persist();showToast('Price check saved')}
 
 function renderSettings(){const counts=[['Accounts',data.accounts.length],['Transactions',data.transactions.length],['Budgets',data.budgets.length],['Goals',data.goals.length],['Purchases',data.purchases.length]];return `${pageHeading('Settings')}<div class="settings-layout"><section class="panel"><div class="panel-head"><div><h2>Cloud sync & account</h2><p>Optional Google sign-in for this device and your other devices.</p></div><span class="category-pill">${user?(cloudLoaded&&!lastSyncError?'Cloud active':'Sync needs attention'):'Local only'}</span></div><div class="setting-action"><div><strong>${user?esc(user.displayName||user.email||'Google account'):'Connect Google'}</strong><p>${user?(cloudLoaded&&!lastSyncError?'Your finance data loaded from Firestore and cloud saves are enabled.':'Google sign-in succeeded, but Northstar has not confirmed a successful cloud sync. Your changes stay in this browser until the Firestore issue is fixed.'):'Your entries stay in this browser until you connect Google and sync them.'}</p></div>${user?`${(!cloudLoaded||lastSyncError)?'<button class="primary-btn" data-action="retry-sync">Retry cloud sync</button>':''}<button class="secondary-btn" data-action="signout">Sign out</button>`:'<button class="primary-btn" data-action="signin">Connect Google</button>'}</div><div class="privacy-note"><span>♧</span><span>Only sign in on a device you trust. Cloud access is intended to be restricted to your own user ID by Firestore security rules. Use fictional data until you confirm your rules are published and tested.</span></div></section>
+${renderVaultPanel()}
 <section class="panel"><div class="panel-head"><div><h2>Preferences</h2><p>Personalize how your numbers are displayed.</p></div></div><label class="field-label" style="max-width:360px">Display currency<select id="currencySelect">${options(['USD','CAD','GBP','EUR','AUD','NZD','JPY'],data.settings.currency||'USD')}</select></label><p class="form-hint">Changing currency changes display formatting only. Northstar does not perform exchange-rate conversion.</p></section>
-<section class="panel"><div class="panel-head"><div><h2>Backup & restore</h2><p>Keep a private backup before making major changes.</p></div></div><div class="setting-action"><div><strong>Export backup</strong><p>Download accounts, transactions, budgets, goals, purchases, and preferences as a JSON file.</p></div><button class="secondary-btn" data-action="export">↓ Export JSON</button></div><div class="setting-action"><div><strong>Restore backup</strong><p>Replace the current data with a valid Northstar JSON backup.</p></div><button class="secondary-btn" data-action="import">↑ Choose file</button></div><div class="data-counts">${counts.map(([label,n])=>`<div><strong>${n}</strong><span>${label}</span></div>`).join('')}</div></section>
+<section class="panel"><div class="panel-head"><div><h2>Backup & restore</h2><p>Keep a private backup before making major changes.</p></div></div><div class="setting-action"><div><strong>Export backup</strong><p>${vault.state==='unlocked'?'Download an encrypted JSON backup of this workspace. Keep your passphrase safe.':'Download a readable, unencrypted JSON backup. Store it privately.'}</p></div><button class="secondary-btn" data-action="export">↓ Export backup</button></div><div class="setting-action"><div><strong>Restore backup</strong><p>Replace the current data with a plaintext or encrypted Northstar JSON backup.</p></div><button class="secondary-btn" data-action="import">↑ Choose file</button></div><div class="data-counts">${counts.map(([label,n])=>`<div><strong>${n}</strong><span>${label}</span></div>`).join('')}</div></section>
 <section class="panel"><div class="panel-head"><div><h2>Data management</h2><p>Clear this Northstar dataset if you need a fresh start.</p></div></div><div class="setting-action"><div><strong>Clear all financial data</strong><p>This deletes accounts, transactions, budgets, goals, and purchase plans from the active dataset. Export a backup first if you may need the information.</p></div><button class="danger-btn" data-action="clear-data">Clear data</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Your Northstar experience</h2><p>Revisit the welcome screen and compass animation any time.</p></div></div><div class="setting-action"><div><strong>Welcome screen</strong><p>See the Northstar introduction and animated compass again.</p></div><button class="secondary-btn" data-action="welcome-again">Replay welcome ↗</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Sound & celebrations</h2><p>Celebrate a savings milestone with a short chime and animation.</p></div></div><label class="checkbox-line"><input id="goalSoundsToggle" type="checkbox" ${data.settings.goalSounds!==false?"checked":""}> Play goal-completion sounds</label><p class="form-hint">Sound plays only when you reach a goal after using the app. You can turn it off here.</p></section>
-<section class="panel"><div class="panel-head"><div><h2>About Northstar</h2><p>What this app does — and does not do.</p></div></div><p class="muted" style="font-size:12px;line-height:1.7;margin:0">Northstar is a manual personal finance tracker. It does not connect to bank accounts, process payments, provide financial advice, or encrypt data stored in your browser. Do not commit financial records or private credentials to GitHub. The Firebase web configuration is client-side configuration; Firestore security rules and account isolation are what protect cloud data.</p></section></div>`}
+<section class="panel"><div class="panel-head"><div><h2>About Northstar</h2><p>What this app does — and does not do.</p></div></div><p class="muted" style="font-size:12px;line-height:1.7;margin:0">Northstar is a manual personal finance tracker. It does not connect to bank accounts, process payments, or provide financial advice. Data is readable unless passphrase protection is explicitly enabled. Protection covers the active workspace, not every older copy or an unlocked device. Do not commit financial records or private credentials to GitHub. Publish and test the Firestore rules for cloud access.</p></section></div>`}
 function openModal(kind,item=null){modalState={kind,id:item?.id||null,initial:item?JSON.parse(JSON.stringify(item)):{},baselineSnapshot:null};renderModal();setTimeout(()=>{const f=$('modalForm');f?.querySelector('input:not([type=checkbox]),select,textarea')?.focus()},0)}
 function modalFormSnapshot(form=$('modalForm')){if(!form)return '';return JSON.stringify(Array.from(form.elements).filter(el=>el.name&&!el.disabled).map(el=>[el.name,(el.type==='checkbox'||el.type==='radio')?(el.checked?el.value:''):el.value]))}
 function modalHasUnsavedChanges(){return !!modalState&&modalState.baselineSnapshot!==null&&modalFormSnapshot()!==modalState.baselineSnapshot}
@@ -1821,12 +1900,17 @@ function renderModal(){const root=$('modalRoot');if(!modalState){root.innerHTML=
  const form=$('modalForm');form?.addEventListener('change',e=>{if(e.target?.id==='modalTxType'){const box=$('transferExtra');box?.classList.toggle('hidden',e.target.value!=='Transfer');const category=form.elements.namedItem('category');if(category&&e.target.value==='Income')category.value='Income';else if(category&&category.value==='Income')category.value='Other';}});modalState.baselineSnapshot=modalFormSnapshot(form);
 }
 function formError(message){const e=$('modalError');e.textContent=message;e.classList.remove('hidden');e.scrollIntoView({block:'nearest',behavior:'smooth'})}
+/* Save validated form data, preserving linked IDs and price history on edits.
+   If a linked expense is reclassified, keep the link so Bought fails safely
+   rather than silently creating another expense. */
 function submitModal(e){e.preventDefault();const form=e.target;if(!modalState||!form||form.id!=='modalForm')return;const fd=new FormData(form),v=Object.fromEntries(fd.entries()),kind=modalState.kind,oldId=modalState.id;let next={...data};
+ const section={transaction:'transactions',account:'accounts',budget:'budgets',goal:'goals',purchase:'purchases'}[kind];
+ if(oldId&&section&&!data[section].some(item=>item.id===oldId)){formError('This record no longer exists. Close this form and review your current records.');return}
  const num=(key)=>Number(v[key]);const validMoney=(n,min=0.01)=>Number.isFinite(n)&&n>=min;
  if(kind==='transaction'){
   const amount=num('amount');if(!v.description?.trim()||!v.accountId||!validMoney(amount)||!v.date){formError('Enter a description, account, date, and a positive amount.');return}if(!next.accounts.some(a=>a.id===v.accountId)){formError('Create or select a valid account first.');return}if(v.type==='Transfer'&&(!v.toAccountId||v.toAccountId===v.accountId||!next.accounts.some(a=>a.id===v.toAccountId))){formError('Choose a different destination account for the transfer.');return}
-  let accounts=next.accounts,transactions=next.transactions;if(oldId){const old=transactions.find(t=>t.id===oldId);if(old)accounts=applyTransaction(accounts,old,true);transactions=transactions.filter(t=>t.id!==oldId)}
-  const tx={id:oldId||id(),description:v.description.trim(),amount:Math.round(amount*100)/100,type:v.type||'Expense',category:v.category||(v.type==='Income'?'Income':'Other'),date:v.date,accountId:v.accountId,...(v.type==='Transfer'?{toAccountId:v.toAccountId}:{})};accounts=applyTransaction(accounts,tx);next={...next,accounts,transactions:[tx,...transactions]};
+  let accounts=next.accounts,transactions=next.transactions;const old=oldId?transactions.find(t=>t.id===oldId):null;if(oldId){if(old)accounts=applyTransaction(accounts,old,true);transactions=transactions.filter(t=>t.id!==oldId)}
+  const tx={...(old||{}),id:oldId||id(),description:v.description.trim(),amount:Math.round(amount*100)/100,type:v.type||'Expense',category:v.category||(v.type==='Income'?'Income':'Other'),date:v.date,accountId:v.accountId,...(v.type==='Transfer'?{toAccountId:v.toAccountId}:{})};if(tx.type!=='Transfer')delete tx.toAccountId;accounts=applyTransaction(accounts,tx);next={...next,accounts,transactions:[tx,...transactions]};
  }else if(kind==='account'){
   const balance=num('balance');if(!v.name?.trim()||v.balance==null||String(v.balance).trim()===''||!Number.isFinite(balance)){formError('Enter an account name and valid current balance.');return}const min=v.minimumBalance===''?undefined:Number(v.minimumBalance);if(min!==undefined&&!Number.isFinite(min)){formError('Enter a valid minimum balance or leave it blank.');return}const item={id:oldId||id(),name:v.name.trim(),type:v.type||'Checking',balance:roundMoney(balance),minimumBalance:min===undefined?undefined:roundMoney(min),protectFromSpending:fd.has('protectFromSpending')};next={...next,accounts:oldId?next.accounts.map(a=>a.id===oldId?item:a):[...next.accounts,item]};
  }else if(kind==='budget'){
@@ -1834,20 +1918,75 @@ function submitModal(e){e.preventDefault();const form=e.target;if(!modalState||!
  }else if(kind==='goal'){
   const target=num('target'),saved=num('saved');if(!v.name?.trim()||!validMoney(target)||v.saved==null||String(v.saved).trim()===''||!Number.isFinite(saved)||saved<0){formError('Enter a name, positive target, and non-negative saved amount.');return}const item={id:oldId||id(),name:v.name.trim(),target:Math.round(target*100)/100,saved:Math.round(saved*100)/100,dueDate:v.dueDate||undefined};next={...next,goals:oldId?next.goals.map(g=>g.id===oldId?item:g):[...next.goals,item]};
  }else if(kind==='purchase'){
-  const price=num('price'),saved=num('saved');if(!v.name?.trim()||!validMoney(price)||v.saved==null||String(v.saved).trim()===''||!Number.isFinite(saved)||saved<0||!v.date||!v.accountId||!next.accounts.some(a=>a.id===v.accountId)){formError('Enter a name, positive price, valid saved amount, target date, and funding account.');return}const status=v.status||'Planning';if(!['Purchased','Cancelled'].includes(status)){const limit=maxPurchaseAllocation(v.accountId,oldId||'');if(saved>limit+0.005){formError('This allocation would bring '+accountName(v.accountId)+' below its minimum balance. You can allocate up to '+money(limit)+' to this purchase while protecting the minimum.');return}}const item={id:oldId||id(),name:v.name.trim(),price:Math.round(price*100)/100,date:v.date,priority:v.priority||'Medium',category:v.category||'Other',accountId:v.accountId,saved:Math.round(saved*100)/100,status,reminderDays:fd.getAll('reminderDays').map(Number).filter(n=>[30,7,1,0].includes(n)),notes:v.notes||''};next={...next,purchases:oldId?next.purchases.map(p=>p.id===oldId?item:p):[...next.purchases,item]};
+  const price=num('price'),saved=num('saved');if(!v.name?.trim()||!validMoney(price)||v.saved==null||String(v.saved).trim()===''||!Number.isFinite(saved)||saved<0||!v.date||!v.accountId||!next.accounts.some(a=>a.id===v.accountId)){formError('Enter a name, positive price, valid saved amount, target date, and funding account.');return}const status=v.status||'Planning';if(!['Purchased','Cancelled'].includes(status)){const limit=maxPurchaseAllocation(v.accountId,oldId||'');if(saved>limit+0.005){formError('This allocation would bring '+accountName(v.accountId)+' below its minimum balance. You can allocate up to '+money(limit)+' to this purchase while protecting the minimum.');return}}const previous=oldId?next.purchases.find(p=>p.id===oldId):null;const item={...(previous||{}),id:oldId||id(),name:v.name.trim(),price:Math.round(price*100)/100,date:v.date,priority:v.priority||'Medium',category:v.category||'Other',accountId:v.accountId,saved:Math.round(saved*100)/100,status,reminderDays:fd.getAll('reminderDays').map(Number).filter(n=>[30,7,1,0].includes(n)),notes:v.notes||''};next={...next,purchases:oldId?next.purchases.map(p=>p.id===oldId?item:p):[...next.purchases,item]};
  }
  const newGoal=kind==='goal'?next.goals.find(g=>g.id===(oldId||next.goals[next.goals.length-1]?.id)):null;const priorGoal=kind==='goal'?data.goals.find(g=>g.id===newGoal?.id):null;const reachedNow=!!newGoal&&Number(newGoal.target)>0&&Number(newGoal.saved)>=Number(newGoal.target)&&(!priorGoal||Number(priorGoal.saved)<Number(priorGoal.target));data=next;persist();modalState=null;render();showToast(kind==='transaction'?(oldId?'Transaction updated':'Transaction saved'):kind==='account'?(oldId?'Account updated':'Account created'):kind==='budget'?'Budget saved':kind==='goal'?(oldId?'Goal updated':'Goal created'):(oldId?'Purchase updated':'Purchase planned'));if(reachedNow)celebrateGoal(newGoal);
 }
 async function deleteItem(section,itemId){if(section==='accounts'){if(data.transactions.some(t=>t.accountId===itemId||t.toAccountId===itemId)||data.purchases.some(p=>p.accountId===itemId)){showToast('This account is used by transactions or purchases. Reassign those items first.');return}}if(await showNorthstarDialog({title:'Delete this item?',message:'This item will be removed from your Northstar records.',detail:'This action can’t be undone. The change will be saved to your current dataset.',icon:'⌫',confirmText:'Delete item',cancelText:'Keep item',danger:true,label:'CONFIRM DELETION'})!==true)return;let next={...data};if(section==='transactions'){const t=next.transactions.find(x=>x.id===itemId);if(t)next.accounts=applyTransaction(next.accounts,t,true);next.transactions=next.transactions.filter(x=>x.id!==itemId)}else next[section]=next[section].filter(x=>x.id!==itemId);data=next;persist();showToast('Item deleted')}
-function exportBackup(){const payload={...data,exportedAt:new Date().toISOString(),app:'Northstar Personal Finance'};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`northstar-backup-${today()}.json`;document.body.append(a);a.click();a.remove();URL.revokeObjectURL(url);showToast('Backup exported')}
+function trapDialogFocus(root,onCancel){
+ const handler=e=>{
+  if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onCancel();return}
+  if(e.key!=='Tab')return;
+  const items=[...root.querySelectorAll('button:not([disabled]),input:not([disabled])')];if(!items.length)return;
+  const first=items[0],last=items[items.length-1];
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+ };
+ root.addEventListener('keydown',handler);return ()=>root.removeEventListener('keydown',handler);
+}
+function requestBackupPassphrase(){
+ const root=$('confirmRoot');
+ return new Promise(resolve=>{
+  root.innerHTML=`<div class="confirm-backdrop"><section class="confirm-dialog vault-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="backupPassTitle"><div class="confirm-dialog-head"><div class="confirm-dialog-icon" aria-hidden="true">⌑</div><div><div class="eyebrow">ENCRYPTED BACKUP</div><h2 id="backupPassTitle">Unlock backup</h2></div></div><p class="confirm-dialog-message">Enter the passphrase that was used when this backup was made.</p><form id="backupPassForm" class="vault-dialog-form"><label>Passphrase<input id="backupPassInput" type="password" autocomplete="current-password" maxlength="1024" required></label><div class="confirm-dialog-actions"><button type="button" class="secondary-btn" id="backupPassCancel">Cancel</button><button class="primary-btn" type="submit">Unlock backup</button></div></form></section></div>`;
+  const previous=document.activeElement;let untrap=()=>{};
+  const finish=value=>{untrap();root.innerHTML='';if(previous?.isConnected)previous.focus();resolve(value)};
+  untrap=trapDialogFocus(root,()=>finish(null));
+  $('backupPassCancel').addEventListener('click',()=>finish(null));
+  $('backupPassForm').addEventListener('submit',e=>{e.preventDefault();finish($('backupPassInput').value)});
+  setTimeout(()=>$('backupPassInput')?.focus(),20);
+ });
+}
+async function exportBackup(){
+ try{
+  const payload={...data,exportedAt:new Date().toISOString(),app:'Northstar Personal Finance'};
+  let output=payload,filename=`northstar-backup-${today()}.json`;
+  if(vault.state==='unlocked'){
+   output=await encryptLedger(payload,vault.key,vault.kdf);filename=`northstar-protected-backup-${today()}.json`;
+  }else{
+   const ok=await showNorthstarDialog({title:'Export an unencrypted backup?',message:'This JSON file contains your financial information in readable form.',detail:'Keep it somewhere private. Passphrase protection is not enabled for this workspace.',icon:'↓',confirmText:'Export JSON',cancelText:'Cancel',label:'PLAINTEXT BACKUP'});
+   if(ok!==true)return;
+  }
+  const blob=new Blob([JSON.stringify(output,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  showToast(vault.state==='unlocked'?'Encrypted backup exported':'Unencrypted backup exported');
+ }catch(error){console.error('Northstar backup export failed.',error);showToast('Could not export the backup. Your data was not changed.')}
+}
 function validateImport(input){if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('This is not a valid Northstar backup.');if(!Array.isArray(input.accounts)&&!Array.isArray(input.transactions)&&!Array.isArray(input.data?.accounts)&&!Array.isArray(input.data?.transactions))throw new Error('This file does not contain Northstar finance data.');const x=normalizeData(input);if(!Array.isArray(x.accounts)||!Array.isArray(x.transactions)||!Array.isArray(x.budgets)||!Array.isArray(x.goals)||!Array.isArray(x.purchases))throw new Error('Backup is missing one or more sections.');if(!x.accounts.every(a=>typeof a.id==='string'&&typeof a.name==='string'&&Number.isFinite(Number(a.balance))))throw new Error('One or more accounts have invalid data.');if(!x.transactions.every(t=>typeof t.id==='string'&&Number.isFinite(Number(t.amount))&&Number(t.amount)>0&&['Income','Expense','Transfer'].includes(t.type)))throw new Error('One or more transactions have invalid data.');return x}
-async function importBackup(file){if(!file)return;try{const imported=validateImport(JSON.parse(await file.text()));if(await showNorthstarDialog({title:'Restore this backup?',message:'Restoring replaces the finance data currently open in Northstar.',detail:'Export a backup of the current data first if you may need it later.',icon:'↻',confirmText:'Restore backup',cancelText:'Cancel',danger:true,label:'REPLACE CURRENT DATA'})!==true)return;data=imported;persist();showToast('Backup restored')}catch(e){showToast(e.message||'Could not read that backup')}finally{$('backupFile').value=''}}
+async function importBackup(file){
+ if(!file)return;
+ try{
+  const parsed=JSON.parse(await file.text());let source=parsed;
+  if(looksEncrypted(parsed)){
+   validateEnvelope(parsed);let opened=null;
+   if(vault.state==='unlocked'&&sameKdf(parsed.kdf,vault.kdf)){try{opened=await decryptLedger(parsed,vault.key)}catch{}}
+   if(!opened){const passphrase=await requestBackupPassphrase();if(passphrase===null)return;try{opened=await decryptLedger(parsed,await deriveVaultKey(passphrase,parsed.kdf))}catch{throw new Error('Incorrect passphrase or damaged encrypted backup. No data was changed.')}}
+   source=opened;
+  }
+  const imported=validateImport(source),detail=vault.state==='unlocked'?'Export an encrypted backup of the current data first if you may need it later.':'The restored data will be stored without app encryption in this workspace. Export a backup of the current data first if needed.';
+  if(await showNorthstarDialog({title:'Restore this backup?',message:'Restoring replaces the finance data currently open in Northstar.',detail,icon:'↻',confirmText:'Restore backup',cancelText:'Cancel',danger:true,label:'REPLACE CURRENT DATA'})!==true)return;
+  data=imported;persist();showToast('Backup restored');
+ }catch(e){showToast(e.message||'Could not read that backup')}finally{$('backupFile').value=''}
+}
+
+/* Marking a plan Purchased here checks its existing transaction link, then
+   records one expense and updates the funding account if no link exists.
+   This is an action, not a renderer: never invoke it just to show a tile. */
 function setPurchaseStatus(purchaseId,status){
  const purchase=data.purchases.find(p=>p.id===purchaseId);
  if(!purchase){showToast('This planned purchase could not be found.');return}
  if(status==='Purchased'){
   const existing=data.transactions.find(t=>t.purchaseId===purchaseId||(purchase.transactionId&&t.id===purchase.transactionId));
   if(existing){
+   if(existing.type!=='Expense'){showToast('The linked transaction is no longer an expense. Review it in Transactions before marking this purchase bought.');return}
    data={...data,purchases:data.purchases.map(p=>p.id===purchaseId?{...p,status:'Purchased',transactionId:existing.id}:p)};
    persist();showToast('This purchase already has an expense recorded. No duplicate was added.');return;
   }
@@ -1867,71 +2006,506 @@ function setPurchaseStatus(purchaseId,status){
 function navigate(nextPage){if(nextPage!=='Purchases')purchaseDetailId=null;page=nextPage;$('sidebar').classList.remove('sidebar-open');$('scrim').classList.add('hidden');render();window.scrollTo({top:0,behavior:'smooth'})}
 function dismissWelcome(){const screen=$("welcomeScreen");if(!screen||screen.classList.contains("hidden"))return;screen.classList.add("welcome-leaving");try{localStorage.setItem("northstar-welcome-seen-v1","1")}catch(e){};window.setTimeout(()=>{screen.classList.add("hidden");screen.classList.remove("welcome-leaving");screen.setAttribute("aria-hidden","true");document.documentElement.classList.add("northstar-seen")},390)}
 function showWelcome(){const screen=$("welcomeScreen");if(!screen)return;document.documentElement.classList.remove("northstar-seen");screen.classList.remove("hidden","welcome-leaving");screen.setAttribute("aria-hidden","false");screen.scrollTop=0;updateWelcomeProgress();try{localStorage.removeItem("northstar-welcome-seen-v1")}catch(e){};window.setTimeout(()=>$('welcomeContinue')?.focus(),60)}
-function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':$('welcomeJourney')?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});break;case'welcome-again':showWelcome();break;case'page':navigate(b.dataset.page);break;case'show-purchase-expenses':{$('purchaseExpenseHistory')?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});$('purchaseExpenseTitle')?.focus({preventScroll:true});break;}case'manage-expenses':query='';txTypeFilter='Expense';txMonthFilter='All';navigate('Transactions');break;case'menu':$('sidebar').classList.add('sidebar-open');$('scrim').classList.remove('hidden');break;case'close-menu':$('sidebar').classList.remove('sidebar-open');$('scrim').classList.add('hidden');break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':openModal('transaction',data.transactions.find(t=>t.id===itemId));break;case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':purchaseDetailId=null;render();window.scrollTo({top:0,behavior:'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
-document.addEventListener('keydown',e=>{const purchaseTile=e.target.closest?.('.purchase-tile[data-action="open-purchase"]');if(purchaseTile&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
+function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':$('welcomeJourney')?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});break;case'welcome-again':showWelcome();break;case'page':navigate(b.dataset.page);break;case'menu':$('sidebar').classList.add('sidebar-open');$('scrim').classList.remove('hidden');break;case'close-menu':$('sidebar').classList.remove('sidebar-open');$('scrim').classList.add('hidden');break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':purchaseDetailId=null;render();window.scrollTo({top:0,behavior:'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
+document.addEventListener('keydown',e=>{const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
 document.addEventListener('click',e=>{
  const option=e.target.closest('[data-confirm-index]');
  if(option&&confirmResolver){e.preventDefault();e.stopPropagation();const index=Number(option.dataset.confirmIndex);settleNorthstarDialog(Number.isInteger(index)&&confirmChoices[index]?confirmChoices[index].value:null);return}
  if(e.target.classList?.contains('confirm-backdrop')){settleNorthstarDialog(null)}
 });
-window.addEventListener('beforeunload',e=>{if(modalHasUnsavedChanges()){e.preventDefault();e.returnValue=''}});
+window.addEventListener('beforeunload',e=>{if(modalHasUnsavedChanges()||(vault.state==='unlocked'&&(vault.editSeq!==vault.savedSeq||(cloudLoaded&&$('syncStatus')?.textContent.startsWith('Saving'))))){e.preventDefault();e.returnValue=''}});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;const action=b.dataset.action;if(b.tagName==='SELECT'||b.tagName==='INPUT')return;if(action==='backdrop-close'&&e.target!==b)return;e.preventDefault();openByAction(action,b)});
 document.addEventListener('submit',e=>{if(e.target?.id==='modalForm')submitModal(e);else if(e.target?.id==='guideProfileForm')saveGuideProfile(e);else if(e.target?.id==='guideAskForm')answerGuide(e);else if(e.target?.classList?.contains('price-check-form'))savePriceCheck(e);else if(e.target?.classList?.contains('purchase-allocation-form'))savePurchaseAllocation(e)});
-document.addEventListener('input',e=>{if(e.target?.id==='txSearch'){query=e.target.value;const pos=e.target.selectionStart;render();const next=$('txSearch');next?.focus();next?.setSelectionRange(pos,pos)}});
+document.addEventListener('input',e=>{if(e.target?.id==='txSearch'){query=e.target.value;const pos=e.target.selectionStart;render();const next=$('txSearch');next?.focus();next?.setSelectionRange(pos,pos)}else if(e.target?.id==='purchaseCompletedSearch')filterCompletedPurchases(e.target.value)});
 document.addEventListener('change',e=>{if(e.target?.id==='goalSoundsToggle'){data={...data,settings:{...data.settings,goalSounds:e.target.checked}};persist();showToast(e.target.checked?'Goal sounds enabled':'Goal sounds muted')}if(e.target?.id==='txTypeFilter'){txTypeFilter=e.target.value;render()}if(e.target?.id==='txMonthFilter'){txMonthFilter=e.target.value;render()}if(e.target?.id==='currencySelect'){data={...data,settings:{...data.settings,currency:e.target.value}};persist();showToast('Display currency updated')}if(e.target?.id==='backupFile'){importBackup(e.target.files?.[0])}if(e.target?.dataset?.action==='purchase-status'){setPurchaseStatus(e.target.dataset.id,e.target.value)}});
-async function initFirebase(){try{const [appSdk,authSdk,storeSdk]=await Promise.all([import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`)]);const app=(appSdk.getApps().length?appSdk.getApps()[0]:appSdk.initializeApp(firebaseConfig));const auth=authSdk.getAuth(app),db=storeSdk.getFirestore(app);fb={...appSdk,...authSdk,...storeSdk,app,auth,db};authSdk.onAuthStateChanged(auth,async current=>{await onAuthChanged(current)});authReady=true}catch(e){console.warn('Firebase SDK could not initialize; local mode remains available.',e);lastSyncError=e;authReady=true;setSync(`Firebase unavailable · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Firebase SDK initialization'))}}
-function docRef(){return fb.doc(fb.db,'users',user.uid,'northstar','financeData')}
-async function onAuthChanged(current){
- if(!current){const wasSignedIn=!!user;user=null;cloudLoaded=false;lastSyncError=null;setCloudLoading(false);if(wasSignedIn)data=loadLocal('local');setSync('Local only','');render();return}
- const anonymousData=data,userLocal=loadLocal(current.uid);user=current;cloudLoaded=false;lastSyncError=null;setSync('Connecting…');setCloudLoading(true);render();
- try{
-  const snap=await fb.getDoc(docRef());let chosen=userLocal;if(!hasRecords(chosen)&&hasRecords(anonymousData))chosen=anonymousData;
-  if(snap.exists()){
-   const cloud=normalizeData(snap.data().data||snap.data());
-   if(hasRecords(chosen)&&dataSignature(chosen)!==dataSignature(cloud)){
-    const choice=await showNorthstarDialog({title:'Choose which data to keep',message:'Northstar found different finance data in your Google account and this browser.',detail:'Using the cloud copy replaces what’s currently shown on this device. Keeping this device uploads the browser copy and replaces the cloud document.',icon:'☁',label:'SYNC CONFLICT',choices:[{value:'cloud',label:'Use cloud copy',style:'primary'},{value:'local',label:'Keep this device',style:'secondary'},{value:'cancel',label:'Decide later',style:'quiet'}]});
-    if(choice==='cloud')data=cloud;else if(choice==='local'){data=chosen;await writeCloudNow()}else{data=chosen;try{localStorage.setItem(localKey(current.uid),JSON.stringify(data))}catch(storageError){}cloudLoaded=false;lastSyncError=new Error('Choose which data to keep to resume cloud sync.');setSync('Sync conflict · action needed','err');setCloudLoading(false);render();return}
-   }else data=cloud;
-  }else{data=chosen;await writeCloudNow()}
-  try{localStorage.setItem(localKey(current.uid),JSON.stringify(data))}catch(storageError){console.warn('Could not save a local copy of cloud data.',storageError)}
-  cloudLoaded=true;lastSyncError=null;setSync('Cloud sync on','ok');setCloudLoading(false);render();
- }catch(e){
-  console.error('Northstar cloud load failed',e);data=hasRecords(userLocal)?userLocal:anonymousData;
-  try{localStorage.setItem(localKey(current.uid),JSON.stringify(data))}catch(storageError){console.warn('Could not save a local copy after the cloud load failed.',storageError)}
-  cloudLoaded=false;lastSyncError=e;setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');setCloudLoading(false);render();showToast(firebaseErrorDetails(e,'Cloud load'))
+/* The protected workspace is opt-in. Its active device copy and cloud
+   document contain only an authenticated ciphertext envelope. Legacy copies,
+   downloaded backups and other devices are separate and may stay plaintext. */
+function vaultKey(uid){return `northstar-vault-v1:${uid}`}
+function withVaultDeviceLock(uid,callback){if(!navigator.locks?.request)throw new Error('This browser does not support the device lock required for passphrase protection.');return navigator.locks.request(vaultKey(uid),callback)}
+function vaultMarkerWrite(uid,phase='active'){
+ const value=JSON.stringify({uid,phase});localStorage.setItem(VAULT_MARKER,value);
+ if(localStorage.getItem(VAULT_MARKER)!==value)throw new Error('The protected workspace marker could not be saved.');
+}
+function readVaultCopy(uid){
+ const raw=localStorage.getItem(vaultKey(uid));if(!raw)throw new Error('The encrypted device copy is missing. Your cloud copy may still be available.');
+ let envelope;try{envelope=JSON.parse(raw)}catch{throw new Error('The encrypted device copy is damaged.')}
+ validateEnvelope(envelope);return {raw,envelope};
+}
+function setVaultLocked(locked){
+ window.NorthstarVaultLocked=locked;document.documentElement.classList.toggle('northstar-vault-locked',locked);
+ const shell=document.querySelector('.app-shell');if(shell)shell.inert=locked||syncLoading;
+}
+function protectedSaveError(error){
+ vault.error=error;cloudLoaded=false;lastSyncError=error;
+ setSync('Device save needs attention','err');
+ showToast('Protected data was not saved. Export an encrypted backup before leaving, then resolve the device storage conflict.');
+ if(page==='Settings')render();
+}
+function queueProtectedLocalSave(){
+ const session=vault.session,uid=vault.uid,key=vault.key,kdf={...vault.kdf},seq=++vault.editSeq;
+ const snapshot=JSON.parse(JSON.stringify(data));
+ setSync('Saving protected copy…');
+ const task=vaultWriteTail.catch(()=>{}).then(()=>withVaultDeviceLock(uid,async()=>{
+  if(vault.state!=='unlocked'||vault.session!==session)throw new Error('Protected workspace changed while saving.');
+  if(readVaultMarker()?.uid!==uid||localStorage.getItem(vaultKey(uid))!==vault.localRaw)throw new Error('The protected device copy changed in another tab.');
+  const envelope=await encryptLedger(snapshot,key,kdf),raw=JSON.stringify(envelope);
+  if(vault.state!=='unlocked'||vault.session!==session||readVaultMarker()?.uid!==uid||localStorage.getItem(vaultKey(uid))!==vault.localRaw)throw new Error('The protected device copy changed in another tab.');
+  localStorage.setItem(vaultKey(uid),raw);
+  if(localStorage.getItem(vaultKey(uid))!==raw)throw new Error('The protected device copy could not be verified.');
+  vault.localRaw=raw;vault.savedSeq=seq;
+  if(seq===vault.editSeq){
+   vault.error=null;
+   if(user?.uid===uid&&cloudLoaded)queueCloudSave();
+   else if(user)setSync(user.uid!==uid?'Account mismatch · sync paused':'Protected device · cloud sync paused','err');
+   else setSync('Protected device · local only','ok');
+   if(page==='Settings')render();
+  }
+ }));
+ vaultWriteTail=task.catch(error=>{if(vault.session===session)protectedSaveError(error)});
+}
+async function flushProtectedLocal(){
+ await vaultWriteTail;
+ if(vault.state!=='unlocked'||vault.savedSeq!==vault.editSeq||vault.error)throw vault.error||new Error('Protected changes have not been saved on this device.');
+ if(readVaultMarker()?.uid!==vault.uid||localStorage.getItem(vaultKey(vault.uid))!==vault.localRaw)throw new Error('The protected device copy changed in another tab.');
+}
+function captureMatchingPlainCopies(snapshot,uid){
+ const found=[];
+ for(const key of [localKey(uid),localKey('local'),'northstar-finance-v1']){
+  try{const raw=localStorage.getItem(key);if(raw&&dataSignature(JSON.parse(raw))===dataSignature(snapshot))found.push({key,raw})}catch{}
  }
+ return found;
+}
+function removeMatchingPlainCopies(candidates){
+ let removed=0,skipped=0;
+ for(const candidate of candidates){try{if(localStorage.getItem(candidate.key)===candidate.raw){localStorage.removeItem(candidate.key);removed++}else skipped++}catch{skipped++}}
+ return {removed,skipped};
+}
+function askVaultSetup(){
+ const root=$('confirmRoot');
+ return new Promise(resolve=>{
+  root.innerHTML=`<div class="confirm-backdrop"><section class="confirm-dialog vault-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="vaultSetupTitle"><div class="confirm-dialog-head"><div class="confirm-dialog-icon" aria-hidden="true">⌑</div><div><div class="eyebrow">OPTIONAL PASSPHRASE PROTECTION</div><h2 id="vaultSetupTitle">Protect this workspace</h2></div></div><p class="confirm-dialog-message">Northstar will encrypt the current workspace in this browser and replace its current cloud document with an encrypted copy. Close other Northstar tabs and devices first.</p><div class="vault-warning">Use a unique, long passphrase. A lost passphrase cannot be recovered. Old backups, browser copies, other devices, and cloud-provider backups may still be unencrypted. Publish the updated Firestore rules first; this app cannot verify that they are deployed.</div><form id="vaultSetupForm" class="vault-dialog-form"><label>Passphrase<input id="vaultSetupPass" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required></label><label>Confirm passphrase<input id="vaultSetupConfirm" type="password" autocomplete="new-password" minlength="12" maxlength="1024" required></label><label class="checkbox-line"><input id="vaultSetupUnderstand" type="checkbox" required><span>I understand that losing this passphrase can make the encrypted data unrecoverable.</span></label><label class="checkbox-line"><input id="vaultSetupCleanup" type="checkbox"><span>After both protected copies are verified, remove older browser workspace copies that exactly match this data. Different copies are left untouched.</span></label><p class="vault-error" id="vaultSetupError" role="alert" hidden></p><div class="confirm-dialog-actions"><button type="button" class="secondary-btn" id="vaultSetupCancel">Cancel</button><button type="submit" class="primary-btn">Enable protection</button></div></form></section></div>`;
+  const form=$('vaultSetupForm'),input=$('vaultSetupPass'),error=$('vaultSetupError'),previous=document.activeElement;let untrap=()=>{};
+  const finish=value=>{untrap();root.innerHTML='';if(previous?.isConnected)previous.focus();resolve(value)};
+  untrap=trapDialogFocus(root,()=>finish(null));
+  $('vaultSetupCancel').addEventListener('click',()=>finish(null));
+  form.addEventListener('submit',e=>{e.preventDefault();const passphrase=input.value;
+   if(passphrase.length<12){error.textContent='Use a passphrase of at least 12 characters.';error.hidden=false;return}
+   if(passphrase!==$('vaultSetupConfirm').value){error.textContent='The passphrases do not match.';error.hidden=false;return}
+   if(!$('vaultSetupUnderstand').checked){error.textContent='Please acknowledge the recovery warning.';error.hidden=false;return}
+   finish({passphrase,cleanup:$('vaultSetupCleanup').checked});
+  });
+  setTimeout(()=>input.focus(),20);
+ });
+}
+async function enableVault(){
+ if(vault.state!=='off'||!user||!fb||!cloudLoaded||lastSyncError){showToast('Connect Google and resolve cloud sync before enabling protection.');return}
+ if(!window.isSecureContext||!crypto?.subtle||!navigator.locks?.request){showToast('Passphrase protection requires HTTPS, Web Crypto, and device-lock support in a modern browser.');return}
+ const uid=user.uid,epoch=cloudEpoch;
+ try{if(localStorage.getItem(vaultKey(uid))){showToast('A protected copy already exists for this account. Reconnect to that workspace instead of overwriting it.');return}}catch{showToast('Browser storage is unavailable. Protection was not enabled.');return}
+ const setup=await askVaultSetup();if(!setup)return;
+ if(!user||user.uid!==uid||epoch!==cloudEpoch||!cloudLoaded){showToast('The account changed. Protection was not enabled.');return}
+ setCloudLoading(true);setSync('Protecting workspace…');clearTimeout(saveTimer);
+ let stageRaw=null,markerWritten=false,protectedState=null;
+ try{
+  // Flush prior plaintext edits before taking the exact snapshot we protect.
+  await writeCloudNow();
+  if(epoch!==cloudEpoch||user?.uid!==uid)throw new Error('The account changed during setup.');
+  const snapshot=JSON.parse(JSON.stringify(data)),candidates=setup.cleanup?captureMatchingPlainCopies(snapshot,uid):[];
+  const kdf=newKdf(),key=await deriveVaultKey(setup.passphrase,kdf);
+  const envelope=await encryptLedger(snapshot,key,kdf);
+  if(dataSignature(await decryptLedger(envelope,key))!==dataSignature(snapshot))throw new Error('The protected copy could not be verified.');
+  await withVaultDeviceLock(uid,async()=>{
+   if(localStorage.getItem(vaultKey(uid)))throw new Error('A protected copy appeared in another tab. Nothing was overwritten.');
+   stageRaw=JSON.stringify(envelope);localStorage.setItem(vaultKey(uid),stageRaw);
+   if(localStorage.getItem(vaultKey(uid))!==stageRaw)throw new Error('The protected device copy could not be verified.');
+   vaultMarkerWrite(uid,'preparing');markerWritten=true;
+  });
+  protectedState={state:'unlocked',uid,key,kdf,localRaw:stageRaw,session:vault.session+1,editSeq:0,savedSeq:0,error:null,pendingCloud:null};
+  // Full document replacement is conditional on the exact cloud version seen.
+  // If the result is uncertain, keep both the staged ciphertext and plaintext.
+  await cloudWritePayload(envelope,uid,epoch);
+  vault=protectedState;vaultMarkerWrite(uid,'active');
+  if(setup.cleanup)removeMatchingPlainCopies(candidates);
+  cloudLoaded=true;lastSyncError=null;setSync('Protected cloud sync on','ok');
+  showToast('Protection enabled. Older backups and other devices may still contain plaintext.');
+ }catch(error){
+  console.error('Northstar protection setup stopped safely.',error);
+  if(markerWritten&&protectedState){vault=protectedState;cloudLoaded=false;lastSyncError=error;setSync('Device protected · cloud unconfirmed','err');showToast('Device copy is protected, but cloud protection was not confirmed. Older copies were kept. Retry sync.');}
+  else{if(stageRaw){try{if(localStorage.getItem(vaultKey(uid))===stageRaw)localStorage.removeItem(vaultKey(uid))}catch{}}lastSyncError=error;setSync('Protection not enabled','err');showToast('Protection was not enabled. Existing data was kept. Check cloud and browser storage.');}
+ }finally{setCloudLoading(false);render()}
+}
+function showVaultUnlock(){
+ setVaultLocked(true);const root=$('vaultRoot'),candidate=vault.pendingCloud;
+ const source=candidate?.source==='cloud'?'cloud':'device';
+ root.innerHTML=`<div class="vault-screen"><section class="vault-card" role="dialog" aria-modal="true" aria-labelledby="vaultUnlockTitle"><div class="vault-mark" aria-hidden="true">✦</div><div class="eyebrow" style="margin-top:16px">NORTHSTAR · PROTECTED WORKSPACE</div><h1 id="vaultUnlockTitle">Your data, under lock.</h1><p>${source==='cloud'?'This Google account has a protected cloud workspace. Unlock it to create a protected copy on this device. Any older unencrypted browser workspace is left untouched.':'Enter the passphrase for the protected copy on this device. You can unlock it without a cloud connection.'}</p><form id="vaultUnlockForm"><label for="vaultUnlockPass">Passphrase<input id="vaultUnlockPass" type="password" autocomplete="current-password" maxlength="1024" required></label><p class="vault-error" id="vaultUnlockError" role="alert" hidden></p><button type="submit" class="primary-btn" id="vaultUnlockSubmit">Unlock workspace ↗</button></form><div class="vault-foot"><span class="muted-small">Lost passphrases cannot be recovered.</span><button type="button" class="text-btn" id="vaultLeave">Use another workspace</button></div></section></div>`;
+ // Keep global shortcuts and delegated actions from reaching hidden financial UI.
+ ['keydown','click','submit','input','change'].forEach(type=>root.addEventListener(type,e=>e.stopPropagation()));
+ $('vaultLeave').addEventListener('click',leaveProtectedWorkspace);
+ $('vaultUnlockForm').addEventListener('submit',unlockProtectedWorkspace);
+ setTimeout(()=>$('vaultUnlockPass')?.focus(),30);
+}
+async function leaveProtectedWorkspace(){
+ const candidate=vault.pendingCloud;
+ if(!confirm('Leave this protected workspace? Its encrypted copy will not be deleted. Other browser workspaces may be unencrypted.'))return;
+ if(candidate&&!readVaultMarker()){
+  data=candidate.previousData;vault={state:'off',uid:'',key:null,kdf:null,localRaw:null,session:vault.session+1,editSeq:0,savedSeq:0,error:null,pendingCloud:null};
+  cloudLoaded=false;lastSyncError=new Error('The cloud workspace is protected. Unlock it to resume sync.');setVaultLocked(false);$('vaultRoot').replaceChildren();setSync('Cloud protected · sync paused','err');setCloudLoading(false);render();return;
+ }
+ try{
+  if(fb?.auth?.currentUser)await fb.signOut(fb.auth);
+  localStorage.removeItem(VAULT_MARKER);location.reload();
+ }catch(error){const box=$('vaultUnlockError');box.hidden=false;box.textContent='Could not switch workspaces. Your encrypted copy was not changed.'}
+}
+async function unlockProtectedWorkspace(e){
+ e.preventDefault();const input=$('vaultUnlockPass'),button=$('vaultUnlockSubmit'),error=$('vaultUnlockError');
+ const passphrase=input.value,candidate=vault.pendingCloud,uid=candidate?.uid||vault.uid,epoch=cloudEpoch;
+ button.disabled=true;error.hidden=true;
+ try{
+  let raw,envelope;
+  if(candidate?.source==='cloud'){envelope=candidate.envelope;validateEnvelope(envelope);raw=JSON.stringify(envelope)}
+  else ({raw,envelope}=readVaultCopy(uid));
+  const key=await deriveVaultKey(passphrase,envelope.kdf),opened=normalizeData(await decryptLedger(envelope,key));
+  if(candidate&&(!user||user.uid!==uid||cloudEpoch!==epoch))throw new Error('The signed-in account changed. Try again.');
+  await withVaultDeviceLock(uid,async()=>{
+   if(candidate?.source==='cloud'){
+    if(localStorage.getItem(vaultKey(uid)))throw new Error('A protected device copy appeared in another tab. Reload to unlock it instead.');
+    localStorage.setItem(vaultKey(uid),raw);
+    if(localStorage.getItem(vaultKey(uid))!==raw)throw new Error('Could not verify the protected device copy.');
+    try{vaultMarkerWrite(uid)}catch(err){try{if(localStorage.getItem(vaultKey(uid))===raw)localStorage.removeItem(vaultKey(uid))}catch{}throw err}
+   }else{
+    if(localStorage.getItem(vaultKey(uid))!==raw)throw new Error('The device copy changed while unlocking. Try again.');
+    if(readVaultMarker()?.uid!==uid)vaultMarkerWrite(uid);
+   }
+  });
+  vault={state:'unlocked',uid,key,kdf:envelope.kdf,localRaw:raw,session:vault.session+1,editSeq:0,savedSeq:0,error:null,pendingCloud:null};
+  data=opened;cloudLoaded=false;lastSyncError=null;setVaultLocked(false);$('vaultRoot').replaceChildren();
+  if(user&&user.uid!==uid){lastSyncError=syncConflict('This protected workspace belongs to a different Google account.');setSync('Account mismatch · sync paused','err');showToast('This protected workspace belongs to a different Google account. No data was uploaded.');}
+  else setSync('Protected device copy','ok');
+  render();if(user?.uid===uid&&fb)await syncProtected(user);
+ }catch(err){
+  console.warn('Protected workspace unlock failed.',err);
+  error.textContent=err?.name==='OperationError'?'Incorrect passphrase or damaged encrypted data. Nothing was changed.':(err?.message||'Could not unlock this protected copy. Nothing was changed.');
+  error.hidden=false;button.disabled=false;input.value='';input.focus();
+ }
+}
+async function lockProtectedWorkspace(){
+ if(vault.state!=='unlocked')return;
+ setCloudLoading(true);
+ try{
+  await flushProtectedLocal();clearTimeout(saveTimer);
+  if(user&&cloudLoaded){try{await writeCloudNow();lastSyncError=null;setSync('Protected cloud sync on','ok')}catch(error){cloudLoaded=false;lastSyncError=error;setSync('Protected sync needs attention','err')}}
+ }catch(error){setCloudLoading(false);showToast('Protected changes are not safely saved. Export an encrypted backup before leaving.');return}
+ setCloudLoading(false);
+ if(!cloudLoaded&&user){const ok=await showNorthstarDialog({title:'Lock with cloud sync paused?',message:'Your latest protected copy is on this device, but cloud sync has not been confirmed.',detail:'You can unlock this device later and retry sync. Export an encrypted backup if you need another copy.',icon:'⌑',confirmText:'Lock workspace',cancelText:'Keep open'});if(ok!==true)return}
+ location.reload();
+}
+function renderVaultPanel(){
+ const active=vault.state==='unlocked';
+ const cloud=active&&cloudLoaded&&user?.uid===vault.uid&&!lastSyncError;
+ const localProblem=active&&(vault.error||vault.editSeq!==vault.savedSeq);
+ return `<section class="panel"><div class="panel-head"><div><h2>Passphrase protection</h2><p>Optional encryption for the active workspace.</p></div><span class="category-pill">${active?'Enabled':'Not enabled'}</span></div>${active?`<div class="setting-action"><div><strong class="vault-status${localProblem?' vault-status-error':''}">${localProblem?'Device save needs attention':'Protected device copy'}</strong><p>${cloud?'The latest confirmed cloud document is encrypted.':!user?'Connect the original Google account to sync this protected workspace.':user.uid!==vault.uid?'Sign in with the Google account that owns this protected workspace.':'Cloud protection is not currently confirmed; use Retry cloud sync when ready.'}</p></div><button class="secondary-btn" data-action="lock-vault">Lock workspace</button></div>${localProblem?'<p class="vault-error" role="alert">Changes are not safely saved on this device. Export an encrypted backup before leaving.</p>':''}${user?.uid===vault.uid&&!cloudLoaded?'<div class="setting-action"><div><strong>Cloud protection paused</strong><p>If the cloud still contains plaintext, you must explicitly choose whether to encrypt it.</p></div><button class="secondary-btn" data-action="protect-cloud">Review cloud copy</button></div>':''}`:`<div class="setting-action"><div><strong>Encrypt this workspace</strong><p>Set a passphrase to protect this browser copy and the current Google cloud document. Requires a successful cloud connection.</p></div><button class="secondary-btn" data-action="enable-vault" ${(!user||!cloudLoaded||lastSyncError)?'disabled':''}>Set up protection</button></div>`}<div class="vault-warning">A lost passphrase cannot be recovered. Older backups, other devices, browser copies, and provider backups may still contain plaintext. Protection does not secure an unlocked device or malicious code. Publish and test the updated Firestore rules.</div></section>`;
+}
+['click','submit','input','change','keydown'].forEach(type=>document.addEventListener(type,e=>{
+ if(!window.NorthstarVaultLocked){
+  if(syncLoading&&!$('confirmRoot')?.contains(e.target)){e.preventDefault();e.stopImmediatePropagation()}
+  return;
+ }
+ const root=$('vaultRoot');
+ if(!root?.contains(e.target)){e.preventDefault();e.stopImmediatePropagation();$('vaultUnlockPass')?.focus();return}
+ if(type==='keydown'&&e.key==='Tab'){
+  const focusable=[...root.querySelectorAll('button:not([disabled]),input:not([disabled])')];if(!focusable.length)return;
+  const first=focusable[0],last=focusable[focusable.length-1];
+  if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}
+ }
+},true));
+window.addEventListener('storage',e=>{
+ if(vault.state==='unlocked'&&(e.key===vaultKey(vault.uid)||e.key===VAULT_MARKER)){
+  if(localStorage.getItem(vaultKey(vault.uid))!==vault.localRaw||readVaultMarker()?.uid!==vault.uid)protectedSaveError(new Error('The protected device copy changed in another tab.'));
+ }
+});
+
+async function initFirebase(){try{const [appSdk,authSdk,storeSdk]=await Promise.all([import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`)]);const app=(appSdk.getApps().length?appSdk.getApps()[0]:appSdk.initializeApp(firebaseConfig));const auth=authSdk.getAuth(app),db=storeSdk.getFirestore(app);fb={...appSdk,...authSdk,...storeSdk,app,auth,db};authSdk.onAuthStateChanged(auth,async current=>{await onAuthChanged(current)});authReady=true}catch(e){console.warn('Firebase SDK could not initialize; local mode remains available.',e);lastSyncError=e;authReady=true;setSync(vault.state==='locked'?'Protected workspace locked':vault.state==='unlocked'?'Protected device · cloud unavailable':`Firebase unavailable · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Firebase SDK initialization'))}}
+function docRef(uid=user?.uid){return fb.doc(fb.db,'users',uid,'northstar','financeData')}
+function cloudValue(snap){return snap.exists()?snap.data():null}
+/* Firestore maps can come from a different JS realm. Do not mistake SDK values
+   such as timestamps or document references for maps when merging them. */
+function isPlainCloudMap(value){
+ if(!value||typeof value!=='object'||Array.isArray(value))return false;
+ const proto=Object.getPrototypeOf(value);if(proto===null)return true;
+ const constructor=Object.prototype.hasOwnProperty.call(proto,'constructor')&&proto.constructor;
+ return Object.getPrototypeOf(proto)===null&&typeof constructor==='function'&&Function.prototype.toString.call(constructor)===Function.prototype.toString.call(Object);
+}
+/* Canonicalize the server document without walking SDK internals (references
+   contain cycles). Unknown types and unsafe integers fail closed rather than
+   allowing an ambiguous fingerprint to overwrite a different cloud copy. */
+function cloudSignature(value){
+ const active=new Set(),isType=(item,name)=>typeof fb?.[name]==='function'&&item instanceof fb[name];
+ const number=n=>{
+  if(Number.isNaN(n))return 'NaN';
+  if(!Number.isFinite(n))return String(n);
+  if(Number.isInteger(n)&&!Number.isSafeInteger(n))throw new Error('The cloud document contains a number this browser cannot compare safely. Sync is paused.');
+  return Object.is(n,-0)?'-0':String(n);
+ };
+ const visit=item=>{
+  if(item===null)return ['null'];
+  if(typeof item==='string'||typeof item==='boolean')return [typeof item,item];
+  if(typeof item==='number')return ['number',number(item)];
+  if(typeof item!=='object')throw new Error('The cloud document contains an unsupported value. Sync is paused.');
+  if(isType(item,'Timestamp'))return ['timestamp',number(item.seconds),number(item.nanoseconds)];
+  if(isType(item,'GeoPoint'))return ['geopoint',number(item.latitude),number(item.longitude)];
+  if(isType(item,'Bytes'))return ['bytes',item.toBase64()];
+  if(isType(item,'DocumentReference')){
+   const database=item.firestore?._databaseId;
+   if(typeof database?.projectId!=='string'||typeof database.database!=='string'||typeof item.path!=='string')throw new Error('The cloud document contains an unsupported reference. Sync is paused.');
+   return ['reference',database.projectId,database.database,item.path];
+  }
+  if(isType(item,'VectorValue'))return ['vector',item.toArray().map(number)];
+  if(Object.prototype.toString.call(item)==='[object Date]'){
+   const millis=Date.prototype.getTime.call(item);if(!Number.isFinite(millis))throw new Error('The cloud document contains an invalid date. Sync is paused.');
+   const seconds=Math.floor(millis/1000);return ['timestamp',number(seconds),number((millis-seconds*1000)*1000000)];
+  }
+  if(active.has(item))throw new Error('The cloud document contains a circular value. Sync is paused.');
+  active.add(item);
+  try{
+   if(Array.isArray(item))return ['array',item.map(visit)];
+   if(isPlainCloudMap(item))return ['map',Object.keys(item).sort().map(key=>[key,visit(item[key])])];
+   throw new Error('The cloud document contains an unsupported value. Sync is paused.');
+  }finally{active.delete(item)}
+ };
+ return JSON.stringify(visit(value));
+}
+function syncConflict(message='The cloud copy changed on another device. Review the conflict before saving.'){const error=new Error(message);error.code='northstar/conflict';return error}
+function plainCloudData(raw){
+ const value=raw&&typeof raw==='object'&&raw.data&&typeof raw.data==='object'?raw.data:raw;
+ if(!value||typeof value!=='object'||(!Array.isArray(value)&&!Array.isArray(value.accounts)&&!Array.isArray(value.transactions)))throw new Error('The cloud document is not a recognized finance dataset. No data was overwritten.');
+ return normalizeData(value);
 }
 function removeUndefinedValues(value){
  if(Array.isArray(value))return value.map(item=>item===undefined?null:removeUndefinedValues(item));
- if(value&&typeof value==='object'){
+ if(isPlainCloudMap(value)){
   const clean={};
-  for(const [key,item] of Object.entries(value)){if(item!==undefined)clean[key]=removeUndefinedValues(item)}
-  return clean
+  for(const [key,item] of Object.entries(value)){if(item!==undefined)Object.defineProperty(clean,key,{value:removeUndefinedValues(item),enumerable:true,writable:true,configurable:true})}
+  return clean;
  }
- return value
+ return value;
 }
-async function writeCloudNow(){if(!user||!fb)return;const safeData=removeUndefinedValues(data);await fb.setDoc(docRef(),{data:safeData,updatedAt:Date.now(),schemaVersion:1},{merge:true})}
-async function retryCloudSync(){if(!fb){showToast(firebaseErrorDetails(lastSyncError||new Error('Firebase SDK not initialized'),'Cloud sync'));return}const current=fb.auth.currentUser;if(!current){showToast('Connect Google before retrying cloud sync.');return}if(!cloudLoaded){await onAuthChanged(current);return}setSync('Retrying save…');try{await writeCloudNow();lastSyncError=null;setSync('Cloud sync on','ok');render();showToast('Cloud save succeeded.')}catch(e){lastSyncError=e;console.error('Northstar cloud retry failed',e);setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Cloud save')+' Your browser copy is still available.')}}
-function queueCloudSave(){clearTimeout(saveTimer);setSync('Saving…');saveTimer=setTimeout(async()=>{try{await writeCloudNow();lastSyncError=null;setSync('Cloud sync on','ok');render()}catch(e){lastSyncError=e;console.error('Northstar cloud save failed',e);setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Cloud save')+' Your browser copy is still available.')}},700)}
+/* Predict Firestore's merge result for the next conflict check. Empty maps
+   replace their field; arrays and SDK values are atomic, not nested maps. */
+function mergePlainCloudValue(before,after){
+ if(!isPlainCloudMap(after))return after;
+ const keys=Object.keys(after);if(!keys.length)return {};
+ const priorIsMap=isPlainCloudMap(before),result=priorIsMap?{...before}:{};
+ for(const key of keys)Object.defineProperty(result,key,{value:mergePlainCloudValue(priorIsMap?before[key]:undefined,after[key]),enumerable:true,writable:true,configurable:true});
+ return result;
+}
+/* Every cloud write compares the exact server document inside a transaction.
+   In particular, plaintext writes can never knowingly replace a vault. */
+function cloudWritePayload(payload,uid=user?.uid,epoch=cloudEpoch){
+ const job=cloudWriteTail.catch(()=>{}).then(async()=>{
+  if(!fb||!uid||user?.uid!==uid||epoch!==cloudEpoch)throw syncConflict('The signed-in account changed before the cloud save.');
+  if(cloudFingerprint===undefined)throw syncConflict('The cloud copy has not been checked.');
+  if(looksEncrypted(payload))validateEnvelope(payload);
+  cloudSignature(payload); // Reject unsupported values before starting a write.
+  const expected=cloudFingerprint,ref=docRef(uid);let written;
+  await fb.runTransaction(fb.db,async transaction=>{
+   const snapshot=await transaction.get(ref),remote=cloudValue(snapshot);
+   if(cloudSignature(remote)!==expected)throw syncConflict();
+   if(looksEncrypted(remote)&&!looksEncrypted(payload))throw syncConflict('The cloud copy is encrypted. Unlock it before saving.');
+   if(user?.uid!==uid||epoch!==cloudEpoch)throw syncConflict('The signed-in account changed before the cloud save.');
+   // A protected document is a full replacement: merge:true could retain plaintext.
+   // Plaintext writes retain Firestore's native merge semantics and do not
+   // rewrite unknown fields; predict the result only for the next fingerprint.
+   if(looksEncrypted(payload)){written=payload;transaction.set(ref,payload)}
+   else{written=mergePlainCloudValue(remote,payload);transaction.set(ref,payload,{merge:true})}
+  });
+  if(user?.uid!==uid||epoch!==cloudEpoch)throw syncConflict('The signed-in account changed during the cloud save.');
+  cloudFingerprint=cloudSignature(written);
+ });
+ cloudWriteTail=job.catch(()=>{});return job;
+}
+async function writeCloudNow(){
+ if(!user||!fb)throw new Error('Connect Google before saving to the cloud.');
+ const uid=user.uid,epoch=cloudEpoch;
+ if(vault.state==='unlocked'){
+  if(uid!==vault.uid)throw syncConflict('This protected workspace belongs to a different Google account.');
+  await flushProtectedLocal();return cloudWritePayload(JSON.parse(vault.localRaw),uid,epoch);
+ }
+ if(vault.state!=='off')throw syncConflict('Unlock the protected workspace before saving.');
+ const safeData=removeUndefinedValues(data); // Detached snapshot; SDK value objects remain atomic.
+ return cloudWritePayload({data:safeData,updatedAt:Date.now(),schemaVersion:1},uid,epoch);
+}
+async function onAuthChanged(current){
+ const epoch=++cloudEpoch;clearTimeout(saveTimer);cloudLoaded=false;cloudFingerprint=undefined;
+ if(vault.state==='locked'){
+  user=current;lastSyncError=null;setCloudLoading(false);setSync('Protected workspace locked');return;
+ }
+ if(vault.state==='unlocked'){
+  user=current;lastSyncError=null;
+  if(!current){setCloudLoading(false);setSync('Protected device · local only','ok');render();return}
+  if(current.uid!==vault.uid){lastSyncError=syncConflict('This protected workspace belongs to a different Google account.');setCloudLoading(false);setSync('Account mismatch · sync paused','err');render();showToast('This protected workspace belongs to a different Google account. No data was uploaded.');return}
+  await syncProtected(current,epoch);return;
+ }
+ if(!current){const wasSignedIn=!!user;user=null;lastSyncError=null;setCloudLoading(false);if(wasSignedIn)data=loadLocal('local');setSync('Local only','');render();return}
+ const anonymousData=data,userLocal=loadLocal(current.uid),chosen=hasRecords(userLocal)?userLocal:anonymousData;
+ user=current;lastSyncError=null;setSync('Connecting…');setCloudLoading(true);render();
+ try{
+  // A previously protected device copy is never silently overwritten by cloud data.
+  const deviceVault=localStorage.getItem(vaultKey(current.uid));
+  if(deviceVault){
+   vault={state:'locked',uid:current.uid,key:null,kdf:null,localRaw:null,session:vault.session+1,editSeq:0,savedSeq:0,error:null,pendingCloud:{source:'device',uid:current.uid,previousData:chosen}};
+   data=blankData();setCloudLoading(false);render();showVaultUnlock();return;
+  }
+  const originalLocal=localStorage.getItem(localKey(current.uid));
+  const snap=await fb.getDocFromServer(docRef(current.uid));if(epoch!==cloudEpoch||user?.uid!==current.uid)return;
+  const raw=cloudValue(snap);cloudFingerprint=cloudSignature(raw);
+  if(looksEncrypted(raw)){
+   vault={state:'locked',uid:current.uid,key:null,kdf:null,localRaw:null,session:vault.session+1,editSeq:0,savedSeq:0,error:null,pendingCloud:{source:'cloud',uid:current.uid,envelope:raw,previousData:chosen}};
+   data=blankData();setCloudLoading(false);render();showVaultUnlock();return;
+  }
+  if(raw!==null){
+   const cloud=plainCloudData(raw);
+   if(hasRecords(chosen)&&dataSignature(chosen)!==dataSignature(cloud)){
+    const choice=await showNorthstarDialog({title:'Choose which data to keep',message:'Northstar found different finance data in your Google account and this browser.',detail:'Using the cloud copy replaces what’s currently shown on this device. Keeping this device uploads the browser copy and replaces the cloud document.',icon:'☁',label:'SYNC CONFLICT',choices:[{value:'cloud',label:'Use cloud copy',style:'primary'},{value:'local',label:'Keep this device',style:'secondary'},{value:'cancel',label:'Decide later',style:'quiet'}]});
+    if(epoch!==cloudEpoch||user?.uid!==current.uid)return;
+    if(choice==='cloud')data=cloud;else if(choice==='local'){data=chosen;await writeCloudNow()}else{data=chosen;lastSyncError=syncConflict('Choose which data to keep to resume cloud sync.');setSync('Sync conflict · action needed','err');return}
+   }else data=cloud;
+  }else{data=chosen;await writeCloudNow()}
+  if(localStorage.getItem(localKey(current.uid))!==originalLocal)throw syncConflict('The device copy changed in another tab. No local copy was overwritten.');
+  localStorage.setItem(localKey(current.uid),JSON.stringify(data));
+  cloudLoaded=true;lastSyncError=null;setSync('Cloud sync on','ok');
+ }catch(e){
+  if(epoch!==cloudEpoch)return;
+  console.error('Northstar cloud load failed',e);data=chosen;cloudLoaded=false;lastSyncError=e;setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');showToast(firebaseErrorDetails(e,'Cloud load'));
+ }finally{if(epoch===cloudEpoch){setCloudLoading(false);render()}}
+}
+async function syncProtected(current,epoch=cloudEpoch){
+ const uid=current?.uid;if(!uid||uid!==vault.uid||vault.state!=='unlocked')return;
+ cloudLoaded=false;setCloudLoading(true);setSync('Checking protected cloud…');
+ try{
+  await flushProtectedLocal();
+  const snap=await fb.getDocFromServer(docRef(uid));if(epoch!==cloudEpoch||user?.uid!==uid)return;
+  const raw=cloudValue(snap);cloudFingerprint=cloudSignature(raw);
+  if(!looksEncrypted(raw)){
+   if(raw!==null)plainCloudData(raw); // Unknown document formats are not safe to replace.
+   lastSyncError=syncConflict(raw===null?'No protected cloud copy exists. Review before uploading.':'The cloud copy is not encrypted. Review it before changing anything.');
+   setSync(raw===null?'Protected device · cloud missing':'Protected device · cloud unprotected','err');return;
+  }
+  validateEnvelope(raw);
+  if(!sameKdf(raw.kdf,vault.kdf))throw syncConflict('The cloud copy uses a different passphrase key. No copy was overwritten.');
+  let cloud;
+  try{cloud=normalizeData(await decryptLedger(raw,vault.key))}catch{throw syncConflict('The protected cloud copy could not be decrypted. No copy was overwritten.')}
+  if(epoch!==cloudEpoch||user?.uid!==uid)return;
+  if(dataSignature(cloud)!==dataSignature(data)){
+   const choice=await showNorthstarDialog({title:'Protected copies are different',message:'This device and your cloud contain different protected data.',detail:'Choose a copy only after making a backup if you might need both. Neither copy changes if you decide later.',icon:'⌑',label:'PROTECTED SYNC CONFLICT',choices:[{value:'cloud',label:'Use cloud copy',style:'primary'},{value:'local',label:'Keep this device',style:'secondary'},{value:'cancel',label:'Decide later',style:'quiet'}]});
+   if(epoch!==cloudEpoch||user?.uid!==uid)return;
+   if(choice==='local'){
+    await flushProtectedLocal();await cloudWritePayload(JSON.parse(vault.localRaw),uid,epoch);
+   }else if(choice==='cloud'){
+    await flushProtectedLocal();const latest=cloudValue(await fb.getDocFromServer(docRef(uid)));
+    if(cloudSignature(latest)!==cloudFingerprint)throw syncConflict();
+    const localRaw=vault.localRaw,remoteRaw=JSON.stringify(raw);
+    await withVaultDeviceLock(uid,async()=>{
+     if(localStorage.getItem(vaultKey(uid))!==localRaw||readVaultMarker()?.uid!==uid)throw syncConflict('The protected device copy changed in another tab.');
+     localStorage.setItem(vaultKey(uid),remoteRaw);
+     if(localStorage.getItem(vaultKey(uid))!==remoteRaw)throw new Error('Could not save the protected cloud copy on this device.');
+     vault.localRaw=remoteRaw;vault.editSeq=vault.savedSeq=0;vault.error=null;data=cloud;
+    });
+   }else{lastSyncError=syncConflict('Choose which protected copy to keep to resume cloud sync.');setSync('Protected sync conflict','err');return}
+  }
+  vaultMarkerWrite(uid,'active');cloudLoaded=true;lastSyncError=null;setSync('Protected cloud sync on','ok');
+ }catch(error){
+  if(epoch!==cloudEpoch)return;
+  console.error('Northstar protected sync stopped safely.',error);cloudLoaded=false;lastSyncError=error;setSync('Protected sync needs attention','err');showToast(error.message||'Protected sync failed. Your device copy was kept.');
+ }finally{if(epoch===cloudEpoch){setCloudLoading(false);render()}}
+}
+async function protectCloudCopy(){
+ if(vault.state!=='unlocked'||!user||!fb||user.uid!==vault.uid){showToast('Connect the Google account for this protected workspace first.');return}
+ const uid=user.uid,epoch=cloudEpoch;setCloudLoading(true);
+ try{
+  await flushProtectedLocal();const snap=await fb.getDocFromServer(docRef(uid));if(epoch!==cloudEpoch||user?.uid!==uid)return;
+  const raw=cloudValue(snap);cloudFingerprint=cloudSignature(raw);
+  if(looksEncrypted(raw)){setCloudLoading(false);await syncProtected(user,epoch);return}
+  const cloud=raw===null?null:plainCloudData(raw);
+  let choice='local';
+  if(cloud&&dataSignature(cloud)!==dataSignature(data)){
+   choice=await showNorthstarDialog({title:'Choose what to encrypt',message:'The unencrypted cloud copy differs from this protected device copy.',detail:'Choosing a copy replaces the other current workspace. Export a backup first if you need both. Older provider backups may remain unencrypted.',icon:'⌑',label:'CLOUD PROTECTION',choices:[{value:'local',label:'Encrypt device copy',style:'primary'},{value:'cloud',label:'Encrypt cloud copy',style:'secondary'},{value:'cancel',label:'Decide later',style:'quiet'}]});
+  }else{
+   const confirmed=await showNorthstarDialog({title:'Protect the cloud copy?',message:'The current cloud document will be replaced by an encrypted copy of this workspace.',detail:'Close other Northstar tabs and devices first. Old backups or provider versions may remain unencrypted.',icon:'⌑',confirmText:'Encrypt cloud copy',cancelText:'Not now',label:'CLOUD PROTECTION'});
+   if(confirmed!==true)choice='cancel';
+  }
+  if(epoch!==cloudEpoch||user?.uid!==uid||choice==='cancel'||!choice)return;
+  await flushProtectedLocal();
+  if(choice==='cloud'){
+   const envelope=await encryptLedger(cloud,vault.key,vault.kdf),before=vault.localRaw;
+   await cloudWritePayload(envelope,uid,epoch);
+   await withVaultDeviceLock(uid,async()=>{
+    if(localStorage.getItem(vaultKey(uid))!==before||readVaultMarker()?.uid!==uid)throw syncConflict('The protected device copy changed in another tab.');
+    const stored=JSON.stringify(envelope);localStorage.setItem(vaultKey(uid),stored);
+    if(localStorage.getItem(vaultKey(uid))!==stored)throw new Error('Could not save the selected cloud copy on this device.');
+    vault.localRaw=stored;vault.editSeq=vault.savedSeq=0;vault.error=null;data=cloud;
+   });
+  }else await cloudWritePayload(JSON.parse(vault.localRaw),uid,epoch);
+  vaultMarkerWrite(uid,'active');cloudLoaded=true;lastSyncError=null;setSync('Protected cloud sync on','ok');showToast('Cloud copy protected. Older backups and other devices may remain unencrypted.');
+ }catch(error){if(epoch===cloudEpoch){cloudLoaded=false;lastSyncError=error;setSync('Protected sync needs attention','err');showToast(error.message||'Cloud protection was not confirmed. Your device copy was kept.')}}
+ finally{if(epoch===cloudEpoch){setCloudLoading(false);render()}}
+}
+async function retryCloudSync(){
+ if(!fb){showToast(firebaseErrorDetails(lastSyncError||new Error('Firebase SDK not initialized'),'Cloud sync'));return}
+ const current=fb.auth.currentUser;if(!current){showToast('Connect Google before retrying cloud sync.');return}
+ if(vault.state==='unlocked'){if(current.uid!==vault.uid){showToast('Sign in to the Google account for this protected workspace.');return}await syncProtected(current);return}
+ if(!cloudLoaded){await onAuthChanged(current);return}
+ setSync('Retrying save…');try{await writeCloudNow();lastSyncError=null;setSync('Cloud sync on','ok');render();showToast('Cloud save succeeded.')}catch(e){cloudLoaded=false;lastSyncError=e;setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Cloud save')+' Your browser copy is still available.')}
+}
+function queueCloudSave(){
+ clearTimeout(saveTimer);setSync('Saving…');
+ saveTimer=setTimeout(async()=>{
+  const uid=user?.uid,epoch=cloudEpoch;
+  try{await writeCloudNow();if(epoch!==cloudEpoch||user?.uid!==uid)return;lastSyncError=null;setSync(vault.state==='unlocked'?'Protected cloud sync on':'Cloud sync on','ok');render()}
+  catch(e){if(epoch!==cloudEpoch)return;cloudLoaded=false;lastSyncError=e;console.error('Northstar cloud save failed',e);setSync('Cloud sync needs attention','err');render();showToast((e.message||firebaseErrorDetails(e,'Cloud save'))+' Your device copy is still available.')}
+ },700);
+}
 async function handleGoogleSignIn(){if(!fb){showToast('Firebase has not initialized. Check the Firebase unavailable status and reload the page.');return}if(signingIn)return;signingIn=true;try{await fb.signInWithPopup(fb.auth,new fb.GoogleAuthProvider())}catch(e){console.error('Northstar Google sign-in failed',e);showToast(firebaseErrorDetails(e,'Google sign-in'))}finally{signingIn=false}}
-async function handleGoogleSignOut(){if(!fb)return;try{await fb.signOut(fb.auth);showToast('Signed out. This browser copy remains available.')}catch(e){showToast('Could not sign out. Try again.')}}
+async function handleGoogleSignOut(){
+ if(!fb)return;setCloudLoading(true);
+ try{
+  if(vault.state==='unlocked')await flushProtectedLocal();
+  clearTimeout(saveTimer);
+  if(user&&cloudLoaded){try{await writeCloudNow()}catch(error){cloudLoaded=false;lastSyncError=error;setSync('Cloud sync needs attention','err')}}
+  setCloudLoading(false);
+  if(user&&!cloudLoaded){const ok=await showNorthstarDialog({title:'Sign out with sync paused?',message:'The latest changes may only be available on this device.',detail:'Keep a backup and reconnect later to review the cloud copy.',icon:'☁',confirmText:'Sign out',cancelText:'Stay signed in'});if(ok!==true)return}
+  await fb.signOut(fb.auth);showToast('Signed out. This browser copy remains available.');
+ }catch(e){setCloudLoading(false);showToast('Could not sign out safely. Check that your device copy is saved.')}
+}
+
 /* Read-only bridge for the local assistant: gives it the live in-memory ledger
    (including cloud-synced data that may not be in localStorage yet). */
 try{
   Object.defineProperty(window,'NorthstarLedger',{
     configurable:true,
     value:function(){
+      if(window.NorthstarVaultLocked)return null;
       try{ return JSON.parse(JSON.stringify(data)); }catch(e){ return data; }
     }
   });
 }catch(e){}
-render();initFirebase();initWelcomeJourney();if(!document.documentElement.classList.contains('northstar-seen'))window.setTimeout(()=>$('welcomeContinue')?.focus(),140);
+render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJourney();if(vault.state!=='locked'&&!document.documentElement.classList.contains('northstar-seen'))window.setTimeout(()=>$('welcomeContinue')?.focus(),140);
 </script>
 <script>
 /* Each purchased tile animates once when it first enters view. Returning to it does not replay the mark. */
 (function(){
   let observer = null;
   let watchedGroup = null;
+  const seen = new Set();
+  function cardKey(card){
+    const transactionId=card.dataset?.transactionId,id=card.dataset?.id;
+    return transactionId?'transaction:'+transactionId:id?'plan:'+id:null;
+  }
+  function markCard(card,settled=false){
+    const key=cardKey(card);if(key)seen.add(key);
+    card.classList.add('purchase-x-visible');
+    if(settled)card.classList.add('purchase-x-settled');
+  }
 
   function setupPurchasedCrosses(){
     const group = document.querySelector('.priority-group-purchased');
@@ -1948,27 +2522,39 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     const cards = Array.from(group.querySelectorAll('.purchase-tile-purchased'));
     if(!cards.length) return;
 
-    const firstTop = cards[0].getBoundingClientRect().top;
-    const columns = Math.max(1, cards.filter(card => Math.abs(card.getBoundingClientRect().top - firstTop) < 3).length);
-    cards.forEach((card, index) => {
-      card.style.setProperty('--purchase-x-delay', ((index % columns) * 78) + 'ms');
+    // Filtered-out cards have no layout box. Counting them as a row would
+    // create huge stagger delays after a search or a later re-render.
+    const grid = group.querySelector('.purchase-tile-grid');
+    const tracks = grid ? getComputedStyle(grid).gridTemplateColumns.trim() : '';
+    const columns = tracks && tracks !== 'none' ? Math.max(1, tracks.split(/\s+/).length) : 1;
+    let visibleIndex = 0;
+    cards.forEach(card => {
+      const delay = card.hidden ? 0 : (visibleIndex++ % columns) * 78;
+      card.style.setProperty('--purchase-x-delay', delay + 'ms');
     });
 
+    const pending=cards.filter(card=>{
+      const key=cardKey(card);
+      if(key&&seen.has(key)){markCard(card,true);return false}
+      return true;
+    });
+    if(!pending.length)return;
     if(!('IntersectionObserver' in window)){
-      cards.forEach(card => card.classList.add('purchase-x-visible'));
+      pending.forEach(card=>markCard(card));
       return;
     }
 
-    observer = new IntersectionObserver(entries => {
+    const currentObserver = new IntersectionObserver(entries => {
+      if(watchedGroup!==group)return;
       entries.forEach(entry => {
         if(!entry.isIntersecting) return;
         const card = entry.target;
-        card.classList.add('purchase-x-visible');
-        observer.unobserve(card);
+        markCard(card);
+        currentObserver.unobserve(card);
       });
     }, {threshold: 0.22, rootMargin: '0px 0px -3% 0px'});
-
-    cards.forEach(card => observer.observe(card));
+    observer=currentObserver;
+    pending.forEach(card => currentObserver.observe(card));
   }
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupPurchasedCrosses);
@@ -2542,6 +3128,7 @@ render();initFirebase();initWelcomeJourney();if(!document.documentElement.classL
     return best;
   }
   function ledger() {
+    if (window.NorthstarVaultLocked || document.documentElement.classList.contains('northstar-vault-locked')) return null;
     var live = null;
     try { if (typeof window.NorthstarLedger === 'function') live = window.NorthstarLedger(); } catch (e) {}
     if (live && typeof live === 'object' && (Array.isArray(live.accounts) || Array.isArray(live.transactions))) return live;

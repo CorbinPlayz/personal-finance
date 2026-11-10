@@ -2,7 +2,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId}/northstar/financeData {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      function owner() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+      function encryptedDocument(doc) {
+        return doc.keys().hasOnly(['format', 'version', 'cipher', 'kdf', 'iv', 'ciphertext', 'revision'])
+          && doc.keys().hasAll(['format', 'version', 'cipher', 'kdf', 'iv', 'ciphertext', 'revision'])
+          && doc.format == 'northstar-encrypted-v1';
+      }
+      allow read, create, delete: if owner();
+      // Once protected, reject older clients that would merge plaintext into
+      // the document. Publish these rules before enabling cloud protection.
+      allow update: if owner() && (
+        !('format' in resource.data)
+        || resource.data.format != 'northstar-encrypted-v1'
+        || encryptedDocument(request.resource.data)
+      );
     }
   }
 }
