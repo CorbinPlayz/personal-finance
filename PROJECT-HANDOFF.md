@@ -22,7 +22,7 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 |---|---|
 | Main website | Implemented in root `index.html` |
 | Mobile layout and navigation | Implemented |
-| Mobile vertical scrolling | The user confirmed the prior scrolling issue was fixed; do not treat it as an open task without a new report. The document scroller and mobile performance safeguards remain in place. No fresh physical-device test was performed for the major update. See section 6. |
+| Mobile scrolling and intro access | The user had confirmed the earlier main-page issue fixed, then reported a **new intro-specific block**. The intro now has a pinned direct-entry button and a native touch scroller. Simulated Chromium swipes pass; confirmation on the user's phone is still needed. See 4m and section 6. |
 | Visual design | Monochrome shell with semantic money colors and the compact red purchased badge; see sections 4a and 4d. |
 | Local persistence | Browser `localStorage`; plaintext by default. Optional passphrase-protected workspace uses a separate encrypted device copy. |
 | Google sign-in / Firestore sync | Implemented in the front end. The user previously reported that Google sign-in and cloud sync worked; this has not been freshly tested during this handoff update. |
@@ -49,7 +49,8 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | `cloudflare-worker/README.md` | Setup, deployment, quota, and privacy notes for an optional Cloudflare Workers AI backend. |
 | `cloudflare-worker/src/index.js` | Worker endpoint. Restricts origin, checks a Firebase ID token, validates the request, sends the question and supplied context to Workers AI, and returns an advisory response. |
 | `cloudflare-worker/wrangler.toml` | Wrangler configuration; Worker name is `northstar-finance-ai`, entry point is `src/index.js`, and AI binding is named `AI`. |
-| `tests/major-update.test.cjs` | Node checks for release-note links, privacy wording, assistant panel closing, and welcome dismissal/replay. |
+| `tests/major-update.test.cjs`, `tests/welcome.test.cjs` | Dependency-free checks for release links, welcome entry/scroll/replay, focus, storage failure, and vault/sync guards. |
+| `tests/welcome-browser.cjs` | Optional Chromium touch/keyboard/viewport checks with blocked or mocked external services; setup is in README. Not a Safari, physical-phone, or live Firebase test. |
 | `tests/purchase-expenses.test.cjs` | Node tests for completed purchase projections, explicit ID links, price/date labels, finance edits, and duplicate-charge regressions. |
 | `tests/vault-crypto.test.mjs`, `tests/vault-sync.test.cjs` | Node crypto round-trip/tamper tests and mocked cloud/device save conflict tests. Run `node --test tests/*.test.*`. These do not verify live Firebase or published rules. |
 | `PROJECT-HANDOFF.md` | This document. Keep it current after meaningful project or requirement changes. |
@@ -274,6 +275,14 @@ While checking the new copy, a browser test found that closing Jarvis with Conne
 
 **Verification:** all 35 Node tests pass, including six release/interface checks. HTML parsed with no errors, all eight CSS blocks and five inline scripts were checked, module/Worker syntax and local Markdown links passed, and `git diff --check` was clean. Headless Chromium checks at 320, 390, 768, and 1440 CSS pixels covered screenshots, welcome reload/replay, keyboard focus and activation of the Settings link, Connections close/Escape/focus, tap-through after closing, footer spacing, and expense tile search/editor without ledger changes. Normal-motion badge frames at 320 and 1440 pixels and reduced-motion layouts were checked. A synthetic encrypted device copy was also unlocked with both first-visit and returning welcome states, after a wrong-passphrase check. Firebase was stubbed for these browser checks; no live Firebase, live AI provider, physical iPhone, or independent security review was performed.
 
+## 4m. Intro access on phones (2026-11-09)
+
+The user clarified a new report: the **intro**, not necessarily the main page, prevented them from reaching Northstar. Previously the first button only scrolled to the journey and the dismiss button was at the bottom. The original iPhone-specific cause was not established: simulated Chromium touch swipes also worked before this change, while automatic focus could move the intro down on short/landscape screens.
+
+The intro now has a prominent **Enter Northstar** button pinned above a separate native touch-scroll area, so entering never requires a swipe. The optional Explore button and bottom action remain; progress/reveals use the new scroller. The toolbar accommodates safe areas and short screens, initial focus no longer scrolls the journey, keyboard focus stays in the dialog, background navigation is inert, and Settings replay restores focus on exit. Dismissal remains a browser-local preference, and the intro can be dismissed during an unresolved cloud load without permitting background edits. A locked vault still takes precedence. Blocked preference writes do not prevent entry, but cannot persist dismissal; an unreadable vault marker still fails closed rather than assuming there is no protected workspace.
+
+**Verification:** 43 dependency-free Node tests and 11 optional headless Chromium scenarios cover simulated touch swipes in both directions and to the bottom, entry without scrolling at 320×240 through desktop sizes, landscape/rotation, main-page scrolling, replay/reload, keyboard and reduced motion, blocked preference writes, unreadable vault storage, synthetic encrypted device unlock, and pending/offline or encrypted cloud results. Finance records stayed unchanged in the tested flows; external services were blocked or mocked. Scoped axe checks reported no definite violations, with some contrast checks incomplete. A WebKit renderer was attempted but could not run because its native dependencies were unavailable. **No physical iPhone or Safari test was performed, and the original iOS failure is not confirmed fixed until the user tries the deployed site.**
+
 ## 5. User requirements and non-negotiable design constraints
 
 These requirements come from prior Northstar discussions and should guide future work.
@@ -297,17 +306,11 @@ These requirements come from prior Northstar discussions and should guide future
 - Before substantial code changes, inspect the actual existing implementation and preserve the user's data and current behavior.
 - Explain what changed, which file changed, and what was actually tested. Do not claim a test was run when it was not.
 
-## 6. Mobile support — resolved, not an active task
+## 6. Mobile support — intro report awaiting device confirmation
 
-The user has now explicitly clarified that mobile scrolling was **already fixed**.
+The user had previously confirmed that the older mobile page-scrolling issue was fixed. Repository history includes the 2026-10-24 `83f81f7a` vertical-scroll fix and the 2026-10-26 `0dd404d8` iPhone document-scrolling improvement. Do not describe that historical main-page issue as newly unresolved.
 
-Repository history corroborates that this was handled in code:
-- 2026-10-24: commit `83f81f7a` — “Fix vertical scrolling on mobile browsers”.
-- 2026-10-26: commit `0dd404d8` — “Improve document scrolling on iPhone browsers”.
-
-The current `index.html` includes document-level vertical overflow rules, iOS momentum scrolling, `touch-action: pan-y`, responsive layout hardening, a fixed phone navigation dock, safe-area bottom spacing, and a scrollable welcome screen. The app also uses a responsive sidebar/scrim on narrower screens.
-
-**Do not list “mobile page will not scroll” as an open issue. Do not attempt another scroll fix unless the user reports a new, reproducible regression.** This handoff review inspected the relevant source and commit history; it did not perform a fresh physical-device test.
+The user subsequently reported that the **welcome intro** prevented them from entering the app. Section 4m documents the pinned direct-entry action and native intro scroller added in response. Existing document scrolling, responsive sidebar/dock, safe-area spacing, and mobile performance safeguards remain. Simulated touch checks now cover both the intro and the main page, but the cause on the user's iPhone remains unverified. Ask the user to try the deployed site on their phone before claiming the new report is resolved; do not claim a physical-device test was performed.
 
 ## 7. Firebase and security notes
 
@@ -382,7 +385,7 @@ Recent work includes local Jarvis review-before-save drafts (PR #12), the compac
 ## 12. Recommended next steps for a new AI/developer
 
 1. Read this handoff and the root `README.md`, then inspect the exact current `index.html` before editing.
-2. The user said mobile scrolling was already fixed. Do not reopen that issue without a new report; if a regression is reported, check both the welcome overlay and the main app on the affected device. No fresh physical-device test is claimed.
+2. The earlier main-page scroll issue was confirmed fixed, but the user has since reported a separate intro-access problem. After deployment, ask them to try the pinned entry and intro swipes on their phone; no physical-device test is claimed.
 3. Publish and test the new Firestore rules and protected sync against a non-production Firebase project; get independent security review before treating this as fully verified. Do not assume the Cloudflare Worker should be integrated just because its files exist.
 4. For visual refinements, preserve the existing premium Northstar design language and the compact Purchase Planner behavior. For the dashboard, prioritize useful information density over simply enlarging cards.
 5. Protect data integrity: keep user-entered amounts intact, preserve the local/cloud conflict flow, respect account minimums and purchase allocations, and do not add sample balances.
@@ -390,6 +393,7 @@ Recent work includes local Jarvis review-before-save drafts (PR #12), the compac
 
 ## Work log
 
+- 2026-11-09: Responded to the new intro-specific mobile report with a pinned Enter Northstar action and native touch scroller. Simulated swipes, replay, storage and vault guards were checked; physical-phone confirmation is pending. See 4m.
 - 2026-11-09: Labeled PR #21 a major update, added the two-page repository write-up, updated README/Worker notes and app copy, and fixed the hidden Connections sheet and welcome replay issues found during responsive QA. See 4l for tests and limits.
 - 2026-11-09: Replaced the rejected expense-history panel with completed expense tiles, fixed lost links/price history and misleading dates, and added optional passphrase-protected device/cloud workspaces. Tests and limitations are in 4j–4k; Firebase rules still require separate deployment and live verification.
 - 2026-11-09 (superseded by 4j): Added an expense-only transaction history to the Purchase Planner, with a jump shortcut, linked-plan labels, and actions to record/manage expenses; the list is a read-only view of the existing records and does not affect balances or plan totals. Added dependency-free Node rendering tests and checked desktop/mobile layouts and transaction flows in headless Chromium. No physical iPhone or live Firebase test was performed; see 4j.
