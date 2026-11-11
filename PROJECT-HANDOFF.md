@@ -21,9 +21,9 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | Area | Current status |
 |---|---|
 | Main website | Implemented in root `index.html` |
-| Mobile layout and navigation | Implemented |
+| Mobile layout and navigation | Responsive floating glass dock replaces the sidebar on both desktop and mobile; narrow screens place Accounts, Budgets, and Settings under More. See 4n. |
 | Mobile scrolling and intro access | The user had confirmed the earlier main-page issue fixed, then reported a **new intro-specific block**. The intro now has a pinned direct-entry button and a native touch scroller. Simulated Chromium swipes pass; confirmation on the user's phone is still needed. See 4m and section 6. |
-| Visual design | Monochrome shell with semantic money colors and the compact red purchased badge; see sections 4a and 4d. |
+| Visual design | Monochrome glass shell with semantic money colors, presentation-only finance feedback, and the compact red purchased badge; see 4a, 4d, and 4n. |
 | Local persistence | Browser `localStorage`; plaintext by default. Optional passphrase-protected workspace uses a separate encrypted device copy. |
 | Google sign-in / Firestore sync | Implemented in the front end. The user previously reported that Google sign-in and cloud sync worked; this has not been freshly tested during this handoff update. |
 | Transactions, accounts, budgets, goals, purchases | Implemented in the main app; recorded expenses appear as completed purchase tiles. |
@@ -31,7 +31,7 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | Purchase priority sorting and compact tile/detail flow | Implemented |
 | Purchased state and one-time X animation | Implemented; recent commits refined the visual alignment of the X and impact ring |
 | Guide | Implemented as a **local rules-based planner**, not an external generative AI model |
-| Jarvis cloud brain (BYOK) | Implemented. Visitors paste their own key in the panel's Connections sheet; key is per-browser, excluded from data/backups; local engine is the default and fallback. Reliability fixes, honest verification status, source labels, and provider diagnostics are in 4g. Local review-before-save finance-action drafts are documented in 4i |
+| Jarvis assistant and optional cloud brain (BYOK) | Local rules engine, account-specific answers and review-before-save drafts; optional visitor-supplied provider. Keys are separate from finance data/backups and workspace encryption. See 4i and 4n. |
 | Manual price research/history | Implemented; no live retailer feed or automatic price monitoring |
 | JSON backup / restore | Implemented; protected workspaces export encrypted JSON, others export plaintext after a warning. |
 | Cloudflare AI Worker | Worker code and setup notes exist, but the website is **not wired to call it** and deployment is not confirmed. The visitor-key (BYOK) path in 4f is what shipped instead |
@@ -41,7 +41,7 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 
 | File | Purpose and important notes |
 |---|---|
-| `index.html` | The complete static app entry point and primary implementation. It contains the HTML shell, extensive CSS, app state, render functions, forms, event handling, local persistence, Firebase integration, and the purchased-card animation observer. It is large (about 410 KB). Make focused edits; do not replace the whole file casually. |
+| `index.html` | The complete static app entry point and primary implementation. It contains the HTML shell, extensive CSS, app state, render functions, forms, event handling, local persistence, Firebase integration, dock, Jarvis, and presentation effects. It is large (about 470 KB). Make focused edits; do not replace the whole file casually. |
 | `README.md` | Product overview, major-update summary and link, GitHub Pages publishing steps, Firebase setup, data-path notes, and privacy/security warnings. It describes the Guide as rules-based. |
 | `MAJOR-UPDATE.md` | Two-page explanation of PR #21's purchase tiles, finance safeguards, optional protection, backups, and verification limits. Linked from README, Settings, and the Worker notes. |
 | `firestore.rules` | User-scoped Firestore rules with a guard against plaintext merges into a protected document. Publishing and testing these rules in Firebase Console is a separate, unverified deployment step. |
@@ -50,7 +50,8 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | `cloudflare-worker/src/index.js` | Worker endpoint. Restricts origin, checks a Firebase ID token, validates the request, sends the question and supplied context to Workers AI, and returns an advisory response. |
 | `cloudflare-worker/wrangler.toml` | Wrangler configuration; Worker name is `northstar-finance-ai`, entry point is `src/index.js`, and AI binding is named `AI`. |
 | `tests/major-update.test.cjs`, `tests/welcome.test.cjs` | Dependency-free checks for release links, welcome entry/scroll/replay, focus, storage failure, and vault/sync guards. |
-| `tests/welcome-browser.cjs` | Optional Chromium touch/keyboard/viewport checks with blocked or mocked external services; setup is in README. Not a Safari, physical-phone, or live Firebase test. |
+| `tests/welcome-browser.cjs`, `tests/interface-browser.cjs` | Optional Chromium touch/keyboard/viewport, dock, Jarvis, motion, and mocked-provider checks; setup is in README. External services are blocked or mocked. Not Safari, physical-phone, live-provider, or live-Firebase tests. |
+| `tests/jarvis.test.cjs` | Dependency-free tests for the local assistant's arithmetic, follow-ups, reviewable drafts, storage failures, and workspace guards. |
 | `tests/purchase-expenses.test.cjs` | Node tests for completed purchase projections, explicit ID links, price/date labels, finance edits, and duplicate-charge regressions. |
 | `tests/vault-crypto.test.mjs`, `tests/vault-sync.test.cjs` | Node crypto round-trip/tamper tests and mocked cloud/device save conflict tests. Run `node --test tests/*.test.*`. These do not verify live Firebase or published rules. |
 | `PROJECT-HANDOFF.md` | This document. Keep it current after meaningful project or requirement changes. |
@@ -132,7 +133,7 @@ The app was deliberately restyled to a **sleek black-and-white** identity (luxur
 - **Palette:** ink `#080808`, paper `#ffffff`, canvas `#f7f7f7`, hairlines `#e9e9e9`/`#ececec`, secondary text `#6e6e6e`–`#9a9a9a`. Every legacy hex in the file was remapped to a neutral ramp.
 - **Danger and completion:** muted oxblood `#8f2f26` is used for destructive actions, errors, and the purchased X. The complete red X is an explicit user requirement.
 - **Money semantics:** the original monochrome treatment was superseded by the user's request for semantic transaction colors; see section 4d. Keep the shell monochrome and preserve the financial color cues.
-- **Icons:** the sidebar nav, mobile dock, topbar buttons, metric tiles, transaction rows, account cards, goal cards, empty states, and welcome benefits now use inline SVG line icons (1.6px stroke, `currentColor`), not Unicode glyphs. The shared set is the `_ico()` helper plus the `ICON` object defined just after `esc()` in the module script. Reuse it instead of adding glyphs.
+- **Icons:** the dock, topbar buttons, metric tiles, transaction rows, account cards, goal cards, empty states, and welcome benefits use inline SVG line icons (1.6px stroke, `currentColor`), not Unicode glyphs. The shared set is the `_ico()` helper plus the `ICON` object defined just after `esc()` in the module script. Reuse it instead of adding glyphs.
 - **Brand mark:** the Northstar star SVGs (`nsBg*` / `nsStar*` gradients) are monochrome — charcoal tile (`#242424`→`#101010`) with a silver-to-white star and a hairline `#ffffff26` edge. Keep those gradient IDs intact; the avatar and breadcrumb variants are generated as strings in JS.
 - **Type and detail:** Manrope for display/values, DM Sans for UI/body, tabular numerals (`font-variant-numeric`) on all money-bearing components, 14px card radius, 9px control radius, hairline borders with a barely-there shadow instead of heavy elevation, black primary buttons with white text, and 180–350ms `cubic-bezier(.22,.61,.36,1)` motion.
 - **Mobile:** the black floating dock uses a white active pill. Safe-area bottom padding and the documented scroll fixes were left untouched.
@@ -144,22 +145,22 @@ The app was deliberately restyled to a **sleek black-and-white** identity (luxur
 The original Liquid Black layer added `<style id="liquid-design">` in `<head>` and `<script id="liquid-runtime">` near the end of the page. Its initial commit was additive and used the app's delegated DOM events (`[data-page]`, `[data-action]`). The bullets below describe that initial design; the ambient effect and mobile performance safeguards were changed afterward (see 4h and the work log).
 
 - **Stacking contract:** `.nsx-ambient` (z 0, drifting blurred colour fields on `#f7f7f7`) → `canvas.nsx-ink` + `.nsx-light` (z 1) → `.app-shell` (z 2). `body` background is transparent so these layers show through gaps and behind glass. The welcome screen now sits at z 3000, above the assistant; confirmation dialogs and the vault remain higher.
-- **Glass:** sidebar, topbar, mobile dock, modals, confirms and toasts use `backdrop-filter` blur + saturation with inset specular highlights and iridescent rim gradients. Cards stay flat and crisp on purpose — that contrast is what makes the glass read as glass.
+- **Glass:** the topbar, floating dock, modals, confirms and toasts use `backdrop-filter` blur + saturation with inset specular highlights and iridescent rim gradients. Cards stay flat and crisp on purpose — that contrast is what makes the glass read as glass. The earlier sidebar was replaced by the dock; see 4n.
 - **Iridescence:** pink `#ff9ad5`, lilac `#b79cff`, cyan `#8be8ff`, mint `#a8ffd4` used only on edges, sheen sweeps, progress shimmer and the dock's active pill — never as a wash behind text.
 - **Ink cursor:** a fixed canvas spawning up to 60 diffusing plumes that expand and fade over ~0.9–1.35 s, each with an iridescent fringe. Throttled to one spawn per 26 ms with **separate clocks for the spawn throttle and the rAF frame loop** (a shared variable previously froze spawning after the first frame — do not merge them again). Hidden entirely on coarse pointers and under reduced motion.
-- **Motion:** `.nsx-enter` staggered entrances on each `#content` mutation (skipped while an input is focused, so search typing does not re-animate), count-up on `.metric-value`/`.account-balance`/`.purchase-summary strong` via `dataset.nsxTarget` de-duplication, hover sheen sweeps, spring card lifts. All gated by `prefers-reduced-motion`.
+- **Motion:** `.nsx-enter` adds staggered page entrances (skipped while an input is focused); hover sheen and card lifts respect `prefers-reduced-motion`. The former count-ups on actual money values were removed in 4n so displayed numbers remain truthful. New goal, budget, transaction, and purchase feedback is presentation-only.
 - **Sound:** synthesized Web Audio only — no asset files. `tap`, `tick`, `whoosh`, `close`, `success`, `purchase`, `error`, `needle`, plus an optional ambience bed (off by default). **Sound is on by default** per user request; the context is created on first gesture because browsers demand it. Mute state, volume, grain and ambience persist in `localStorage` under `northstar-fx-v1`. The topbar speaker button, `M`, and the palette all toggle it.
 - **Command palette:** `⌘K`/`Ctrl+K` — 8 page jumps + 9 actions, arrow keys, Enter, Esc. Actions are executed by clicking the app's real controls, so the palette can never bypass validation.
 - **Shortcuts:** `?` cheat sheet, `N` new transaction, `M` mute, `G` grain, `H`/`T`/`A` pages, `Esc` closes overlays.
-- **Easter egg:** press and hold the sidebar logo ~700 ms — the mark melts, needle-drop plays, small toast appears.
+- **Easter egg:** press and hold the breadcrumb logo ~700 ms — the mark melts, needle-drop plays, and a small toast appears.
 - **Historical verification:** `parse5`, `css-tree`, `node --check`, and a jsdom boot harness checked the then-current layers and interactions. At that time, neither audio nor visuals were checked in a browser. Later targeted browser checks are documented in 4j–4l; the original sound design has not been audibly verified.
 
 ## 4c. Jarvis — local assistant (2026-11-03)
 
-A floating assistant orb (bottom-right) opens a glass chat panel. Its default rules-based engine is local and needs no API key. An optional visitor-supplied cloud connection was added later (4f–4g); when enabled it can send selected data to the chosen provider. Jarvis reads the same live ledger the app writes and uses a localStorage fallback. The draft-only typed money-action path can fill existing app forms but never directly changes ledger state; see 4i.
+A floating assistant orb (bottom-right) opens a glass chat panel. Its default rules-based engine is local and needs no API key. An optional visitor-supplied cloud connection was added later (4f–4g); when enabled it can send selected data to the chosen provider. Jarvis reads the active in-memory ledger through `NorthstarLedger`; it does not scan other browser workspaces if that bridge is unavailable. The draft-only typed money-action path can fill existing app forms but never directly changes ledger state; see 4i and 4n.
 
-- **What it can answer:** greeting/status, `roast me` (a candid, numbers-driven assessment), `can I afford <amount>`, spending by month + top categories, income, savings rate, budget status (and overruns), goal progress, total balance minus account minimums, open purchase plans, `what should I do next` (three ranked moves), plus a capability list.
-- **Tone modes:** Playful (default), Ruthless, Coach — chosen with chips in the header, persisted. The roast is generated from real figures (over-budget categories, negative savings rate, unfunded purchases), not canned filler, though it is a rules engine rather than a language model.
+- **What it can answer:** greeting/status, `roast me` (a candid, numbers-driven assessment), account-specific affordability, spending by month or merchant, income, savings rate, budgets, goals, balances and purchase plans, plus a capability list. Estimates are not bank-verified or guaranteed safe; see 4n.
+- **Tone modes:** Playful, Ruthless, Coach (default) — chosen with chips in the header, persisted. The roast is generated from recorded figures, though it is a rules engine rather than a language model.
 - **Voice (optional, off by default):** `speechSynthesis` replies, preferring a British male voice for the Jarvis feel; `SpeechRecognition` mic input where the browser supports it.
 - **Persistence:** assistant preferences live under `northstar-jarvis-v1`; chat history is intentionally not persisted.
 - **Shortcuts:** `J` toggles the panel outside text fields. Within the assistant, `Esc` closes Connections first, then the assistant, and returns focus to the corresponding control.
@@ -175,17 +176,16 @@ The design is **monochrome chrome with colour for money only**. The user explici
 - **Where:** `<style id="color-accents">` (five style blocks now) and `<script id="jarvis-ink">`.
 - **Money colours:** income `#1a7f5a` (`--money-in`), expense `#b3402a` (`--money-out`), transfer `#2b57c4` (`--money-move`), with pale tints for pill/icon backgrounds. Applied to `.positive`/`.negative` amounts, `.type-pill.income|expense|transfer`, `.tx-icon.*`, metric tiles, and a six-hue rotating palette for the spending-by-category bars.
 - **Still monochrome:** shell chrome, nav, buttons, inputs, headings, cards, tables, modals, Jarvis panel. The rule of thumb: **if it is a number or a category, colour is allowed; if it is UI furniture, it stays black/white.**
-- **Jarvis panel ink:** a canvas inside `.nsj-panel` (z 1, content at z 2, border ring at z 3) renders white/iridescent plumes behind the chat text — on pointer move, on tap, and one soft bloom per incoming message. Clipped by the panel's rounded corners, respects reduced motion, capped at 26 plumes.
+- **Jarvis panel ink (historical):** a canvas once rendered plumes inside `.nsj-panel`. It was removed when the user requested a page-wide ambient effect instead; see 4h.
 - **Verification:** `parse5` 0 errors, `css-tree` 0 errors across all five blocks, `node --check` clean, and a jsdom run asserting the ink canvas mounts as the panel's first child, synthetic pointer events raise nothing, and every colour rule is present.
 
 ## 4e. Jarvis v2 — the "can't see anything" bug and the new brain (2026-11-03)
 
-**Critical bug that was fixed here (do not regress it):** Jarvis v1 read only `northstar-finance-v1:local`. The app actually persists to `localStorage` under **`northstar-finance-v1:<uid>` when signed in** (`localKey(user?user.uid:'local')` in `persist()`). So on any signed-in session Jarvis was reading an empty slot and reported it could see nothing. Two fixes, both required:
+This section records the earlier implementation; 4n describes the current parsing, safety and workspace behavior.
 
-1. **Live bridge (primary):** a read-only hook is defined **inside the module script**, immediately before the final `render();initFirebase();initWelcomeJourney();` line:
-   `window.NorthstarLedger = () => JSON.parse(JSON.stringify(data))`
-   This exposes the in-memory ledger, including cloud-synced data that hasn't been persisted locally yet. The hook MUST stay inside the module — `data` is module-scoped, and an earlier attempt that placed it after `</script>` silently fell back to storage because `data` was out of scope.
-2. **Storage scan (fallback):** `scanStorage()` enumerates every `northstar-finance-v1*` key and picks the one with the most records, so it also works if the bridge is unavailable.
+**Critical bug that was fixed here (do not regress it):** Jarvis v1 read only `northstar-finance-v1:local`. The app actually persists to `localStorage` under **`northstar-finance-v1:<uid>` when signed in** (`localKey(user?user.uid:'local')` in `persist()`). So on any signed-in session Jarvis was reading an empty slot and reported it could see nothing.
+
+The read-only `NorthstarLedger` bridge is defined **inside the module script** where `data` is in scope and returns the active in-memory ledger. It returns no ledger while a protected vault is locked or cloud loading is underway. An earlier fallback scanned stored workspaces and picked the one with most records; it was removed in 4n because it could expose the wrong person's workspace. If the bridge is unavailable, Jarvis now fails closed rather than guessing.
 
 **Brain v2 (rules engine, still no network):**
 - Intent classifier with weighted keywords (17 intents) plus entity extraction: amounts (`400`, `1.5k`), any category name present in the data (canonical casing preserved), and month references (`last month`, `this month`, month names).
@@ -205,7 +205,7 @@ Jarvis now has an optional visitor-supplied LLM. The site ships **no keys** and 
 - Controls: provider select (`gemini`, `openai`, `anthropic`, `groq`, `openrouter`, `custom`), key field (`type=password`), model field, base URL (custom only), switches for Cloud brain / Remember on this device / Include transactions, buttons Save & test, Preview payload, Clear key, and a status line `#nsjConnStatus`.
 
 **Key isolation (the important part — do not merge this into finance data):**
-- Dedicated storage key `northstar-jarvis-conn-v1`, written to `sessionStorage` by default and to `localStorage` only when "Remember on this device" is on. Toggling the switch moves the blob and clears the other copy.
+- Dedicated storage key `northstar-jarvis-conn-v1`, written to `sessionStorage` by default and to `localStorage` only when "Remember on this device" is on. Toggling the switch attempts to move the blob and remove the other copy. If storage fails or copies conflict, the sheet warns that a key may remain and cloud does not silently re-enable on reload; see 4n.
 - It is **not** part of `data`, so it is absent from the Firestore document and from `exportBackup()` (which serialises `{...data}` only). It is stored separately in browser storage and is **not encrypted by workspace passphrase protection**. `JSON.stringify(conn)` exists solely inside `saveConn()`.
 - The key never appears in the repo, in page source, or in any export. It is sent only to the selected provider (Gemini puts it in the query string; OpenAI-compatible uses `Authorization: Bearer`; Anthropic uses `x-api-key` plus `anthropic-dangerous-direct-browser-access: true`).
 
@@ -259,7 +259,7 @@ Transaction edits now preserve `purchaseId` and other existing metadata; purchas
 
 Protection is **off by default**; no existing data is encrypted until the user explicitly enables it in Settings. Setup currently requires HTTPS, Web Crypto, Web Locks, Google sign-in, and a successfully synced cloud document. It warns about unrecoverable passphrases, requires explicit acknowledgement, and asks the user to close other tabs/devices. `vault-crypto.mjs` uses PBKDF2-SHA-256 (600,000 iterations, random salt) to derive a non-extractable AES-256-GCM key; every save gets a random 96-bit IV and authenticated ciphertext. The passphrase is not persisted or deliberately sent to Firebase.
 
-The encrypted device copy is `northstar-vault-v1:{uid}` and an active-workspace marker makes the app lock before financial UI renders on reload. The lock screen can unlock the device offline; the Jarvis bridge/fallback returns no ledger while locked. Auth account mismatch never uploads the protected workspace to a different UID. A new device unlocks the existing cloud envelope and retains any older plaintext browser workspace. Protected JSON backups use the same passphrase; an emergency encrypted export can include unsaved in-memory changes. Plaintext exports and restores into an unprotected workspace are explicitly warned about.
+The encrypted device copy is `northstar-vault-v1:{uid}` and an active-workspace marker makes the app lock before financial UI renders on reload. The lock screen can unlock the device offline; the Jarvis bridge returns no ledger while locked. Auth account mismatch never uploads the protected workspace to a different UID. A new device unlocks the existing cloud envelope and retains any older plaintext browser workspace. Protected JSON backups use the same passphrase; an emergency encrypted export can include unsaved in-memory changes. Plaintext exports and restores into an unprotected workspace are explicitly warned about.
 
 Setup stages and verifies device ciphertext before replacing the entire Firestore document, without `merge:true`. Cloud writes serialize and compare a canonical fingerprint of the observed document inside a Firestore transaction; unsupported values and unsafe integers fail closed, and ordinary plaintext writes use Firestore's native merge to preserve unrelated fields. Conflict, mixed/invalid ciphertext, account changes, storage failures, and uncertain results pause sync instead of silently overwriting. Device writes serialize, use Web Locks, compare the previous stored envelope, and surface quota/cross-tab failures. If setup fails after staging, both old plaintext copies and the encrypted stage are retained; cloud protection is explicitly unconfirmed until reviewed/retried. Setup can optionally remove only exact matching old browser copies **after** both new copies are confirmed. Distinct local workspaces, downloaded backups, other browsers/devices, and provider backups/history may remain unencrypted.
 
@@ -283,6 +283,18 @@ The intro now has a prominent **Enter Northstar** button pinned above a separate
 
 **Verification:** 43 dependency-free Node tests and 11 optional headless Chromium scenarios cover simulated touch swipes in both directions and to the bottom, entry without scrolling at 320×240 through desktop sizes, landscape/rotation, main-page scrolling, replay/reload, keyboard and reduced motion, blocked preference writes, unreadable vault storage, synthetic encrypted device unlock, and pending/offline or encrypted cloud results. Finance records stayed unchanged in the tested flows; external services were blocked or mocked. Scoped axe checks reported no definite violations, with some contrast checks incomplete. A WebKit renderer was attempted but could not run because its native dependencies were unavailable. **No physical iPhone or Safari test was performed, and the original iOS failure is not confirmed fixed until the user tries the deployed site.**
 
+## 4n. Glass dock, Jarvis and financial motion (2026-11-09)
+
+The user chose a floating, Apple-inspired glass dock on both desktop and phone instead of the sidebar. The dock directly exposes all eight sections on wider screens; at 700px or narrower it shows Home, Activity, Goals, Plan, Guide and More, with Accounts, Budgets and Settings in More. The current section and reminder count remain accessible; More supports keyboard focus, Escape, outside dismissal and resize. Safe-area padding, a scrollable short-screen menu, the assistant orb, and toasts are arranged to avoid blocking the controls. `#glass-dock-design`, `renderDock`, `positionDockIndicator`, and `setDockMore` are the relevant landmarks; the old sidebar markup is gone.
+
+Jarvis has a larger responsive panel, suggestion chips, quick draft buttons, an accessible scrollable conversation and a clear-chat button. Local follow-ups retain the relevant account or month, recognize merchants and categories, and preserve cents and numeric names. Affordability asks for a specific account, then subtracts its configured minimum and active purchase allocations; it never presents combined accounts as spendable cash. Responses disclose that future obligations and actual bank balances are not verified. Daily estimates and over-allocated accounts disclose recorded shortfalls rather than hiding them behind a zero. Requests that are ambiguous ask for details or leave fields unset. Transactions, transfers, account balances, budgets, goals, and purchase plans still open the real form for review; no ledger change happens before explicit Save. An open finance/confirmation dialog cannot be displaced by assistant, navigation, or command-palette shortcuts.
+
+The assistant reads only the active in-memory ledger and is unavailable while the welcome, vault lock, or cloud loading blocks the workspace. Closing the panel, changing account/workspace, or clearing the chat cancels or ignores stale cloud requests and tests. Save & test discloses that it sends the key and finance summary; the optional recent-transactions setting also sends date, type, amount, category and description. Provider errors redact the literal and URL-encoded key. Connection storage checks both the chosen store and removal from the other store; failures and conflicting copies are surfaced, and cloud is not silently re-enabled from conflicting/unreadable copies. The key remains separate from workspace encryption and backups; no provider call was tested live.
+
+`#finance-motion` and `#finance-motion-runtime` add goal-marker and budget progress transitions, a transaction toast cue, and a planned-purchase move into the completed list. They only affect presentation and do not alter balances or records. Money-value count-ups were removed to avoid briefly displaying fictional values. A goal celebration for a protected workspace waits for the encrypted device save and is skipped on failure or a stale workspace/goal. Reduced motion suppresses the new movement. Preserve the accepted compact red purchased badge, its once-per-seen behavior, and all transaction/link safeguards in 4j.
+
+**Verification:** 53 dependency-free Node tests, nine optional interface Chromium scenarios, and 11 welcome Chromium scenarios passed. Interface checks exercised all eight sections at 320×240, 320×568, 390×844, 667×375, 844×390, 768×1024 and 1440×900; More keyboard/resize, reviewable drafts, finance motion and reduced motion, encrypted-device save success/failure, mocked provider cancellation/errors, account changes and blocked connection storage were covered. HTML/CSS/inline JavaScript parsing, duplicate-ID checks, and `git diff --check` passed. Scoped axe runs on the dock, More, assistant and Connections at 320×240, 390×844 and 1440×900 reported no definite violations; some contrast checks were incomplete. All browser services were mocked or blocked. **No physical iPhone, Safari, live AI provider, or live Firebase test was performed.**
+
 ## 5. User requirements and non-negotiable design constraints
 
 These requirements come from prior Northstar discussions and should guide future work.
@@ -298,8 +310,8 @@ These requirements come from prior Northstar discussions and should guide future
 - Aim for a premium, professional fintech feel: calm neutral surfaces, crisp typography, restrained accent color, clean hierarchy, and semantic colors only when they communicate something.
 - Avoid generic AI-looking styling, unnecessarily oversized cards, and empty dashboard space. Dashboard cards should use space for meaningful information rather than padding alone.
 - Keep the Purchase Planner compact and scannable as the number of planned items grows. Automatic grouping/sorting is preferred over manual reordering.
-- Keep phone layouts usable, not merely scaled-down desktop layouts.
-- The user values polished motion and careful alignment. Avoid adding animations that replay unexpectedly or ignore reduced-motion preferences.
+- Keep phone layouts usable, not merely scaled-down desktop layouts. The current floating dock replaces the sidebar at all sizes; preserve access to all eight sections.
+- The user values polished motion and careful alignment. Avoid adding animations that replay unexpectedly, make financial values temporarily inaccurate, or ignore reduced-motion preferences.
 
 ### Setup and assistance style
 - Explain technical setup one step at a time when directly guiding the user through setup.
@@ -310,7 +322,7 @@ These requirements come from prior Northstar discussions and should guide future
 
 The user had previously confirmed that the older mobile page-scrolling issue was fixed. Repository history includes the 2026-10-24 `83f81f7a` vertical-scroll fix and the 2026-10-26 `0dd404d8` iPhone document-scrolling improvement. Do not describe that historical main-page issue as newly unresolved.
 
-The user subsequently reported that the **welcome intro** prevented them from entering the app. Section 4m documents the pinned direct-entry action and native intro scroller added in response. Existing document scrolling, responsive sidebar/dock, safe-area spacing, and mobile performance safeguards remain. Simulated touch checks now cover both the intro and the main page, but the cause on the user's iPhone remains unverified. Ask the user to try the deployed site on their phone before claiming the new report is resolved; do not claim a physical-device test was performed.
+The user subsequently reported that the **welcome intro** prevented them from entering the app. Section 4m documents the pinned direct-entry action and native intro scroller added in response. Existing document scrolling, the responsive floating dock, safe-area spacing, and mobile performance safeguards remain. Simulated touch checks now cover both the intro and the main page, but the cause on the user's iPhone remains unverified. Ask the user to try the deployed site on their phone before claiming the new report is resolved; do not claim a physical-device test was performed.
 
 ## 7. Firebase and security notes
 
@@ -346,7 +358,7 @@ Before integrating it, confirm the user still wants a remote AI feature, check c
 
 The root README documents GitHub Pages deployment from branch `main`, folder `/(root)`. It also documents adding the GitHub Pages hostname as a Firebase Authentication authorized domain and publishing the Firestore rules in Firebase Console.
 
-GitHub Pages reported `built` at [the public site](https://corbinplayz.github.io/personal-finance/) after PR #21; its [deployment run](https://github.com/CorbinPlayz/personal-finance/actions/runs/42839110722) succeeded for merge commit `f46e974`. This confirms that deployment, not a fresh Firebase end-to-end test.
+GitHub Pages reported `built` at [the public site](https://corbinplayz.github.io/personal-finance/) after PR #23; its [deployment run](https://github.com/CorbinPlayz/personal-finance/actions/runs/42916131325) succeeded for merge commit `d73f84b`. Check GitHub Actions and Pages status for later changes. Deployment success does not validate Firebase, providers, or physical-device behavior.
 
 The optional Worker has a separate Wrangler configuration. The unchanged Worker's PR #21 preview check failed without diagnostics, while its production build check succeeded on the merge commit. Neither result confirms a live endpoint or front-end integration. Its README describes Cloudflare setup, AI binding, and Firebase API-key environment variable.
 
@@ -361,7 +373,10 @@ The file is large and contains mostly long CSS/JavaScript lines. Use targeted se
 | `applyTransaction`, `reservedFunds`, `accountBalanceParts`, `maxPurchaseAllocation` | Account arithmetic and purchase protection |
 | `showNorthstarDialog` | Reusable styled confirmation/choice dialogs |
 | `initWelcomeJourney`, `updateWelcomeProgress` | Intro scroll progress and reveal effects |
+| `renderDock`, `positionDockIndicator`, `setDockMore` | Shared responsive navigation, active indicator and More menu |
 | `render`, `renderOverview`, `renderTransactions`, `renderAccounts`, `renderBudgets`, `renderGoals` | Main page rendering |
+| `#jarvis-runtime`, `NorthstarLedger`, `routeMoneyAction` | Active-workspace assistant, local answers and reviewable form drafts |
+| `#finance-motion-runtime`, `celebrateSavedGoal` | Presentation-only feedback and protected-save celebration guard |
 | `renderPurchases`, `renderPurchaseTile`, `completedPurchaseEntries`, `setPurchaseStatus` | Read-only completed expense projections, explicit-ID deduplication, tile/detail display, and bought flow |
 | `safePriceHistory`, `estimatePriceTrend`, `renderPurchasePriceTools`, `savePriceCheck` | Manual price logs and local trend estimate |
 | `renderGuide`, `saveGuideProfile`, `answerGuide` | Rules-based Guide and saved profile/memory |
@@ -380,7 +395,7 @@ The most relevant code-history milestones on `main` include:
 - 2026-10-26: iPhone document-scrolling improvement; purchase planner descriptions and clear-data safeguards; automatic purchase priority sorting; compact square tiles and detail view; separate Purchased group; muted completed cards; one-time animated X; subsequent X/ring alignment refinements.
 - 2026-11-03: initial project handoff added.
  
-Recent work includes local Jarvis review-before-save drafts (PR #12), the compact purchased badge, the completed expense tiles and optional protected workspace (PR #21, sections 4j–4k), and the major-update write-up and interface follow-up (4l).
+Recent work includes local Jarvis review-before-save drafts (PR #12), the compact purchased badge, the completed expense tiles and optional protected workspace (PR #21, sections 4j–4k), the major-update write-up (4l), the pinned intro entry (PR #23, 4m), and the dock/Jarvis/motion refinements (4n).
 
 ## 12. Recommended next steps for a new AI/developer
 
@@ -393,6 +408,7 @@ Recent work includes local Jarvis review-before-save drafts (PR #12), the compac
 
 ## Work log
 
+- 2026-11-09: Replaced the sidebar with a responsive glass dock, refined Jarvis's local answers and reviewable drafts, added safe presentation-only financial feedback, and checked key-storage and protected-save failure paths. See 4n for verification and limits.
 - 2026-11-09: Responded to the new intro-specific mobile report with a pinned Enter Northstar action and native touch scroller. Simulated swipes, replay, storage and vault guards were checked; physical-phone confirmation is pending. See 4m.
 - 2026-11-09: Labeled PR #21 a major update, added the two-page repository write-up, updated README/Worker notes and app copy, and fixed the hidden Connections sheet and welcome replay issues found during responsive QA. See 4l for tests and limits.
 - 2026-11-09: Replaced the rejected expense-history panel with completed expense tiles, fixed lost links/price history and misleading dates, and added optional passphrase-protected device/cloud workspaces. Tests and limitations are in 4j–4k; Firebase rules still require separate deployment and live verification.

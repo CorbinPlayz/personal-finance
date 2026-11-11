@@ -204,3 +204,48 @@ test('locking flushes pending protected changes before reload and clears the sav
   vm.runInContext(section('async function lockProtectedWorkspace(', '\nfunction renderVaultPanel('), context);
   await context.lockProtectedWorkspace(); assert.equal(reloaded, true);
 });
+
+test('goal celebration waits for the protected device save and skips failures or stale goals', async () => {
+  const goal = { id: 'goal', name: 'Milestone', target: 100, saved: 100 };
+  const helper = section('function celebrateSavedGoal(', '\nfunction showToast(');
+  function prepare() {
+    const h = localHarness();
+    h.context.window = { NorthstarVaultLocked: false };
+    h.context.console = console;
+    h.context.data.goals = [{ ...goal }];
+    h.calls = [];
+    h.context.celebrateGoal = value => h.calls.push(value);
+    vm.runInContext(helper, h.context);
+    return h;
+  }
+  const saved = prepare();
+  saved.context.queueProtectedLocalSave();
+  saved.context.celebrateSavedGoal(goal, 'pending');
+  assert.equal(saved.calls.length, 0, 'do not celebrate before the write resolves');
+  await saved.context.vaultWriteTail; await Promise.resolve();
+  assert.equal(saved.calls.length, 1, 'celebrate after the protected copy is saved');
+
+  const failed = prepare(); failed.failWrites = true;
+  failed.context.queueProtectedLocalSave(); failed.context.celebrateSavedGoal(goal, 'pending');
+  await failed.context.vaultWriteTail; await Promise.resolve();
+  assert.ok(failed.context.vault.error);
+  assert.equal(failed.calls.length, 0, 'quota failures are not celebrated');
+
+  const changed = prepare();
+  changed.context.queueProtectedLocalSave(); changed.context.celebrateSavedGoal(goal, 'pending');
+  changed.context.data.goals = [{ ...goal, saved: 10 }];
+  await changed.context.vaultWriteTail; await Promise.resolve();
+  assert.equal(changed.calls.length, 0, 'a no-longer-complete goal is not celebrated');
+
+  const switched = prepare();
+  switched.context.queueProtectedLocalSave(); switched.context.celebrateSavedGoal(goal, 'pending');
+  switched.context.vault.session++;
+  await switched.context.vaultWriteTail; await Promise.resolve();
+  assert.equal(switched.calls.length, 0, 'a changed workspace cannot trigger the old celebration');
+
+  const immediate = prepare();
+  immediate.context.celebrateSavedGoal(goal, false);
+  assert.equal(immediate.calls.length, 0);
+  immediate.context.celebrateSavedGoal(goal, true);
+  assert.equal(immediate.calls.length, 1, 'an immediately saved goal celebrates immediately');
+});
