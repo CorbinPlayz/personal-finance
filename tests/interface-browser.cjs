@@ -51,6 +51,7 @@ const firebaseModules = {
     args: ['--no-sandbox', '--disable-dev-shm-usage', ...(process.env.CHROMIUM_FLAGS || '').split(/\s+/).filter(Boolean)] });
   let count = 0;
   const failures = [];
+  const noticeRequests = [];
   async function check(name, fn) {
     try { await fn(); console.log('PASS', name); count++; }
     catch (error) { console.error('FAIL', name); throw error; }
@@ -65,6 +66,7 @@ const firebaseModules = {
     await page.setRequestInterception(true);
     page.on('request', request => {
       const url = request.url();
+      if (url.startsWith(base + '/') && new URL(url).pathname.endsWith('/ai-reader-notice.js')) noticeRequests.push(url);
       if (url.startsWith(base + '/') || url.startsWith('data:')) return void request.continue();
       const name = Object.keys(firebaseModules).find(item => url.endsWith('/' + item));
       if (name) return void request.respond({ status: 200, contentType: 'text/javascript', headers: { 'Access-Control-Allow-Origin': '*' }, body: firebaseModules[name] });
@@ -493,6 +495,7 @@ const firebaseModules = {
     });
 
     assert.deepEqual(failures, [], 'no uncaught browser errors');
+    assert.deepEqual(noticeRequests, [], 'the comment-only notice must never be fetched by the site');
     console.log(`\n${count} browser scenarios passed. Providers and Firebase were mocked; all other external requests were blocked.`);
   } finally {
     await browser.close();
