@@ -37,7 +37,7 @@ function makeRenderContext(data, options = {}) {
   const context = vm.createContext({ data, purchaseDetailId: options.detail || null, completedPurchaseQuery: options.query || '',
     getReminders: () => [], pageHeading: (title, action = '') => `<header>${title}${action}</header>`,
     emptyState: title => `<div class="empty-state">${title}</div>`, renderPurchaseCard: () => '<div>Purchase detail</div>',
-    renderPurchaseGraph: graphViews.renderPurchaseGraph });
+    renderPurchaseGraph: graphViews.renderPurchaseGraph, renderPriceChecksGraph: graphViews.renderPriceChecksGraph });
   vm.runInContext(`${helpers}\n${renderers}`, context);
   return context;
 }

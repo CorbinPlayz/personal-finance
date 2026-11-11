@@ -2,9 +2,10 @@
 // These render the real presentation module with synthetic records and no DOM.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { renderCashFlowGraph, renderCategoryGraph, renderTransactionGraph, renderAccountGraph,
-  renderBudgetGraph, renderGoalGraph, renderPurchaseGraph, renderScenarioPanel, renderScenarioResult } from '../financial-graphs-view.mjs';
+  renderBudgetGraph, renderGoalGraph, renderPurchaseGraph, renderWorkspaceCountGraph, renderGuideProfileGraph, renderPriceChecksGraph, renderScenarioPanel, renderScenarioResult } from '../financial-graphs-view.mjs';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const format = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -101,6 +102,69 @@ test('goal and purchase percentages disclose the uncapped amount and never guess
   assert.doesNotMatch(purchaseHtml, /Linked item|>Later</);
   assert.match(purchaseHtml, /Bars cap at 100%/);
   assert.equal(JSON.stringify(purchases), before);
+  const large = renderPurchaseGraph([{ id: 'large', name: 'Large', price: '70000000000000.02', saved: '70000000000000.01', status: 'Saving' }], new Set(), money, esc);
+  assert.match(large, /\$0\.01 remaining/, 'subtract in cents even for close large values');
+});
+
+test('workspace record mix shows counts, not balances, with an honest zero state', () => {
+  const counts = [['Accounts', 2], ['Transactions', 5], ['Budgets', 1], ['Goals', 0], ['<Purchases>', 2]], before = JSON.stringify(counts);
+  const html = renderWorkspaceCountGraph(counts, esc);
+  assert.match(html, /Active workspace counts, not balances/);
+  assert.match(html, /<strong>5<\/strong><span>.*Transactions/);
+  assert.match(html, /&lt;Purchases&gt;/); assert.doesNotMatch(html, /<Purchases>/);
+  assert.match(html, /width:50%/);
+  assert.equal(JSON.stringify(counts), before);
+  assert.match(renderWorkspaceCountGraph([['Accounts', 0]], esc), /No records to chart yet/);
+});
+
+test('Guide graph uses only explicitly saved profile values and discloses a shortfall', () => {
+  const profile = { monthlyIncome: '1000', essentialBills: '750', cushion: '400' }, before = JSON.stringify(profile);
+  const html = renderGuideProfileGraph(profile, money, esc);
+  assert.match(html, /Monthly income · \$1,000\.00/);
+  assert.match(html, /Bills and buffer exceed income by \$150\.00/);
+  assert.match(html, /the bar caps segments at the income entered/);
+  assert.match(html, /not actual transactions or a verified balance/);
+  assert.equal(JSON.stringify(profile), before);
+  assert.match(renderGuideProfileGraph({ monthlyIncome: '1000', essentialBills: '', cushion: '0' }, money, esc), /Save a positive income, bills, and buffer/);
+  assert.match(renderGuideProfileGraph({ monthlyIncome: '1000', essentialBills: '0', cushion: '0' }, money, esc), /Room left/);
+  assert.match(renderGuideProfileGraph({ monthlyIncome: '0', essentialBills: '0', cushion: '0' }, money, esc), /Build your monthly picture/);
+  const large = renderGuideProfileGraph({ monthlyIncome: '70000000000000.02', essentialBills: '70000000000000.01', cushion: '0' }, money, esc);
+  assert.match(large, /Room left<\/small><strong>\$0\.01/);
+  assert.match(renderGuideProfileGraph({ monthlyIncome: '10', essentialBills: '70000000000000', cushion: '10000000000000' }, money, esc), /Amounts are too large to compare/);
+});
+
+test('normalization preserves an absent imported buffer without changing the Guide form default', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const between = (start, end) => {
+    const first = html.indexOf(start), last = html.indexOf(end, first);
+    assert.ok(first >= 0 && last > first);
+    return html.slice(first, last);
+  };
+  const context = vm.createContext({ blankData: () => ({ settings: { profile: { monthlyIncome: '', essentialBills: '', cushion: '250' } } }) });
+  vm.runInContext(`${between('function normalizeData(input){', 'function migrateSimpleTransactions(')}\n${between('function getGuideProfile(){', 'function safePriceHistory(')}`, context);
+  const source = { accounts: [], settings: { profile: { monthlyIncome: '2000', essentialBills: '1200' } } };
+  const before = JSON.stringify(source);
+  context.data = context.normalizeData(source);
+  assert.equal(Object.hasOwn(context.data.settings.profile, 'cushion'), false);
+  assert.equal(context.getGuideProfile().cushion, '250', 'the existing form still supplies its default');
+  assert.match(renderGuideProfileGraph(context.data.settings.profile, money, esc), /Build your monthly picture/);
+  assert.equal(JSON.stringify(source), before);
+  context.data = context.normalizeData({ accounts: [], settings: { profile: { ...source.settings.profile, cushion: '0' } } });
+  assert.match(renderGuideProfileGraph(context.data.settings.profile, money, esc), /Room left/);
+});
+
+test('purchase price timeline is an ordered view of manual checks, not an expense history or forecast', () => {
+  const purchase = { id: 'p1', priceHistory: [{ date: '2026-11-02', price: 24 }, { date: '2026-10-02', price: 30 },
+    { date: '2026-11-31', price: 1 }, { date: '2026-11-05', price: 20 }] };
+  const before = JSON.stringify(purchase), html = renderPriceChecksGraph(purchase, money, esc, value => value);
+  assert.match(html, /Latest · \$20\.00 on 2026-11-05/);
+  assert.match(html, /Showing 3 of 3 valid checks, equally spaced/);
+  assert.match(html, /Not a live price feed or forecast/);
+  assert.match(html, /1 entry could not be graphed/);
+  assert.match(html, /2026-10-02<\/th><td>\$30\.00/);
+  assert.doesNotMatch(html, /purchaseExpenseHistory|show-purchase-expenses|manage-expenses/);
+  assert.equal(JSON.stringify(purchase), before);
+  assert.match(renderPriceChecksGraph({ id: 'empty' }, money, esc, value => value), /No prices logged yet/);
 });
 
 test('scenario controls and output are explicit, escaped, and do not change goals', () => {

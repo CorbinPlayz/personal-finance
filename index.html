@@ -1562,7 +1562,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <input id="backupFile" type="file" accept="application/json,.json" class="hidden">
 <script type="module">
 import { looksEncrypted, validateEnvelope, newKdf, deriveVaultKey, encryptLedger, decryptLedger, sameKdf } from './vault-crypto.mjs';
-import { renderCashFlowGraph, renderCategoryGraph, renderTransactionGraph, renderAccountGraph, renderBudgetGraph, renderGoalGraph, renderPurchaseGraph, renderScenarioPanel, renderScenarioResult } from './financial-graphs-view.mjs';
+import { renderCashFlowGraph, renderCategoryGraph, renderTransactionGraph, renderAccountGraph, renderBudgetGraph, renderGoalGraph, renderPurchaseGraph, renderWorkspaceCountGraph, renderGuideProfileGraph, renderPriceChecksGraph, renderScenarioPanel, renderScenarioResult } from './financial-graphs-view.mjs';
 const FIREBASE_VERSION='13.1.0';
 const firebaseConfig={apiKey:'AIzaSyC8f5T4LzZRuhii3SwgFDrf8tpLZNEqnKw',authDomain:'northstar-personal-finan-ca543.firebaseapp.com',projectId:'northstar-personal-finan-ca543',storageBucket:'northstar-personal-finan-ca543.firebasestorage.app',messagingSenderId:'1009926915952',appId:'1:1009926915952:web:4c0027a0b1082c770971b5',measurementId:'G-S3DTKY24TP'};
 const CATEGORIES=['Housing','Food','Transport','Shopping','Entertainment','Bills','Health','Education','Income','Other'];
@@ -1612,7 +1612,11 @@ function normalizeData(input){
  if(!input||typeof input!=='object')return blankData();
  let x=input.data&&typeof input.data==='object'?input.data:input;
  if(!Array.isArray(x.accounts)){return migrateSimpleTransactions(Array.isArray(x.transactions)?x.transactions:[])}
- const b=blankData();return { ...b,...x,version:1,accounts:Array.isArray(x.accounts)?x.accounts:[],transactions:Array.isArray(x.transactions)?x.transactions:[],budgets:Array.isArray(x.budgets)?x.budgets:[],goals:Array.isArray(x.goals)?x.goals:[],purchases:Array.isArray(x.purchases)?x.purchases:[],settings:{...b.settings,...(x.settings||{}),profile:{...b.settings.profile,...(x.settings?.profile||{})}}};
+ const b=blankData(),sourceProfile=x.settings?.profile||{},profile={...b.settings.profile,...sourceProfile};
+ // The Guide can show its legacy default buffer in the form, but a missing
+ // imported buffer is not a saved value for the graph. Do not invent it.
+ if(!Object.prototype.hasOwnProperty.call(sourceProfile,'cushion'))delete profile.cushion;
+ return { ...b,...x,version:1,accounts:Array.isArray(x.accounts)?x.accounts:[],transactions:Array.isArray(x.transactions)?x.transactions:[],budgets:Array.isArray(x.budgets)?x.budgets:[],goals:Array.isArray(x.goals)?x.goals:[],purchases:Array.isArray(x.purchases)?x.purchases:[],settings:{...b.settings,...(x.settings||{}),profile}};
 }
 function migrateSimpleTransactions(old){
  const d=blankData();if(!Array.isArray(old)||!old.length)return d;
@@ -1938,7 +1942,7 @@ function renderPurchases(){
  if(detail){
   const linked=completed.find(entry=>!entry.expenseOnly&&entry.plan.id===detail.id)?.transaction;
   const linkedNote=linked?`<div class="purchase-linked-note"><div><strong>Linked expense</strong><span>${esc(money(linked.amount))} · ${esc(fmtDate(linked.date))} · ${esc(accountName(linked.accountId))}</span></div><button class="secondary-btn small" data-action="edit-transaction" data-id="${esc(linked.id)}">Edit expense ↗</button></div>`:'';
-  return `${pageHeading('Purchase details',`<button class="secondary-btn" data-action="back-to-purchases">← All purchases</button>`)}<div class="purchase-detail-view"><div class="purchase-detail-intro"><span class="eyebrow">PURCHASE PLANNER</span><p>Review the details, update what you have saved, or edit the full plan.</p></div>${linkedNote}${renderPurchaseCard(detail)}</div>`;
+  return `${pageHeading('Purchase details',`<button class="secondary-btn" data-action="back-to-purchases">← All purchases</button>`)}<div class="purchase-detail-view"><div class="purchase-detail-intro"><span class="eyebrow">PURCHASE PLANNER</span><p>Review the details, update what you have saved, or edit the full plan.</p></div>${linkedNote}${renderPurchaseCard(detail)}${renderPriceChecksGraph(detail,money,esc,fmtDate)}</div>`;
  }
  const completedPlanIds=new Set(completed.filter(entry=>!entry.expenseOnly).map(entry=>entry.plan.id));
  const linkedActive=completed.some(entry=>!entry.expenseOnly&&entry.plan.originalStatus&&!['Purchased','Cancelled'].includes(entry.plan.originalStatus));
@@ -1982,6 +1986,7 @@ function renderGuide(){
  const field=(label,name,value,hint)=>'<label class="field-label">'+label+'<input name="'+name+'" type="number" min="0" step="0.01" inputmode="decimal" value="'+esc(value||'')+'" placeholder="0.00">'+(hint?'<small class="muted-small">'+hint+'</small>':'')+'</label>';
  let html=pageHeading('Northstar Guide','<button class="secondary-btn" data-action="page" data-page="Purchases">Open purchase planner ↗</button>');
  html+='<section class="guide-hero"><div class="eyebrow">YOUR PERSONAL COMPASS</div><h2>A plan that remembers what matters to you.</h2><p>Save your monthly picture and priorities once. Northstar uses them to shape practical next steps, organize planned purchases, and review the price history you record.</p><div class="guide-hero-statrow"><div class="guide-hero-stat"><span>Monthly room after bills & buffer</span><strong>'+(income>0?esc(money(monthlyRoom)):'Add your profile')+'</strong></div><div class="guide-hero-stat"><span>Estimated spendable now</span><strong>'+esc(money(spendable))+'</strong></div><div class="guide-hero-stat"><span>Active purchase plans</span><strong>'+active.length+'</strong></div></div></section>';
+ html+=renderGuideProfileGraph(data.settings?.profile,money,esc);
  html+='<div class="guide-grid"><section class="panel"><div class="panel-head"><div><h2>Your profile & memory</h2><p>Only details you choose are stored in Northstar.</p></div><span class="category-pill">Saved profile</span></div><form id="guideProfileForm"><div class="guide-profile-grid">';
  html+=field('Monthly take-home income','monthlyIncome',p.monthlyIncome,'After tax, in your display currency');
  html+=field('Essential monthly bills','essentialBills',p.essentialBills,'Rent, utilities, phone and required costs');
@@ -2022,7 +2027,7 @@ function savePriceCheck(e){e.preventDefault();const form=e.target,id=form.datase
 function renderSettings(){const counts=[['Accounts',data.accounts.length],['Transactions',data.transactions.length],['Budgets',data.budgets.length],['Goals',data.goals.length],['Purchases',data.purchases.length]];return `${pageHeading('Settings')}<div class="settings-layout"><section class="panel"><div class="panel-head"><div><h2>Cloud sync & account</h2><p>Optional Google sign-in for this device and your other devices.</p></div><span class="category-pill">${user?(cloudLoaded&&!lastSyncError?'Cloud active':'Sync needs attention'):'Local only'}</span></div><div class="setting-action"><div><strong>${user?esc(user.displayName||user.email||'Google account'):'Connect Google'}</strong><p>${user?(cloudLoaded&&!lastSyncError?'Your finance data loaded from Firestore and cloud saves are enabled.':'Google sign-in succeeded, but Northstar has not confirmed a successful cloud sync. Your changes stay in this browser until the Firestore issue is fixed.'):'Your entries stay in this browser until you connect Google and sync them.'}</p></div>${user?`${(!cloudLoaded||lastSyncError)?'<button class="primary-btn" data-action="retry-sync">Retry cloud sync</button>':''}<button class="secondary-btn" data-action="signout">Sign out</button>`:'<button class="primary-btn" data-action="signin">Connect Google</button>'}</div><div class="privacy-note"><span>♧</span><span>Only sign in on a device you trust. Cloud access is intended to be restricted to your own user ID by Firestore security rules. Use fictional data until you confirm your rules are published and tested.</span></div></section>
 ${renderVaultPanel()}
 <section class="panel"><div class="panel-head"><div><h2>Preferences</h2><p>Personalize how your numbers are displayed.</p></div></div><label class="field-label" style="max-width:360px">Display currency<select id="currencySelect">${options(['USD','CAD','GBP','EUR','AUD','NZD','JPY'],data.settings.currency||'USD')}</select></label><p class="form-hint">Changing currency changes display formatting only. Northstar does not perform exchange-rate conversion.</p></section>
-<section class="panel"><div class="panel-head"><div><h2>Backup & restore</h2><p>Keep a private backup before making major changes.</p></div></div><div class="setting-action"><div><strong>Export backup</strong><p>${vault.state==='unlocked'?'Download an encrypted JSON backup of this workspace. Keep your passphrase safe.':'Download a readable, unencrypted JSON backup. Store it privately.'}</p></div><button class="secondary-btn" data-action="export">↓ Export backup</button></div><div class="setting-action"><div><strong>Restore backup</strong><p>Replace the current data with a plaintext or encrypted Northstar JSON backup.</p></div><button class="secondary-btn" data-action="import">↑ Choose file</button></div><div class="data-counts">${counts.map(([label,n])=>`<div><strong>${n}</strong><span>${label}</span></div>`).join('')}</div></section>
+<section class="panel"><div class="panel-head"><div><h2>Backup & restore</h2><p>Keep a private backup before making major changes.</p></div></div><div class="setting-action"><div><strong>Export backup</strong><p>${vault.state==='unlocked'?'Download an encrypted JSON backup of this workspace. Keep your passphrase safe.':'Download a readable, unencrypted JSON backup. Store it privately.'}</p></div><button class="secondary-btn" data-action="export">↓ Export backup</button></div><div class="setting-action"><div><strong>Restore backup</strong><p>Replace the current data with a plaintext or encrypted Northstar JSON backup.</p></div><button class="secondary-btn" data-action="import">↑ Choose file</button></div>${renderWorkspaceCountGraph(counts,esc)}</section>
 <section class="panel"><div class="panel-head"><div><h2>Data management</h2><p>Clear this Northstar dataset if you need a fresh start.</p></div></div><div class="setting-action"><div><strong>Clear all financial data</strong><p>This deletes accounts, transactions, budgets, goals, and purchase plans from the active dataset. Export a backup first if you may need the information.</p></div><button class="danger-btn" data-action="clear-data">Clear data</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Your Northstar experience</h2><p>Revisit the welcome screen and compass animation any time.</p></div></div><div class="setting-action"><div><strong>Welcome screen</strong><p>See the Northstar introduction and animated compass again.</p></div><button class="secondary-btn" data-action="welcome-again">Replay welcome ↗</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Sound & celebrations</h2><p>Celebrate a savings milestone with a short chime and animation.</p></div></div><label class="checkbox-line"><input id="goalSoundsToggle" type="checkbox" ${data.settings.goalSounds!==false?"checked":""}> Play goal-completion sounds</label><p class="form-hint">Sound plays only when you reach a goal after using the app. You can turn it off here.</p></section>
@@ -3370,15 +3375,22 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   var seen=new Set(),scheduled=false,media=window.matchMedia('(prefers-reduced-motion: reduce)');
   function ready(){return document.documentElement.classList.contains('northstar-seen')&&!window.NorthstarVaultLocked&&!shell?.inert&&!document.hidden}
   function reveal(el){
-    var key=el.dataset.graphKey;if(!key||seen.has(key)||!ready())return;
-    seen.add(key);
-    if(!media.matches){
-      el.classList.add('ns-graph-enter');
-      var finish=function(event){if(event.target!==el||event.animationName!=='nsGraphArrive')return;el.classList.remove('ns-graph-enter');el.removeEventListener('animationend',finish);el.removeEventListener('animationcancel',finish)};
-      el.addEventListener('animationend',finish);el.addEventListener('animationcancel',finish);
-    }
+    var key=el.dataset.graphKey;if(!key||seen.has(key)||!ready()||el.classList.contains('ns-graph-enter'))return;
+    if(media.matches){seen.add(key);if(observer)observer.unobserve(el);return}
+    // Initial auth and sync can replace a graph before its first paint. Mark it
+    // seen only when an attached element actually starts animating.
+    var started=function(event){
+      if(event.target!==el||event.animationName!=='nsGraphArrive')return;
+      if(el.isConnected&&ready()&&!media.matches){seen.add(key);if(observer)observer.unobserve(el)}
+    };
+    var finish=function(event){
+      if(event.target!==el||event.animationName!=='nsGraphArrive')return;
+      el.classList.remove('ns-graph-enter');el.removeEventListener('animationstart',started);el.removeEventListener('animationend',finish);el.removeEventListener('animationcancel',finish);
+    };
+    el.addEventListener('animationstart',started);el.addEventListener('animationend',finish);el.addEventListener('animationcancel',finish);
+    el.classList.add('ns-graph-enter');
   }
-  var observer='IntersectionObserver' in window?new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting){reveal(entry.target);if(seen.has(entry.target.dataset.graphKey))observer.unobserve(entry.target)}})},{threshold:.1}):null;
+  var observer='IntersectionObserver' in window?new IntersectionObserver(function(entries){entries.forEach(function(entry){if(entry.isIntersecting)reveal(entry.target)})},{threshold:.1}):null;
   function scan(){
     scheduled=false;if(observer)observer.disconnect();if(!ready())return;
     content.querySelectorAll('[data-graph-key]').forEach(function(el){

@@ -2,24 +2,45 @@
  * Read-only models for Northstar's financial graphs.
  * These functions use recorded entries only; they never update the ledger.
  */
-const MAX_CENTS = Number.MAX_SAFE_INTEGER;
+// Beyond 2^46 currency units, a JavaScript number cannot represent every cent.
+// Reject those amounts and aggregates rather than display a different cent.
+const MAX_CENTS = 2 ** 46 * 100 - 1;
 
 function cents(value) {
   if ((typeof value !== 'number' && typeof value !== 'string') || (typeof value === 'string' && !value.trim())) return null;
   const amount = Number(value);
   if (!Number.isFinite(amount) || amount < 0) return null;
   const result = Math.round((amount + Number.EPSILON) * 100);
-  return Number.isSafeInteger(result) ? result : null;
+  return Number.isSafeInteger(result) && result <= MAX_CENTS ? result : null;
 }
 
 function addCents(current, addition) {
-  return Number.isSafeInteger(current + addition) ? current + addition : null;
+  const result = current + addition;
+  return Number.isSafeInteger(result) && result <= MAX_CENTS ? result : null;
 }
 
 /* Match the graph models' monetary validation in presentation-only views. */
 export function graphAmount(value) {
   const result = cents(value);
   return result === null ? null : result / 100;
+}
+
+/* Keep aggregate and difference arithmetic in cents before formatting. */
+export function graphTotal(values) {
+  if (!Array.isArray(values)) return null;
+  let total = 0;
+  for (const value of values) {
+    const amount = cents(value);
+    if (amount === null) return null;
+    total = addCents(total, amount);
+    if (total === null) return null;
+  }
+  return total / 100;
+}
+
+export function graphDifference(left, right) {
+  const a = cents(left), b = cents(right);
+  return a === null || b === null ? null : (a - b) / 100;
 }
 
 const hasId = value => (typeof value === 'string' && value.trim() !== '') || (typeof value === 'number' && Number.isFinite(value));
@@ -124,6 +145,21 @@ export function transactionGraph(transactions) {
     group.cents = next; group.count++; total = nextTotal;
   }
   return { groups: groups.map(group => ({ type: group.type, amount: group.cents / 100, count: group.count })), total: total / 100, excluded };
+}
+
+/* A price check is a manual observation, not a purchase or a live price feed. */
+export function priceChecksGraph(history, count = 6) {
+  const source = Array.isArray(history) ? history : [];
+  const valid = [];
+  let excluded = 0;
+  source.forEach((item, index) => {
+    const value = cents(item?.price);
+    if (!graphMonthFromDate(item?.date) || value === null || value === 0) { excluded++; return; }
+    valid.push({ date: item.date, price: value / 100, index });
+  });
+  valid.sort((a, b) => a.date.localeCompare(b.date) || a.index - b.index);
+  const limit = Number.isInteger(count) && count > 0 && count <= 24 ? count : 6;
+  return { rows: valid.slice(-limit).map(({ date, price }) => ({ date, price })), total: valid.length, excluded };
 }
 
 /* Explicit what-if inputs only: no saved data, interest or bank activity is assumed. */

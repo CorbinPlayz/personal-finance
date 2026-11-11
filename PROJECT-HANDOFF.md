@@ -26,7 +26,7 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | Visual design | Monochrome glass shell with semantic money colors, presentation-only finance feedback, and the compact red purchased badge; see 4a, 4d, and 4n. |
 | Local persistence | Browser `localStorage`; plaintext by default. Optional passphrase-protected workspace uses a separate encrypted device copy. |
 | Google sign-in / Firestore sync | Implemented in the front end. The user previously reported that Google sign-in and cloud sync worked; this has not been freshly tested during this handoff update. |
-| Transactions, accounts, budgets, goals, purchases | Implemented in the main app; recorded expenses appear as completed purchase tiles. |
+| Transactions, accounts, budgets, goals, purchases | Implemented in the main app; recorded expenses appear as completed purchase tiles. Read-only graphs now cover all eight sections; see 4p. |
 | Major update | PR #21 shipped the completed-expense and optional protection changes. The two-page user-facing overview is `MAJOR-UPDATE.md`; Settings links to it and the welcome screen labels the update. |
 | Purchase priority sorting and compact tile/detail flow | Implemented |
 | Purchased state and one-time X animation | Implemented; recent commits refined the visual alignment of the X and impact ring |
@@ -41,11 +41,14 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 
 | File | Purpose and important notes |
 |---|---|
-| `index.html` | The complete static app entry point and primary implementation. It contains the HTML shell, extensive CSS, app state, render functions, forms, event handling, local persistence, Firebase integration, dock, Jarvis, and presentation effects. It is large (about 472 KB uncompressed). Make focused edits; do not replace the whole file casually. |
+| `index.html` | The static app entry point and primary implementation. It contains the HTML shell, extensive CSS, app state, render functions, forms, event handling, local persistence, Firebase integration, dock, Jarvis, and presentation effects. It imports the vault and graph modules listed below. Make focused edits; do not replace the whole file casually. |
 | `README.md` | Product overview, major-update summary and link, GitHub Pages publishing steps, Firebase setup, data-path notes, and privacy/security warnings. It describes the Guide as rules-based. |
 | `MAJOR-UPDATE.md` | Two-page explanation of PR #21's purchase tiles, finance safeguards, optional protection, backups, and verification limits. Linked from README, Settings, and the Worker notes. |
 | `firestore.rules` | User-scoped Firestore rules with a guard against plaintext merges into a protected document. Publishing and testing these rules in Firebase Console is a separate, unverified deployment step. |
 | `vault-crypto.mjs` | Browser/Node Web Crypto envelope helpers: PBKDF2-SHA-256, AES-256-GCM, fresh IV, strict encrypted-format validation. It must be deployed alongside `index.html`. |
+| `finance-graphs.mjs` | Pure read-only financial graph models with strict date/amount validation, transfer direction, safe aggregation, and transient goal scenario calculations. No network or storage access. |
+| `financial-graphs-view.mjs`, `financial-graphs.css` | Escaped, responsive graph rendering, exact-value disclosures, empty/exclusion states, and reduced-motion-aware glass styling. Deploy these files next to the HTML and model module. |
+| `tests/finance-graphs.test.mjs`, `tests/financial-graphs-view.test.mjs`, `tests/finance-graphs-browser.cjs` | Synthetic calculation, escaping, responsive, keyboard, animation and scoped accessibility checks; browser services are mocked or blocked. |
 | `cloudflare-worker/README.md` | Setup, deployment, quota, and privacy notes for an optional Cloudflare Workers AI backend. |
 | `cloudflare-worker/src/index.js` | Worker endpoint. Restricts origin, checks a Firebase ID token, validates the request, sends the question and supplied context to Workers AI, and returns an advisory response. |
 | `cloudflare-worker/wrangler.toml` | Wrangler configuration; Worker name is `northstar-finance-ai`, entry point is `src/index.js`, and AI binding is named `AI`. |
@@ -300,6 +303,21 @@ The assistant reads only the active in-memory ledger and is unavailable while th
 
 At the owner's request, both the inline AI-reader comment and the separate legacy notice were removed. They did not implement website access control, and removing them does not alter the finance app's logic. Previously published versions can still remain in Git history and existing copies.
 
+## 4p. Financial graphs across Northstar (2026-11-09)
+
+PR #28 adds graphs without changing the ledger, saving projections, importing a chart library, or contacting an external data service. Models in `finance-graphs.mjs` consume the active in-memory workspace; renderers in `financial-graphs-view.mjs` escape labels and expose exact values as text or tables. `financial-graphs.css` is a required static asset, not a build output. The HTML only wires these pieces into existing pages and keeps goal what-if inputs in transient UI state.
+
+- **Overview:** six calendar months of valid recorded income and spending, excluding transfers; current-month expense categories.
+- **Transactions:** income, expense, and transfer amounts with valid numeric values for the current search and filters. Transfers are counted once, not as income or spending.
+- **Accounts:** three months of valid recorded inflows/outflows for each individual account, with transfer sides attributed to the correct account. These are flows, not reconstructed bank balances.
+- **Budgets and Goals:** validated current-month category spending versus limits; goal progress plus an optional comparison of up to two explicitly entered monthly contributions, assuming no interest or fees. Scenarios neither check cash availability nor move money; inputs are transient and reset on page rerender.
+- **Purchases:** active planned-purchase funding, not bank funds or completed expenses; each purchase detail has an equally spaced timeline of manually logged price checks, not a live retailer feed or a forecast.
+- **Guide and Settings:** saved income, bills, and cushion with any arithmetic shortfall, not actual transactions or a verified balance; active workspace record counts, not monetary totals. Imported profiles missing a buffer retain that absence during normalization and are not graphed as though the Guide's existing form default were saved. The form's default remains unchanged; users should review it before saving.
+
+Strict graph validation can make a graph differ from older list/card calculations when imported records have malformed dates or amounts. Excluded entries and capped marks are disclosed; totals and differences use cents, and magnitudes that cannot retain cent precision are not presented as exact. The UI includes honest empty states, exact-value alternatives, and legends so color is not the only signal. Motion is presentation-only: the graph is marked seen when its entrance actually starts, preventing auth/sync rerenders from consuming the animation before paint. Reduced-motion turns it off, including mid-animation.
+
+**Verification:** 76 dependency-free Node tests, 11 synthetic/mocked graph Chromium scenarios, nine interface Chromium scenarios and 11 welcome Chromium scenarios passed. Graph checks covered 320, 390, 768 and 1440 CSS-pixel widths, duplicate IDs, filter/Save/read-only behavior, a missing imported Guide buffer, keyboard controls, long escaped labels, empty and invalid data, and reduced motion. HTML, CSS and inline scripts parsed without errors, and `git diff --check` passed. Scoped axe found no definite violations but returned 10 incomplete/manual-review results on translucent surfaces; a separate conservative opaque-background contrast check passed, not a complete accessibility audit. External services were mocked or blocked; no physical iPhone, Safari, live AI provider, or live Firebase/rules test was performed.
+
 ## 5. User requirements and non-negotiable design constraints
 
 These requirements come from prior Northstar discussions and should guide future work.
@@ -379,7 +397,8 @@ The file is large and contains mostly long CSS/JavaScript lines. Use targeted se
 | `showNorthstarDialog` | Reusable styled confirmation/choice dialogs |
 | `initWelcomeJourney`, `updateWelcomeProgress` | Intro scroll progress and reveal effects |
 | `renderDock`, `positionDockIndicator`, `setDockMore` | Shared responsive navigation, active indicator and More menu |
-| `render`, `renderOverview`, `renderTransactions`, `renderAccounts`, `renderBudgets`, `renderGoals` | Main page rendering |
+| `render`, `renderOverview`, `renderTransactions`, `renderAccounts`, `renderBudgets`, `renderGoals` | Main page rendering and graph integration |
+| `finance-graphs.mjs`, `financial-graphs-view.mjs`, `financial-graphs.css`, `prepareGraphEntrances` | Pure graph models, escaped accessible rendering, styling and one-shot visible-entry motion |
 | `#jarvis-runtime`, `NorthstarLedger`, `routeMoneyAction` | Active-workspace assistant, local answers and reviewable form drafts |
 | `#finance-motion-runtime`, `celebrateSavedGoal` | Presentation-only feedback and protected-save celebration guard |
 | `renderPurchases`, `renderPurchaseTile`, `completedPurchaseEntries`, `setPurchaseStatus` | Read-only completed expense projections, explicit-ID deduplication, tile/detail display, and bought flow |
@@ -413,6 +432,7 @@ Recent work includes local Jarvis review-before-save drafts (PR #12), the compac
 
 ## Work log
 
+- 2026-11-09: Added read-only graphs across all eight sections and transient goal contribution comparisons, with exact-value alternatives, responsive layouts, reduced motion, and synthetic model/browser checks. See 4p for graph meanings and verification limits.
 - 2026-11-09: Removed the inline and legacy AI-reader notices at the owner's request. The page otherwise matches the previous release byte-for-byte; the removed inline comment reduced the uncompressed page by about 258 KB. All 54 Node tests, 20 simulated Chromium scenarios, HTML/CSS/JavaScript parser checks, and duplicate-ID checks passed. Services were mocked or blocked; no physical device or live-provider test was performed. See 4o.
 - 2026-11-09 (superseded by removal; see 4o): Replaced the original source pointer with a 3,000-line HTML comment. All 57 Node tests and 21 simulated Chromium scenarios passed; the notice stayed invisible, navigation worked, and the page was otherwise byte-for-byte unchanged. HTML/CSS/JavaScript parser and duplicate-ID checks passed. Services were mocked or blocked; no physical device or live-provider test was performed.
 - 2026-11-09 (superseded by removal; see 4o): Added the original 3,000-line, comment-only AI-reader notice and an inert source pointer. All 55 Node tests and 20 simulated Chromium scenarios passed; no notice requests were made, and the site HTML otherwise matched the previous release. External services were mocked or blocked; no physical device or live-provider test was performed.

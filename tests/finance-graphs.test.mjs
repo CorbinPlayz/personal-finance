@@ -1,7 +1,7 @@
 // Run with: node --test tests/finance-graphs.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { graphAmount, graphMonthFromDate, graphMonths, monthlyGraph, categoryGraph, transactionGraph, goalScenarioGraph } from '../finance-graphs.mjs';
+import { graphAmount, graphTotal, graphDifference, graphMonthFromDate, graphMonths, monthlyGraph, categoryGraph, transactionGraph, priceChecksGraph, goalScenarioGraph } from '../finance-graphs.mjs';
 
 const record = (type, amount, date, extras = {}) => ({ type, amount, date, accountId: 'spending', ...extras });
 
@@ -65,6 +65,19 @@ test('amount validation rejects missing, negative, nonnumeric and unsupported va
   assert.equal(graphAmount('9.99'), 9.99);
 });
 
+test('very large amounts never display a different cent or overflow aggregates', () => {
+  assert.equal(graphAmount('70000000000000.01'), 70000000000000.01);
+  assert.equal(graphAmount('70368744177664.01'), null, 'the next magnitude cannot represent every cent');
+  assert.equal(graphAmount('90071992547409.91'), null);
+  assert.equal(graphDifference('70000000000000.02', '70000000000000.01'), 0.01);
+  assert.equal(graphTotal(['70000000000000', '0.01']), 70000000000000.01);
+  assert.equal(graphTotal(['70000000000000', '10000000000000']), null);
+  const result = monthlyGraph([record('Income', '70000000000000', '2026-11-01'),
+    record('Income', '10000000000000', '2026-11-02')], '2026-11', 1);
+  assert.equal(result.rows[0].incoming, 70000000000000);
+  assert.equal(result.excluded, 1);
+});
+
 test('expense categories use actual valid amounts and preserve arbitrary category names as data', () => {
   const entries = [record('Expense', 12.35, '2026-11-01', { category: 'Food' }),
     record('Expense', 5.4, '2026-11-02', { category: 'Food' }),
@@ -83,6 +96,15 @@ test('transaction mix counts only matching records and does not mislabel transfe
     record('Transfer', 20, ''), record('Expense', 'bad', ''), record('Unknown', 500, '')]);
   assert.deepEqual(result.groups, [{ type: 'Income', amount: 30, count: 1 }, { type: 'Expense', amount: 2.35, count: 1 }, { type: 'Transfer', amount: 20, count: 1 }]);
   assert.equal(result.total, 52.35); assert.equal(result.excluded, 1);
+});
+
+test('manual price checks sort by valid dates, preserve duplicate-day order, and never edit history', () => {
+  const checks = [{ date: '2026-11-02', price: 25 }, { date: '2026-10-04', price: 30 },
+    { date: '2026-11-02', price: 24 }, { date: '2026-11-31', price: 1 }, { date: '2026-11-03', price: 0 }];
+  const before = JSON.stringify(checks), result = priceChecksGraph(checks, 2);
+  assert.deepEqual(result.rows, [{ date: '2026-11-02', price: 25 }, { date: '2026-11-02', price: 24 }]);
+  assert.equal(result.total, 3); assert.equal(result.excluded, 2);
+  assert.equal(JSON.stringify(checks), before);
 });
 
 test('what-if goals calculate explicitly entered monthly amounts without saving or assuming interest', () => {

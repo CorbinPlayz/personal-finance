@@ -10,6 +10,8 @@ const root = path.join(__dirname, '..');
 const read = name => fs.readFileSync(path.join(root, name), 'utf8');
 const html = read('index.html');
 const update = read('MAJOR-UPDATE.md');
+let renderWorkspaceCountGraph;
+test.before(async () => { ({ renderWorkspaceCountGraph } = await import('../financial-graphs-view.mjs')); });
 
 function section(start, end) {
   const first = html.indexOf(start), last = html.indexOf(end, first);
@@ -41,6 +43,7 @@ test('Settings renders the major-update link with safe external-link attributes'
     user: null, cloudLoaded: false, lastSyncError: null, vault: { state: 'off' },
     pageHeading: title => `<h1>${title}</h1>`,
     renderVaultPanel: () => '',
+    renderWorkspaceCountGraph,
     options: () => '',
     esc: value => String(value),
   });
