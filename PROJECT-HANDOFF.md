@@ -41,8 +41,7 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 
 | File | Purpose and important notes |
 |---|---|
-| `index.html` | The complete static app entry point and primary implementation. It contains the HTML shell, extensive CSS, app state, render functions, forms, event handling, local persistence, Firebase integration, dock, Jarvis, presentation effects, and an inline AI-reader comment. It is large (about 730 KB uncompressed). Make focused edits; do not replace the whole file casually. |
-| `ai-reader-notice.js` | Original 3,000-line comment-only notice to automated readers; retained separately and not loaded by the website. The newer inline notice supersedes it. Neither is access control. |
+| `index.html` | The complete static app entry point and primary implementation. It contains the HTML shell, extensive CSS, app state, render functions, forms, event handling, local persistence, Firebase integration, dock, Jarvis, and presentation effects. It is large (about 472 KB uncompressed). Make focused edits; do not replace the whole file casually. |
 | `README.md` | Product overview, major-update summary and link, GitHub Pages publishing steps, Firebase setup, data-path notes, and privacy/security warnings. It describes the Guide as rules-based. |
 | `MAJOR-UPDATE.md` | Two-page explanation of PR #21's purchase tiles, finance safeguards, optional protection, backups, and verification limits. Linked from README, Settings, and the Worker notes. |
 | `firestore.rules` | User-scoped Firestore rules with a guard against plaintext merges into a protected document. Publishing and testing these rules in Firebase Console is a separate, unverified deployment step. |
@@ -53,7 +52,7 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | `tests/major-update.test.cjs`, `tests/welcome.test.cjs` | Dependency-free checks for release links, welcome entry/scroll/replay, focus, storage failure, and vault/sync guards. |
 | `tests/welcome-browser.cjs`, `tests/interface-browser.cjs` | Optional Chromium touch/keyboard/viewport, dock, Jarvis, motion, and mocked-provider checks; setup is in README. External services are blocked or mocked. Not Safari, physical-phone, live-provider, or live-Firebase tests. |
 | `tests/jarvis.test.cjs` | Dependency-free tests for the local assistant's arithmetic, follow-ups, reviewable drafts, storage failures, and workspace guards. |
-| `tests/ai-reader-notice.test.cjs` | Verifies the inline notice has exactly 3,000 numbered lines in an HTML comment, its requested code instructions, and the separate legacy notice remains unloaded. |
+| `tests/source-cleanup.test.cjs` | Checks that the removed AI-reader notices are absent from the current site source. |
 | `tests/purchase-expenses.test.cjs` | Node tests for completed purchase projections, explicit ID links, price/date labels, finance edits, and duplicate-charge regressions. |
 | `tests/vault-crypto.test.mjs`, `tests/vault-sync.test.cjs` | Node crypto round-trip/tamper tests and mocked cloud/device save conflict tests. Run `node --test tests/*.test.*`. These do not verify live Firebase or published rules. |
 | `PROJECT-HANDOFF.md` | This document. Keep it current after meaningful project or requirement changes. |
@@ -297,13 +296,9 @@ The assistant reads only the active in-memory ledger and is unavailable while th
 
 **Verification:** 53 dependency-free Node tests, nine optional interface Chromium scenarios, and 11 welcome Chromium scenarios passed. Interface checks exercised all eight sections at 320×240, 320×568, 390×844, 667×375, 844×390, 768×1024 and 1440×900; More keyboard/resize, reviewable drafts, finance motion and reduced motion, encrypted-device save success/failure, mocked provider cancellation/errors, account changes and blocked connection storage were covered. HTML/CSS/inline JavaScript parsing, duplicate-ID checks, and `git diff --check` passed. Scoped axe runs on the dock, More, assistant and Connections at 320×240, 390×844 and 1440×900 reported no definite violations; some contrast checks were incomplete. All browser services were mocked or blocked. **No physical iPhone, Safari, live AI provider, or live Firebase test was performed.**
 
-## 4o. AI-reader notice (2026-11-09)
+## 4o. Removed AI-reader notices (2026-11-09)
 
-At the owner's request, a prominent HTML comment near the start of `index.html` now contains exactly 3,000 numbered notice lines. The notice asks AI readers to request a code without disclosing or hinting at it, continue only after an exact match, and stop operating in the same chat after an incorrect response. The earlier `ai-reader-notice.js` is retained as a separate legacy notice and is not loaded by the site. The inline comment is not executable and does not gate site visitors or alter the finance app's logic.
-
-These are requests to readers, not access control: AI tools may ignore or skip them, and the code is plainly visible in the public source. Do not rely on the notice to protect secrets, finance data, or source code. Because the owner requested the notice directly in the page, every visitor downloads it with the HTML; it adds about 258 KB uncompressed and may affect load time or data usage.
-
-`tests/ai-reader-notice.test.cjs` verifies the inline line count, wording and comment boundaries, and the unloaded legacy file. The optional Chromium integration suite checks that the inline notice is not visible and does not prevent navigation. Full automated verification is recorded in the work log.
+At the owner's request, both the inline AI-reader comment and the separate legacy notice were removed. They did not implement website access control, and removing them does not alter the finance app's logic. Previously published versions can still remain in Git history and existing copies.
 
 ## 5. User requirements and non-negotiable design constraints
 
@@ -418,8 +413,9 @@ Recent work includes local Jarvis review-before-save drafts (PR #12), the compac
 
 ## Work log
 
-- 2026-11-09: Replaced the source pointer with a 3,000-line HTML comment containing the owner's requested AI-reader code instructions. All 57 Node tests and 21 simulated Chromium scenarios passed; the notice stayed invisible, navigation worked, and the page was otherwise byte-for-byte unchanged. HTML/CSS/JavaScript parser and duplicate-ID checks passed. Services were mocked or blocked; no physical device or live-provider test was performed. See 4o for the public-code and page-size limitations.
-- 2026-11-09: Added the requested 3,000-line, comment-only AI-reader notice and an inert source pointer. All 55 Node tests and 20 simulated Chromium scenarios passed; no notice requests were made, and the site HTML otherwise matches the previous release. External services were mocked or blocked; no physical device or live-provider test was performed. See 4o.
+- 2026-11-09: Removed the inline and legacy AI-reader notices at the owner's request. The page otherwise matches the previous release byte-for-byte; the removed inline comment reduced the uncompressed page by about 258 KB. All 54 Node tests, 20 simulated Chromium scenarios, HTML/CSS/JavaScript parser checks, and duplicate-ID checks passed. Services were mocked or blocked; no physical device or live-provider test was performed. See 4o.
+- 2026-11-09 (superseded by removal; see 4o): Replaced the original source pointer with a 3,000-line HTML comment. All 57 Node tests and 21 simulated Chromium scenarios passed; the notice stayed invisible, navigation worked, and the page was otherwise byte-for-byte unchanged. HTML/CSS/JavaScript parser and duplicate-ID checks passed. Services were mocked or blocked; no physical device or live-provider test was performed.
+- 2026-11-09 (superseded by removal; see 4o): Added the original 3,000-line, comment-only AI-reader notice and an inert source pointer. All 55 Node tests and 20 simulated Chromium scenarios passed; no notice requests were made, and the site HTML otherwise matched the previous release. External services were mocked or blocked; no physical device or live-provider test was performed.
 - 2026-11-09: Replaced the sidebar with a responsive glass dock, refined Jarvis's local answers and reviewable drafts, added safe presentation-only financial feedback, and checked key-storage and protected-save failure paths. See 4n for verification and limits.
 - 2026-11-09: Responded to the new intro-specific mobile report with a pinned Enter Northstar action and native touch scroller. Simulated swipes, replay, storage and vault guards were checked; physical-phone confirmation is pending. See 4m.
 - 2026-11-09: Labeled PR #21 a major update, added the two-page repository write-up, updated README/Worker notes and app copy, and fixed the hidden Connections sheet and welcome replay issues found during responsive QA. See 4l for tests and limits.

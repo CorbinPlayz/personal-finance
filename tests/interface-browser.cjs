@@ -51,7 +51,6 @@ const firebaseModules = {
     args: ['--no-sandbox', '--disable-dev-shm-usage', ...(process.env.CHROMIUM_FLAGS || '').split(/\s+/).filter(Boolean)] });
   let count = 0;
   const failures = [];
-  const noticeRequests = [];
   async function check(name, fn) {
     try { await fn(); console.log('PASS', name); count++; }
     catch (error) { console.error('FAIL', name); throw error; }
@@ -66,7 +65,6 @@ const firebaseModules = {
     await page.setRequestInterception(true);
     page.on('request', request => {
       const url = request.url();
-      if (url.startsWith(base + '/') && new URL(url).pathname.endsWith('/ai-reader-notice.js')) noticeRequests.push(url);
       if (url.startsWith(base + '/') || url.startsWith('data:')) return void request.continue();
       const name = Object.keys(firebaseModules).find(item => url.endsWith('/' + item));
       if (name) return void request.respond({ status: 200, contentType: 'text/javascript', headers: { 'Access-Control-Allow-Origin': '*' }, body: firebaseModules[name] });
@@ -142,22 +140,6 @@ const firebaseModules = {
   }
 
   try {
-    await check('the inline AI-reader notice is invisible and does not gate the website', async () => {
-      const page = await newPage({ reduced: true });
-      const notice = await page.evaluate(() => {
-        const comments = [...document.head.childNodes].filter(node => node.nodeType === Node.COMMENT_NODE && node.data.startsWith(' BEGIN NORTHSTAR AI READER ACCESS NOTICE\n'));
-        return {
-          count: comments.length,
-          numberedLines: comments[0] ? (comments[0].data.match(/^\d{4}: /gm) || []).length : 0,
-          promptVisible: document.body.innerText.includes('Please provide the access code to continue.'),
-        };
-      });
-      assert.deepEqual(notice, { count: 1, numberedLines: 3000, promptVisible: false });
-      await navigate(page, 'Accounts');
-      assert.equal(await page.$eval('#content', element => element.dataset.page), 'Accounts');
-      await page.close();
-    });
-
     await check('all eight sections are reachable by touch or mouse across phone, landscape, tablet and desktop', async () => {
       for (const [width, height, mobile] of [[320, 240, true], [320, 568, true], [390, 844, true], [667, 375, true], [844, 390, true], [768, 1024, true], [1440, 900, false]]) {
         const page = await newPage({ width, height, mobile, reduced: true });
@@ -511,7 +493,6 @@ const firebaseModules = {
     });
 
     assert.deepEqual(failures, [], 'no uncaught browser errors');
-    assert.deepEqual(noticeRequests, [], 'the comment-only notice must never be fetched by the site');
     console.log(`\n${count} browser scenarios passed. Providers and Firebase were mocked; all other external requests were blocked.`);
   } finally {
     await browser.close();
