@@ -99,11 +99,13 @@ test('closing the assistant closes and disables its Connections sheet', () => {
   panel.contains = () => true;
   orb.focus = () => { restored = true; };
   const context = vm.createContext({
-    panel, orb, document: { activeElement: {}, documentElement: { classList: { contains: () => true } } }, window: {},
+    panel, orb, document: { activeElement: {}, querySelector: () => null, documentElement: { classList: { contains: () => true } } }, window: {},
     build: () => {}, refreshStatus: () => {}, setTimeout: () => {}, clearTimeout: () => {},
+    cancelConnectionTest: () => {}, cancelCloudReply: () => {},
+    workspaceBlocked: () => !!context.window.NorthstarVaultLocked || !context.document.documentElement.classList.contains('northstar-seen'),
     focusTimer: null, greeted: true,
   });
-  vm.runInContext(section('  function toggle(force) {', '\n  document.addEventListener('), context);
+  vm.runInContext(section('  function toggle(force, restoreFocus) {', '\n  document.addEventListener('), context);
   context.toggle(true);
   assert.equal(panel.inert, false);
   assert.equal(panel.attributes['aria-hidden'], 'false');

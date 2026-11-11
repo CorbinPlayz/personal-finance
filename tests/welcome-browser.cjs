@@ -134,10 +134,9 @@ const firebaseModules = {
     await page.touchscreen.tap(box.x, box.y);
   }
   async function openSettings(page) {
-    await page.tap('.mobile-menu');
-    await page.waitForFunction(() => document.getElementById('sidebar').classList.contains('sidebar-open'));
-    await delay(250); // allow the mobile sidebar's slide-in to finish
-    await page.tap('#sidebar [data-action="page"][data-page="Settings"]');
+    await page.tap('#dockMoreBtn');
+    await page.waitForFunction(() => !document.getElementById('dockMoreMenu').hidden);
+    await page.tap('#dockMoreMenu [data-action="page"][data-page="Settings"]');
     await page.waitForSelector('[data-action="welcome-again"]');
   }
   async function check(name, fn) {
@@ -211,8 +210,10 @@ const firebaseModules = {
       assert.equal(await page.evaluate(() => window.NorthstarLedger().accounts[0].balance), 123.45);
       await swipe(page, 'up', null);
       assert.ok(await page.evaluate(() => document.scrollingElement.scrollTop) > 50, 'main page scrolls after dismissing the intro');
+      await delay(1500); // let touch momentum settle before the next tap
       await page.tap('#mobileDock [data-page="Purchases"]');
       await page.waitForSelector('[data-action="edit-transaction"][data-id="test-expense"]');
+      await delay(700); // let the navigation's scroll-to-top finish
       await page.tap('[data-action="edit-transaction"][data-id="test-expense"]');
       await page.waitForSelector('#modalForm');
       assert.equal(await page.evaluate(() => window.NorthstarLedger().transactions[0].description), 'Synthetic lunch');

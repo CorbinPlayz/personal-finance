@@ -1279,6 +1279,8 @@ body.nsx-grain:after{
 .nsj-field input:focus,.nsj-field select:focus{border-color:rgba(255,255,255,.45)!important;outline:none}
 .nsj-field select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#8a8a8a 50%),linear-gradient(135deg,#8a8a8a 50%,transparent 50%);background-position:calc(100% - 15px) 52%,calc(100% - 10px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
 .nsj-hint{font-size:9.5px;line-height:1.55;color:#7a7a7a}
+.nsj-storage-warning{color:#ffb9ad;padding:8px;border:1px solid #a75148;border-radius:8px;background:#4a252080}
+.nsj-storage-warning[hidden]{display:none!important}
 .nsj-hint a{color:#cfcfcf;text-decoration:underline;text-underline-offset:2px}
 
 .nsj-row{display:flex;align-items:center;gap:9px;justify-content:space-between;padding:9px 10px;border:1px solid rgba(255,255,255,.10);border-radius:10px;background:rgba(255,255,255,.03)}
@@ -1368,6 +1370,92 @@ body.nsx-grain:after{
   .purchase-tile-context{font-size:8.5px;margin-top:6px}
 }
 </style>
+<style id="glass-dock-design">
+/* A single compact frosted-glass navigation surface, shared by all screens. */
+.app-shell .main-area{margin-left:0}
+.app-shell .content{padding-bottom:calc(118px + env(safe-area-inset-bottom, 0px))}
+.app-shell .page-footer{margin-bottom:calc(88px + env(safe-area-inset-bottom, 0px))}
+#mobileDock{
+  display:flex;align-items:stretch;justify-content:center;gap:3px;position:fixed;z-index:60;
+  left:50%;right:auto;bottom:calc(12px + env(safe-area-inset-bottom, 0px));transform:translateX(-50%);
+  width:min(840px,calc(100% - 28px));max-width:calc(100% - 28px);padding:7px;border-radius:25px;
+  background:linear-gradient(155deg,rgba(75,78,84,.78),rgba(27,29,34,.79) 48%,rgba(17,19,23,.82))!important;
+  border:1px solid rgba(255,255,255,.52)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(155%)!important;backdrop-filter:blur(18px) saturate(155%)!important;
+  box-shadow:0 14px 40px rgba(15,19,24,.24),0 2px 8px rgba(15,19,24,.18),inset 0 1px 1px rgba(255,255,255,.55),inset 0 -1px 1px rgba(255,255,255,.08)
+}
+#mobileDock.menu-open{z-index:1700}
+#mobileDock:before{content:"";position:absolute;inset:1px 1px auto;height:42%;border-radius:24px 24px 60% 60%;background:linear-gradient(180deg,rgba(255,255,255,.18),transparent);pointer-events:none}
+#mobileDock .dock-indicator{position:absolute;z-index:0;top:7px;bottom:7px;left:0;width:var(--dock-width,0px);transform:translateX(var(--dock-x,0px));border-radius:18px;background:linear-gradient(150deg,rgba(255,255,255,.98),rgba(231,236,239,.88));box-shadow:0 3px 12px rgba(0,0,0,.16),inset 0 1px 1px #fff;transition:transform .38s cubic-bezier(.2,.8,.2,1),width .38s cubic-bezier(.2,.8,.2,1);pointer-events:none}
+#mobileDock .dock-item{position:relative;z-index:1;flex:1 1 0;min-width:0;min-height:55px;padding:5px 2px;border:0;border-radius:18px;background:transparent!important;color:#f3f4f5;box-shadow:none!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:color .2s,transform .2s;outline-offset:1px}
+#mobileDock .dock-item:hover{background:rgba(255,255,255,.1)!important}
+#mobileDock .dock-item.active,#mobileDock .dock-more.is-current{color:#171a1e}
+#mobileDock .dock-item:active{transform:scale(.94)}
+#mobileDock .dock-icon{width:23px;height:23px;display:grid;place-items:center;color:inherit}
+#mobileDock .dock-icon svg{display:block;width:21px;height:21px;stroke-width:1.7}
+#mobileDock .dock-item small{font-size:9.5px;line-height:1.15;font-weight:700;white-space:nowrap;letter-spacing:0}
+#mobileDock .dock-reminder{position:absolute;right:15%;top:4px;min-width:16px;height:16px;padding:0 3px;border-radius:9px;background:#8f2f26;color:#fff;font-size:9px;line-height:16px;font-weight:700}
+#mobileDock .dock-more{display:none}
+/* Keep the assistant and notices clear of the navigation at every width. */
+.nsj-orb{right:16px;bottom:calc(94px + env(safe-area-inset-bottom, 0px))}
+.toast{right:84px;bottom:calc(94px + env(safe-area-inset-bottom, 0px));max-width:min(460px,calc(100vw - 100px))}
+.dock-menu[hidden]{display:none!important}
+.dock-menu{position:absolute;z-index:3;right:3px;bottom:calc(100% + 10px);width:min(260px,calc(100vw - 28px));max-height:calc(100vh - 95px);max-height:calc(100dvh - 95px - env(safe-area-inset-bottom, 0px));overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px;border:1px solid rgba(255,255,255,.4);border-radius:22px;background:linear-gradient(145deg,rgba(67,69,75,.95),rgba(25,27,31,.96));box-shadow:0 16px 42px rgba(0,0,0,.28),inset 0 1px 1px rgba(255,255,255,.35);color:#fff}
+.dock-menu-title{padding:5px 10px 7px;color:#d5d6d8;font-size:9px;letter-spacing:.14em;font-weight:700}
+.dock-menu-item{width:100%;display:flex;align-items:center;gap:12px;min-height:46px;padding:8px 10px;border:0;border-radius:12px;background:transparent;color:#fff;text-align:left;font-size:12px;font-weight:600}
+.dock-menu-item:hover,.dock-menu-item.active{background:rgba(255,255,255,.15)}
+.dock-menu-item span,.dock-menu-item svg{display:block;width:20px;height:20px;flex:none}
+@media(max-width:700px){
+  #mobileDock{width:min(440px,calc(100% - 24px));max-width:calc(100% - 24px);padding:6px;gap:1px;border-radius:23px}
+  #mobileDock .dock-secondary{display:none}
+  #mobileDock .dock-more{display:flex}
+  #mobileDock .dock-item{min-height:53px}
+  #mobileDock .dock-item small{font-size:8.5px}
+  #mobileDock .dock-indicator{top:6px;bottom:6px;border-radius:17px}
+}
+@media(prefers-reduced-motion:reduce){#mobileDock .dock-indicator,#mobileDock .dock-item{transition:none!important}#mobileDock .dock-item:active{transform:none!important}}
+@media(prefers-reduced-transparency:reduce){#mobileDock{background:#292b30!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
+</style>
+<style id="finance-motion">
+.goal-progress-track{position:relative;overflow:visible}
+.goal-progress-track .progress-fill{height:100%;border-radius:inherit}
+.goal-progress-marker{position:absolute;top:50%;left:clamp(7px,var(--goal-progress),calc(100% - 7px));transform:translate(-50%,-50%);display:grid;place-items:center;width:15px;height:15px;border:1px solid #777;border-radius:50%;background:#fff;color:#292929;font-size:10px;line-height:1;box-shadow:0 1px 5px #0002;pointer-events:none}
+.budget-row.progress-updated{animation:budgetHighlight .8s ease-out}
+@keyframes budgetHighlight{0%{box-shadow:0 0 0 3px #8a8a8a55}100%{box-shadow:0 5px 22px #08080807}}
+.toast.transaction-flow .transaction-flow-icon{position:relative;display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:50%;background:#ffffff18;font-size:17px}
+.toast.transaction-flow .transaction-flow-icon:after{content:"";position:absolute;left:2px;bottom:2px;width:4px;height:4px;border-radius:50%;background:#fff;animation:financeFlow .7s ease-out both}
+.toast.transaction-flow.flow-income .transaction-flow-icon{color:#8ae3b8}.toast.transaction-flow.flow-expense .transaction-flow-icon{color:#f1a79f}.toast.transaction-flow.flow-transfer .transaction-flow-icon{color:#a9c8ff}
+@keyframes financeFlow{from{transform:translateX(0);opacity:0}30%{opacity:1}to{transform:translateX(23px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.budget-row.progress-updated,.toast.transaction-flow .transaction-flow-icon:after{animation:none!important}}
+</style>
+<style id="jarvis-usability">
+/* Room to read, type and reach the controls without covering the dock when closed. */
+.nsj-panel{right:16px;bottom:calc(94px + env(safe-area-inset-bottom, 0px));width:min(440px,calc(100vw - 32px));height:min(650px,calc(100vh - 112px));height:min(650px,calc(100dvh - 112px))}
+.nsj-head{flex-wrap:wrap;gap:4px;padding:10px 12px}
+.nsj-title{flex:1 1 60px;min-width:0}.nsj-title span{font-size:10px;letter-spacing:.04em}
+.nsj-tones{order:5;flex:1 1 100%;margin:0;gap:5px}
+.nsj-tone{min-height:32px;padding:5px 10px;font-size:10px}
+.nsj-close,.nsj-gear,.nsj-clear{width:44px;height:44px;flex:none}
+.nsj-clear{border:0;background:transparent;color:#aaa;cursor:pointer;padding:4px;border-radius:6px;display:grid;place-items:center}
+.nsj-clear:hover{color:#fff;background:rgba(255,255,255,.08)}
+.nsj-log{min-height:55px;scroll-behavior:auto}
+.nsj-suggestions,.nsj-quick{display:flex;gap:6px;overflow-x:auto;flex:none;padding:4px 12px 6px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.nsj-suggestions .nsj-chip,.nsj-quick .nsj-chip{flex:0 0 auto;min-height:36px}
+.nsj-quick .nsj-chip{background:rgba(255,255,255,.1);color:#fff;border-radius:10px}
+.nsj-action-hint{padding:0 14px 5px;color:#aaa;font-size:10px;line-height:1.35}
+.nsj-foot{padding:8px 12px}.nsj-input{min-height:42px}
+.nsj-busy{padding:0 12px 5px;color:#ddd;font-size:10px;text-align:center}
+.nsj-busy:empty{display:none}
+.nsj-footnote{color:#aaa;letter-spacing:.02em;text-transform:none;font-size:10px}
+@media(max-width:700px){
+  .nsj-panel{top:calc(10px + env(safe-area-inset-top, 0px));right:10px;bottom:calc(10px + env(safe-area-inset-bottom, 0px));left:10px;width:auto;height:auto;border-radius:20px}
+  .nsj-input{font-size:16px!important}
+  .nsj-tone{min-height:38px}
+}
+@media(max-height:420px){.nsj-panel{top:8px;right:8px;bottom:8px;left:8px;width:auto;height:auto}.nsj-suggestions{display:none}.nsj-action-hint{display:none}.nsj-head{padding:7px 12px}.nsj-tones{flex:0 1 auto;order:0;width:auto}.nsj-tone{min-height:30px}.nsj-footnote{padding-bottom:4px}}
+@media(max-height:420px) and (max-width:500px){.nsj-tones{flex-basis:100%;order:5}}
+@media(max-height:300px){.nsj-quick,.nsj-footnote{display:none}.nsj-log{min-height:30px}.nsj-head{padding-top:3px;padding-bottom:3px}.nsj-foot{padding-top:5px;padding-bottom:5px}}
+</style>
 <style id="welcome-access">
 /* The entry action is outside the native scroll area, so it remains visible
    even on short/landscape screens and never depends on a swipe. */
@@ -1446,28 +1534,29 @@ button:disabled{opacity:.55;cursor:not-allowed}
   </div>
 </section>
 <div class="app-shell">
-<aside class="sidebar" id="sidebar">
-  <div class="brand"><div class="brand-mark" aria-label="Northstar logo"><svg class="northstar-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgSidebar" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarSidebar" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgSidebar)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarSidebar)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg></div><div><strong>Northstar</strong><span>PERSONAL FINANCE</span></div><button class="icon-btn mobile-close" data-action="close-menu" aria-label="Close menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
-  <div class="workspace-label">YOUR WORKSPACE</div>
-  <nav id="mainNav">
-    <button class="nav-item active" data-action="page" data-page="Overview"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></svg></span>Overview</button>
-    <button class="nav-item" data-action="page" data-page="Transactions"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8.5h12.5"/><path d="M13.5 5.5 17 8.5l-3.5 3"/><path d="M20 15.5H7.5"/><path d="M10.5 12.5 7 15.5l3.5 3"/></svg></span>Transactions</button>
-    <button class="nav-item" data-action="page" data-page="Accounts"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="5.5" width="18" height="13" rx="2.4"/><path d="M3 10h18"/><path d="M6.6 14.6h4.2"/></svg></span>Accounts</button>
-    <button class="nav-item" data-action="page" data-page="Budgets"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 19v-8"/><path d="M12 19V5"/><path d="M18 19v-5"/><path d="M3.6 19h16.8"/></svg></span>Budgets</button>
-    <button class="nav-item" data-action="page" data-page="Goals"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7.8"/><circle cx="12" cy="12" r="3.2"/></svg></span>Savings goals</button>
-    <button class="nav-item" data-action="page" data-page="Purchases"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8h12l1.1 11.4H4.9z"/><path d="M9.2 8V6.4a2.8 2.8 0 0 1 5.6 0V8"/></svg></span>Purchase planner <span class="nav-count hidden" id="reminderCount">0</span></button>
-    <button class="nav-item" data-action="page" data-page="Guide"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11.6 3.6 13.4 9l5.4 1.8-5.4 1.8-1.8 5.4-1.8-5.4L4.4 10.8 9.8 9z"/><path d="M18.4 16.2l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/></svg></span>Northstar Guide</button>
-    <button class="nav-item" data-action="page" data-page="Settings"><span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7.5h9"/><path d="M17 7.5h3"/><circle cx="15" cy="7.5" r="2"/><path d="M4 16.5h3"/><path d="M11 16.5h9"/><circle cx="9" cy="16.5" r="2"/></svg></span>Settings</button>
-  </nav>
-  <div class="sidebar-bottom"><div class="privacy-card"><span style="font-size:20px">♧</span><div><strong>Your data, your call</strong><span>Manual tracking. No bank login.</span></div></div><p>Northstar shows the picture you build with the information you enter. It does not connect to your bank.</p><div class="sidebar-footer">NORTHSTAR · PERSONAL FINANCE</div></div>
-</aside>
-<button class="scrim hidden" id="scrim" data-action="close-menu" aria-label="Close navigation"></button>
 <div class="main-area">
-<header class="topbar"><div style="display:flex;align-items:center;min-width:0"><button class="icon-btn mobile-menu" data-action="menu" aria-label="Open navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div class="breadcrumb"><span class="breadcrumb-brand"><svg class="breadcrumb-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgCrumb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarCrumb" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgCrumb)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarCrumb)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg><b>NORTHSTAR</b></span><span>/</span> <strong id="breadcrumbTitle">Overview</strong></div></div><div class="top-actions"><span class="sync-state" id="syncStatus" aria-live="polite">Local only</span><button id="signInBtn" class="secondary-btn small" data-action="signin">Connect Google</button><button id="signOutBtn" class="secondary-btn small hidden" data-action="signout">Sign out</button><div class="avatar" id="avatar" aria-label="Northstar"><svg class="avatar-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgAvatar" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarAvatar" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgAvatar)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarAvatar)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg></div></div></header>
+<header class="topbar"><div style="display:flex;align-items:center;min-width:0"><div class="breadcrumb"><span class="breadcrumb-brand"><svg class="breadcrumb-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgCrumb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarCrumb" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgCrumb)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarCrumb)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg><b>NORTHSTAR</b></span><span>/</span> <strong id="breadcrumbTitle">Overview</strong></div></div><div class="top-actions"><span class="sync-state" id="syncStatus" aria-live="polite">Local only</span><button id="signInBtn" class="secondary-btn small" data-action="signin">Connect Google</button><button id="signOutBtn" class="secondary-btn small hidden" data-action="signout">Sign out</button><div class="avatar" id="avatar" aria-label="Northstar"><svg class="avatar-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgAvatar" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarAvatar" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgAvatar)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarAvatar)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg></div></div></header>
 <main class="content" id="content" tabindex="-1"></main>
 <footer class="page-footer"><span>Northstar Personal Finance</span><span>Manual tracking <b>·</b> Optional cloud sync; protection off by default</span></footer>
 </div></div>
-<nav class="mobile-dock" id="mobileDock" aria-label="Quick navigation"><button class="dock-item active" data-action="page" data-page="Overview"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4.4 10.3 12 4.3l7.6 6v9.4H4.4z"/><path d="M9.8 19.7v-5.3h4.4v5.3"/></svg></span><small>Home</small></button><button class="dock-item" data-action="page" data-page="Transactions"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3.5 12h3.9l2.2-5.4 3.3 10.9 2.3-5.5h5.3"/></svg></span><small>Activity</small></button><button class="dock-item" data-action="page" data-page="Goals"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7.8"/><circle cx="12" cy="12" r="3.2"/></svg></span><small>Goals</small></button><button class="dock-item" data-action="page" data-page="Purchases"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8h12l1.1 11.4H4.9z"/><path d="M9.2 8V6.4a2.8 2.8 0 0 1 5.6 0V8"/></svg></span><small>Plan</small></button><button class="dock-item" data-action="page" data-page="Guide"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11.6 3.6 13.4 9l5.4 1.8-5.4 1.8-1.8 5.4-1.8-5.4L4.4 10.8 9.8 9z"/><path d="M18.4 16.2l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/></svg></span><small>Guide</small></button></nav><div id="goalCelebrationRoot" aria-live="polite"></div><div id="modalRoot"></div><div id="confirmRoot"></div><div id="toastRoot" aria-live="polite"></div>
+<nav class="mobile-dock" id="mobileDock" aria-label="Main navigation">
+  <span class="dock-indicator" aria-hidden="true"></span>
+  <button type="button" class="dock-item active" data-action="page" data-page="Overview" aria-label="Home · Overview" aria-current="page"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></svg></span><small>Home</small></button>
+  <button type="button" class="dock-item" data-action="page" data-page="Transactions" aria-label="Activity · Transactions"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 8.5h12.5"/><path d="M13.5 5.5 17 8.5l-3.5 3"/><path d="M20 15.5H7.5"/><path d="M10.5 12.5 7 15.5l3.5 3"/></svg></span><small>Activity</small></button>
+  <button type="button" class="dock-item dock-secondary" data-action="page" data-page="Accounts" aria-label="Accounts"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="5.5" width="18" height="13" rx="2.4"/><path d="M3 10h18"/><path d="M6.6 14.6h4.2"/></svg></span><small>Accounts</small></button>
+  <button type="button" class="dock-item dock-secondary" data-action="page" data-page="Budgets" aria-label="Budgets"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 19v-8"/><path d="M12 19V5"/><path d="M18 19v-5"/><path d="M3.6 19h16.8"/></svg></span><small>Budgets</small></button>
+  <button type="button" class="dock-item" data-action="page" data-page="Goals" aria-label="Savings goals"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7.8"/><circle cx="12" cy="12" r="3.2"/></svg></span><small>Goals</small></button>
+  <button type="button" class="dock-item" data-action="page" data-page="Purchases" aria-label="Plan · Purchase planner"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8h12l1.1 11.4H4.9z"/><path d="M9.2 8V6.4a2.8 2.8 0 0 1 5.6 0V8"/></svg></span><small>Plan</small> <span class="dock-reminder hidden" id="reminderCount" aria-hidden="true">0</span></button>
+  <button type="button" class="dock-item" data-action="page" data-page="Guide" aria-label="Northstar Guide"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11.6 3.6 13.4 9l5.4 1.8-5.4 1.8-1.8 5.4-1.8-5.4L4.4 10.8 9.8 9z"/><path d="M18.4 16.2l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/></svg></span><small>Guide</small></button>
+  <button type="button" class="dock-item dock-secondary" data-action="page" data-page="Settings" aria-label="Settings"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7.5h9"/><path d="M17 7.5h3"/><circle cx="15" cy="7.5" r="2"/><path d="M4 16.5h3"/><path d="M11 16.5h9"/><circle cx="9" cy="16.5" r="2"/></svg></span><small>Settings</small></button>
+  <button type="button" class="dock-item dock-more" id="dockMoreBtn" data-action="dock-more" aria-label="More sections" aria-expanded="false" aria-controls="dockMoreMenu"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></span><small>More</small></button>
+  <div class="dock-menu" id="dockMoreMenu" role="group" aria-label="More sections" hidden>
+    <div class="dock-menu-title">MORE SECTIONS</div>
+    <button type="button" class="dock-menu-item" data-action="page" data-page="Accounts"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="5.5" width="18" height="13" rx="2.4"/><path d="M3 10h18"/><path d="M6.6 14.6h4.2"/></svg></span>Accounts</button>
+    <button type="button" class="dock-menu-item" data-action="page" data-page="Budgets"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 19v-8"/><path d="M12 19V5"/><path d="M18 19v-5"/><path d="M3.6 19h16.8"/></svg></span>Budgets</button>
+    <button type="button" class="dock-menu-item" data-action="page" data-page="Settings"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7.5h9"/><path d="M17 7.5h3"/><circle cx="15" cy="7.5" r="2"/><path d="M4 16.5h3"/><path d="M11 16.5h9"/><circle cx="9" cy="16.5" r="2"/></svg></span>Settings</button>
+  </div>
+</nav><div id="goalCelebrationRoot" aria-live="polite"></div><div id="modalRoot"></div><div id="confirmRoot"></div><div id="toastRoot" aria-live="polite"></div>
 <div id="vaultRoot"><div class="vault-screen vault-loading" role="status"><div class="vault-card"><div class="vault-mark" aria-hidden="true">✦</div><h1>Opening your protected workspace</h1><p>If this screen does not change, make sure Northstar is loaded over HTTPS and <code>vault-crypto.mjs</code> is deployed next to the page. Reload without clearing browser data; your protected copy has not been changed.</p></div></div></div>
 <input id="backupFile" type="file" accept="application/json,.json" class="hidden">
 <script type="module">
@@ -1531,10 +1620,10 @@ function migrateSimpleTransactions(old){
 }
 function loadLocal(key){try{let raw=localStorage.getItem(localKey(key));if(!raw&&key==='local')raw=localStorage.getItem('northstar-finance-v1');return raw?normalizeData(JSON.parse(raw)):blankData()}catch{return blankData()}}
 function persist(){
- if(vault.state==='unlocked'){queueProtectedLocalSave();render();return}
- if(vault.state!=='off'){showToast('Unlock the protected workspace before making changes.');return}
- try{localStorage.setItem(localKey(user?user.uid:'local'),JSON.stringify(data))}catch(e){showToast('Browser storage is full. Export a backup and remove older records.')}
- if(user&&cloudLoaded)queueCloudSave();render();
+ if(vault.state==='unlocked'){queueProtectedLocalSave();render();return 'pending'}
+ if(vault.state!=='off'){showToast('Unlock the protected workspace before making changes.');return false}
+ let saved=true;try{localStorage.setItem(localKey(user?user.uid:'local'),JSON.stringify(data))}catch(e){saved=false;showToast('Browser storage is full or unavailable. Export a backup and check storage before leaving.')}
+ if(user&&cloudLoaded)queueCloudSave();render();return saved;
 }
 function accountName(aid){return data.accounts.find(a=>a.id===aid)?.name||'Unknown account'}
 /* Apply an income, expense, or transfer to the tracked account balances.
@@ -1564,7 +1653,7 @@ function accountBalanceParts(account){
 }
 function renderAccountBalanceBar(account,showLegend=true){
  const p=accountBalanceParts(account);
- const aria=account.name+' total '+money(p.total)+', remaining after purchase allocations and minimum '+money(p.available)+', allocated to purchases '+money(p.allocatedTotal)+', minimum balance '+money(p.minimumConfigured)+'.';
+ const aria=account.name+' total '+money(p.total)+', remaining after purchase allocations '+money(p.available)+', allocated to purchases '+money(p.allocatedTotal)+', minimum balance '+money(p.minimumConfigured)+' (not deducted from this bar).';
  const segments=(p.available>0?'<span class="account-balance-fill available" style="width:'+p.availablePct.toFixed(4)+'%"></span>':'')+
   (p.allocated>0?'<span class="account-balance-fill purchase-allocated" style="width:'+p.allocatedPct.toFixed(4)+'%"></span>':'');
  let html='<div class="account-balance-meter" role="img" aria-label="'+esc(aria)+'">'+segments+'</div>';
@@ -1681,6 +1770,17 @@ function scrollWelcomeJourney(){
 }
 function playGoalSound(){if(data.settings?.goalSounds===false)return;try{const Ctx=window.AudioContext||window.webkitAudioContext;if(!Ctx)return;const ctx=new Ctx(),now=ctx.currentTime;[[659.25,0],[783.99,.12],[987.77,.24],[1318.51,.39]].forEach(([freq,delay])=>{const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(freq,now+delay);gain.gain.setValueAtTime(.0001,now+delay);gain.gain.exponentialRampToValueAtTime(.12,now+delay+.025);gain.gain.exponentialRampToValueAtTime(.0001,now+delay+.34);osc.connect(gain);gain.connect(ctx.destination);osc.start(now+delay);osc.stop(now+delay+.36)});setTimeout(()=>ctx.close().catch(()=>{}),1300)}catch(e){console.debug('Goal sound unavailable in this browser.',e)}}
 function celebrateGoal(goal){playGoalSound();const root=$('goalCelebrationRoot');if(!root)return;root.innerHTML='';const overlay=document.createElement('div');overlay.className='goal-celebration';overlay.setAttribute('role','status');overlay.setAttribute('aria-label','Savings goal reached');const colors=['#999999','#a8a8a8','#b8b8b8','#a8a8a8','#c9c9c9','#ffffff'];for(let i=0;i<42;i++){const bit=document.createElement('span');bit.className='goal-confetti';bit.style.setProperty('--x',Math.round(Math.random()*100)+'%');bit.style.setProperty('--w',(4+Math.random()*6)+'px');bit.style.setProperty('--h',(6+Math.random()*10)+'px');bit.style.setProperty('--c',colors[i%colors.length]);bit.style.setProperty('--d',(1.8+Math.random()*1.1)+'s');bit.style.setProperty('--delay',(Math.random()*.36)+'s');bit.style.setProperty('--r',Math.round(Math.random()*180)+'deg');bit.style.setProperty('--drift',Math.round(Math.random()*140-70)+'px');overlay.appendChild(bit)}const card=document.createElement('div');card.className='goal-celebration-card';card.innerHTML='<span class="goal-celebration-mark">✦</span><small>NORTHSTAR MILESTONE</small><h2>Look how far you’ve come.</h2><p>'+esc(goal.name)+' reached '+esc(money(goal.saved))+' of '+esc(money(goal.target))+'.<br>You made it happen, one step at a time.</p>';overlay.appendChild(card);root.appendChild(overlay);setTimeout(()=>{if(overlay.isConnected)overlay.remove()},3000)}
+function celebrateSavedGoal(goal,status){
+ const show=()=>{try{celebrateGoal(goal)}catch(e){console.warn('Goal celebration was skipped.',e)}};
+ if(status===false)return;
+ if(status!=='pending'){show();return}
+ // Protected writes are asynchronous. Never celebrate a failed or stale save.
+ const session=vault.session,sequence=vault.editSeq;
+ vaultWriteTail.then(()=>{
+  const current=data.goals.find(g=>g.id===goal.id);
+  if(vault.state==='unlocked'&&vault.session===session&&vault.savedSeq>=sequence&&!vault.error&&!window.NorthstarVaultLocked&&current&&Number(current.target)>0&&Number(current.saved)>=Number(current.target))show();
+ }).catch(e=>console.warn('Goal celebration was skipped.',e));
+}
 function showToast(text){const root=$('toastRoot');root.innerHTML=`<div class="toast"><span>✓</span><span>${esc(text)}</span><button data-action="dismiss-toast" aria-label="Dismiss">×</button></div>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>root.replaceChildren(),3500)}
 function setSync(text,kind=''){const el=$('syncStatus');el.textContent=text;el.className='sync-state'+(kind?' '+kind:'')}
 function firebaseErrorCode(error){return String(error?.code||'unknown-error')}
@@ -1707,6 +1807,7 @@ function isWelcomeVisible(){const screen=$('welcomeScreen');return !!screen&&!sc
 function updateBackgroundAvailability(){
  const blocked=syncLoading||window.NorthstarVaultLocked||isWelcomeVisible();
  const shell=document.querySelector('.app-shell'),dock=$('mobileDock');if(shell)shell.inert=blocked;if(dock)dock.inert=blocked;
+ try{window.NorthstarJarvis?.setWorkspaceBlocked?.(blocked,syncLoading||!!window.NorthstarVaultLocked)}catch(e){console.warn('Assistant workspace update was skipped.',e)}
 }
 function setCloudLoading(loading){syncLoading=loading;updateBackgroundAvailability();const content=$('content');if(content)content.setAttribute('aria-busy',String(loading));const signOut=$('signOutBtn');if(signOut)signOut.disabled=loading;}
 function update(mutator,toastText){data=mutator(data);persist();if(toastText)showToast(toastText)}
@@ -1719,9 +1820,8 @@ function metric(label,value,icon,note,tone){return `<div class="metric-card"><di
 function render(){
  $('breadcrumbTitle').textContent=page;const avatar=$('avatar'),identity=(user?.displayName||user?.email||'').trim();if(identity){avatar.textContent=identity.charAt(0).toUpperCase();avatar.classList.add('user-avatar');avatar.setAttribute('aria-label','Signed in as '+identity)}else{avatar.innerHTML=`<svg class="avatar-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgAvatarRender" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarAvatarRender" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgAvatarRender)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarAvatarRender)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg>`;avatar.classList.remove('user-avatar');avatar.setAttribute('aria-label','Northstar logo')}
  $('signInBtn').classList.toggle('hidden',!!user);$('signOutBtn').classList.toggle('hidden',!user);
- $('mainNav').querySelectorAll('[data-page]').forEach(b=>{b.classList.toggle('active',b.dataset.page===page);});
- const reminderCount=getReminders().length;$('reminderCount').textContent=reminderCount;$('reminderCount').classList.toggle('hidden',!reminderCount);
- const main=$('content');main.innerHTML=page==='Overview'?renderOverview():page==='Transactions'?renderTransactions():page==='Accounts'?renderAccounts():page==='Budgets'?renderBudgets():page==='Goals'?renderGoals():page==='Purchases'?renderPurchases():page==='Guide'?renderGuide():renderSettings();$('mobileDock')?.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+ const reminderCount=getReminders().length;$('reminderCount').textContent=reminderCount;$('reminderCount').classList.toggle('hidden',!reminderCount);$('mobileDock')?.querySelector('.dock-item[data-page="Purchases"]')?.setAttribute('aria-label','Plan'+(reminderCount?' '+reminderCount+' reminder'+(reminderCount===1?'':'s'):'')+' · Purchase planner');
+ const main=$('content');main.dataset.page=page;main.innerHTML=page==='Overview'?renderOverview():page==='Transactions'?renderTransactions():page==='Accounts'?renderAccounts():page==='Budgets'?renderBudgets():page==='Goals'?renderGoals():page==='Purchases'?renderPurchases():page==='Guide'?renderGuide():renderSettings();renderDock();
  renderModal();
 }
 function renderFundsAllocation(){
@@ -1768,8 +1868,8 @@ function renderAccountBalanceBreakdown(){
  return '<section class="panel account-breakdown-panel" aria-labelledby="accountBreakdownTitle"><div class="panel-head"><div><h2 id="accountBreakdownTitle">Balances by account</h2><p>Each account has its own balance and bar.</p></div><button class="text-btn" data-action="page" data-page="Accounts">Manage accounts ↗</button></div><div class="account-balance-tiles">'+rows+'</div></section>';
 }
 function renderAccounts(){return `${pageHeading('Accounts',`<button class="primary-btn" data-action="add-account">＋ Create account</button>`)}<div class="welcome-strip"><div class="welcome-icon">▣</div><div><strong>You control every starting balance.</strong><span>Create accounts you want to track manually. Northstar never assumes or imports a balance.</span></div></div>${data.accounts.length?`<div class="account-grid">${data.accounts.map(a=>`<article class="account-card"><div class="account-card-top"><div class="account-icon">${a.type==='Savings'?ICON.bank:a.type==='Credit'?ICON.card:a.type==='Investment'?ICON.trend:ICON.wallet}</div><div class="row-actions"><button class="action-btn" data-action="edit-account" data-id="${esc(a.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="accounts" data-id="${esc(a.id)}">Delete</button></div></div><div class="muted">${esc(a.type)}</div><h2>${esc(a.name)}</h2><div class="account-balance ${a.minimumBalance!=null&&a.balance<a.minimumBalance?'negative':''}">${esc(money(a.balance))}</div>${renderAccountBalanceBar(a,true)}${a.minimumBalance!=null?`<div class="minimum-note ${a.balance<a.minimumBalance?'warning-text':''}">${a.balance<a.minimumBalance?'Below your minimum balance':'Minimum balance'} · ${esc(money(a.minimumBalance))}</div>`:''}${a.protectFromSpending?`<div style="margin-top:10px"><span class="category-pill">♧ Protected (informational)</span></div>`:''}</article>`).join('')}<button class="add-account-card" data-action="add-account"><span>＋</span><strong>Add another account</strong><small>Checking, savings, cash, and more</small></button></div>`:emptyState('Start with your accounts','Add a checking account, savings account, cash wallet, or any balance you want to track.','Create account','add-account')}<p class="small-disclaimer">Balances are manually tracked. Protection and minimum-balance labels are reminders only; they do not block withdrawals.</p>`}
-function renderBudgets(){const list=[...data.budgets].sort((a,b)=>a.category.localeCompare(b.category));return `${pageHeading('Budgets',`<button class="primary-btn" data-action="add-budget">＋ Set a budget</button>`)}<div class="welcome-strip"><div class="welcome-icon">▤</div><div><strong>Set a limit for your spending.</strong><span>Budget progress uses recorded expenses from the current calendar month.</span></div></div>${list.length?`<div class="stack">${list.map(b=>{const spent=monthSpend(b.category),pct=b.limit>0?spent/b.limit*100:0,remaining=b.limit-spent;return `<section class="panel budget-row"><div class="budget-row-top"><div><span class="category-pill">${esc(b.category)}</span><h3>${esc(money(spent))} <small>spent of ${esc(money(b.limit))}</small></h3></div><div class="row-actions"><button class="action-btn" data-action="edit-budget" data-id="${esc(b.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="budgets" data-id="${esc(b.id)}">Delete</button></div></div><div class="progress-track"><div class="progress-fill ${pct>100?'over':''}" style="width:${Math.min(100,pct)}%"></div></div><div class="budget-foot"><span>${pct>100?`Over budget by ${esc(money(-remaining))}`:`${esc(money(Math.max(0,remaining)))} remaining`}</span><strong>${Math.round(pct)}% used</strong></div></section>`}).join('')}</div>`:emptyState('No budgets yet','Choose categories and give yourself a monthly spending limit.','Set a budget','add-budget')}<p class="small-disclaimer">This version tracks category budgets for the current month. It does not automatically connect to bank or card transactions.</p>`}
-function renderGoals(){return `${pageHeading('Goals',`<button class="primary-btn" data-action="add-goal">＋ Create savings goal</button>`)}<div class="welcome-strip"><div class="welcome-icon">◎</div><div><strong>Give your savings a destination.</strong><span>Update the amount saved as you make progress toward each goal.</span></div></div>${data.goals.length?`<div class="goal-grid">${data.goals.map(g=>{const p=g.target>0?Math.min(100,g.saved/g.target*100):0,complete=p>=100;return `<article class="goal-card goal-card-journey ${complete?'goal-complete':''}"><div class="goal-card-top"><div class="goal-icon">${complete?ICON.check:ICON.target}</div><div class="row-actions">${complete?'<span class="goal-achieved-badge">★ Goal reached</span>':""}<button class="action-btn" data-action="edit-goal" data-id="${esc(g.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="goals" data-id="${esc(g.id)}">Delete</button></div></div><h3>${esc(g.name)}</h3><p class="muted">${g.dueDate?'Target date · '+esc(fmtDate(g.dueDate)):'No target date set'}</p><div class="goal-numbers"><strong>${esc(money(g.saved))}</strong><span>of ${esc(money(g.target))}</span></div><div class="progress-track goal-progress-track" role="progressbar" aria-label="${esc(g.name)} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p)}"><div class="progress-fill ${complete?"goal-progress-complete":""}" style="width:${p}%"></div></div><div class="budget-foot"><span>${complete?"A milestone worth celebrating":esc(money(Math.max(0,g.target-g.saved))+" to go")}</span><strong>${Math.round(p)}%</strong></div><button class="text-btn" data-action="edit-goal" data-id="${esc(g.id)}">${complete?"Update goal ↗":"Add to this goal ↗"}</button></article>`}).join('')}</div>`:emptyState('No savings goals yet','Create an emergency fund, trip, new PC, or another goal and track your progress.','Create savings goal','add-goal')}`}
+function renderBudgets(){const list=[...data.budgets].sort((a,b)=>a.category.localeCompare(b.category));return `${pageHeading('Budgets',`<button class="primary-btn" data-action="add-budget">＋ Set a budget</button>`)}<div class="welcome-strip"><div class="welcome-icon">▤</div><div><strong>Set a limit for your spending.</strong><span>Budget progress uses recorded expenses from the current calendar month.</span></div></div>${list.length?`<div class="stack">${list.map(b=>{const spent=monthSpend(b.category),pct=b.limit>0?spent/b.limit*100:0,remaining=b.limit-spent;return `<section class="panel budget-row" data-budget-id="${esc(b.id)}"><div class="budget-row-top"><div><span class="category-pill">${esc(b.category)}</span><h3>${esc(money(spent))} <small>spent of ${esc(money(b.limit))}</small></h3></div><div class="row-actions"><button class="action-btn" data-action="edit-budget" data-id="${esc(b.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="budgets" data-id="${esc(b.id)}">Delete</button></div></div><div class="progress-track"><div class="progress-fill ${pct>100?'over':''}" style="width:${Math.min(100,pct)}%"></div></div><div class="budget-foot"><span>${pct>100?`Over budget by ${esc(money(-remaining))}`:`${esc(money(Math.max(0,remaining)))} remaining`}</span><strong>${Math.round(pct)}% used</strong></div></section>`}).join('')}</div>`:emptyState('No budgets yet','Choose categories and give yourself a monthly spending limit.','Set a budget','add-budget')}<p class="small-disclaimer">This version tracks category budgets for the current month. It does not automatically connect to bank or card transactions.</p>`}
+function renderGoals(){return `${pageHeading('Goals',`<button class="primary-btn" data-action="add-goal">＋ Create savings goal</button>`)}<div class="welcome-strip"><div class="welcome-icon">◎</div><div><strong>Give your savings a destination.</strong><span>Update the amount saved as you make progress toward each goal.</span></div></div>${data.goals.length?`<div class="goal-grid">${data.goals.map(g=>{const p=g.target>0?Math.min(100,g.saved/g.target*100):0,complete=p>=100;return `<article class="goal-card goal-card-journey ${complete?'goal-complete':''}" data-goal-id="${esc(g.id)}"><div class="goal-card-top"><div class="goal-icon">${complete?ICON.check:ICON.target}</div><div class="row-actions">${complete?'<span class="goal-achieved-badge">★ Goal reached</span>':""}<button class="action-btn" data-action="edit-goal" data-id="${esc(g.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="goals" data-id="${esc(g.id)}">Delete</button></div></div><h3>${esc(g.name)}</h3><p class="muted">${g.dueDate?'Target date · '+esc(fmtDate(g.dueDate)):'No target date set'}</p><div class="goal-numbers"><strong>${esc(money(g.saved))}</strong><span>of ${esc(money(g.target))}</span></div><div class="progress-track goal-progress-track" role="progressbar" aria-label="${esc(g.name)} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p)}"><div class="progress-fill ${complete?"goal-progress-complete":""}" style="width:${p}%"></div><span class="goal-progress-marker" style="--goal-progress:${p}%" aria-hidden="true">✦</span></div><div class="budget-foot"><span>${complete?"A milestone worth celebrating":esc(money(Math.max(0,g.target-g.saved))+" to go")}</span><strong>${Math.round(p)}%</strong></div><button class="text-btn" data-action="edit-goal" data-id="${esc(g.id)}">${complete?"Update goal ↗":"Add to this goal ↗"}</button></article>`}).join('')}</div>`:emptyState('No savings goals yet','Create an emergency fund, trip, new PC, or another goal and track your progress.','Create savings goal','add-goal')}`}
 function renderPurchaseCard(p){const priority=['High','Medium','Low'].includes(p.priority)?p.priority:'Medium';const pct=p.price>0?Math.min(100,(p.saved||0)/p.price*100):0;const days=reminderDaysLeft(p);return `<article class="purchase-card"><div class="purchase-card-head"><span class="priority ${esc(priority.toLowerCase())}">${esc(priority)} priority</span><div class="row-actions"><button class="action-btn" data-action="edit-purchase" data-id="${esc(p.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="purchases" data-id="${esc(p.id)}">Delete</button></div></div><h3>${esc(p.name)}</h3><p class="muted">${esc(p.category)} · ${esc(accountName(p.accountId))}</p><div class="purchase-price">${esc(money(p.price))}</div>${renderPurchasePriceTools(p)}<div class="purchase-meta"><span>Target date</span><strong>${esc(fmtDate(p.date))}</strong></div><div class="purchase-meta"><span>Saved so far</span><strong>${esc(money(p.saved||0))}</strong></div><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div class="budget-foot"><span>${Math.round(pct)}% saved</span><strong>${esc(money(Math.max(0,p.price-(p.saved||0))))} left</strong></div><form class='purchase-allocation-form' data-purchase-id='${esc(p.id)}'><label class='purchase-allocation-label'>Amount allocated<input name='allocatedAmount' type='number' min='0' max='${esc(['Purchased','Cancelled'].includes(p.status)?p.price:maxPurchaseAllocation(p.accountId,p.id))}' step='0.01' required inputmode='decimal' value='${esc((Number(p.saved)||0).toFixed(2))}'></label><button class='secondary-btn small' type='submit'>Update allocation</button><p>Set the amount saved for this purchase directly on its card.</p></form>${p.date&&Number.isFinite(days)&&['Planning','Saving','Ready'].includes(p.status)?`<div class="purchase-date-note">${days<0?`${Math.abs(days)} days overdue`:days===0?'Target date is today':`${days} days until target`}${getReminders().includes(p)?' · Reminder due':''}</div>`:''}${p.notes?`<div class="purchase-notes is-collapsed" data-notes-preview>${esc(p.notes)}</div><button class="purchase-notes-toggle" type="button" data-action="toggle-purchase-notes" aria-expanded="false">Expand description</button>`:''}<div class="purchase-actions"><select aria-label="Purchase status" data-action="purchase-status" data-id="${esc(p.id)}">${options(['Planning','Saving','Ready','Purchased','Postponed','Cancelled'],p.status)}</select>${p.status!=='Purchased'?`<button class="bought-btn" data-action="purchase-bought" data-id="${esc(p.id)}">Bought</button>`:''}</div></article>`}
 function sortPurchaseItems(a,b){const da=/^\d{4}-\d{2}-\d{2}$/.test(String(a.date||''))?String(a.date):'9999-12-31';const db=/^\d{4}-\d{2}-\d{2}$/.test(String(b.date||''))?String(b.date):'9999-12-31';return da.localeCompare(db)||(Number(a.price)||0)-(Number(b.price)||0)||String(a.name||'').localeCompare(String(b.name||''))}
 /* Completed tiles are projections of plans or existing expenses, never new records. */
@@ -1939,7 +2039,7 @@ function renderModal(){const root=$('modalRoot');if(!modalState){root.innerHTML=
  else if(kind==='goal'){title=edit?'Edit savings goal':'Create savings goal';submit=edit?'Save changes':'Create goal';body=`${field('Goal name','name','text',v.name||'','required maxlength="100" placeholder="Emergency fund"')}<div class="field-grid">${field('Target amount','target','number',v.target??'','min="0.01" step="0.01" required')}${field('Amount saved so far','saved','number',v.saved??'0','min="0" step="0.01" required')}${field('Target date (optional)','dueDate','date',v.dueDate||'','')}</div><p class="form-hint">Update the saved amount whenever you add to or use the money reserved for this goal.</p>`}
  else if(kind==='purchase'){title=edit?'Edit planned purchase':'Plan a future purchase';submit=edit?'Save changes':'Save purchase';body=`${field('Purchase name','name','text',v.name||'','required maxlength="100" placeholder="New laptop"')}<div class="field-grid">${field('Price','price','number',v.price??'','min="0.01" step="0.01" required')}${field('Target purchase date','date','date',v.date||today(),'required')}${select('Priority','priority',options(['Low','Medium','High'],v.priority||'Medium'),v.priority||'Medium')}${select('Category','category',categoryOptions(v.category,true),v.category||'Other')}</div>${select('Funding account','accountId',accountOptions(v.accountId),v.accountId||'','required')}<div class="field-grid">${field('Already set aside','saved','number',v.saved??'0','min="0" step="0.01" required')}${select('Status','status',options(['Planning','Saving','Ready','Purchased','Postponed','Cancelled'],v.status||'Planning'),v.status||'Planning')}</div><div class="field-label">Remind me<div class="reminder-options">${[[30,'30 days before'],[7,'7 days before'],[1,'1 day before'],[0,'On the day']].map(([n,label])=>`<label class="checkbox-line"><input type="checkbox" name="reminderDays" value="${n}" ${(Array.isArray(v.reminderDays)?v.reminderDays:[30,7,1,0]).includes(n)?'checked':''}>${label}</label>`).join('')}</div></div><label class="field-label">Notes (optional)<textarea rows="2" maxlength="1000" name="notes" placeholder="Links, details, or things to compare">${esc(v.notes||'')}</textarea></label><p class="form-hint">Reminders are checked while the dashboard is open. Notifications while it is closed are not configured.</p>`}
  root.innerHTML=`<div class="modal-backdrop" data-action="backdrop-close"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><div class="eyebrow">NORTHSTAR</div><h2 id="modalTitle">${esc(title)}</h2></div><button class="icon-btn" data-action="close-modal" aria-label="Close dialog">×</button></div><form id="modalForm" novalidate><div id="modalError" class="form-error hidden" role="alert"></div>${body}<div class="modal-actions"><button type="button" class="secondary-btn" data-action="close-modal">Cancel</button><button type="submit" class="primary-btn">✓ ${esc(submit)}</button></div></form></section></div>`;
- const form=$('modalForm');form?.addEventListener('change',e=>{if(e.target?.id==='modalTxType'){const box=$('transferExtra');box?.classList.toggle('hidden',e.target.value!=='Transfer');const category=form.elements.namedItem('category');if(category&&e.target.value==='Income')category.value='Income';else if(category&&category.value==='Income')category.value='Other';}});modalState.baselineSnapshot=modalFormSnapshot(form);
+ const form=$('modalForm');form?.addEventListener('change',e=>{if(e.target?.id==='modalTxType'){const type=e.target.value,box=$('transferExtra');box?.classList.toggle('hidden',type!=='Transfer');const category=form.elements.namedItem('category');if(category){const selected=type==='Income'?'Income':category.value==='Income'?'Other':category.value||'Other';category.innerHTML=categoryOptions(selected,type==='Expense');category.value=selected}}});modalState.baselineSnapshot=modalFormSnapshot(form);
 }
 function formError(message){const e=$('modalError');e.textContent=message;e.classList.remove('hidden');e.scrollIntoView({block:'nearest',behavior:'smooth'})}
 /* Save validated form data, preserving linked IDs and price history on edits.
@@ -1947,6 +2047,7 @@ function formError(message){const e=$('modalError');e.textContent=message;e.clas
    rather than silently creating another expense. */
 function submitModal(e){e.preventDefault();const form=e.target;if(!modalState||!form||form.id!=='modalForm')return;const fd=new FormData(form),v=Object.fromEntries(fd.entries()),kind=modalState.kind,oldId=modalState.id;let next={...data};
  const section={transaction:'transactions',account:'accounts',budget:'budgets',goal:'goals',purchase:'purchases'}[kind];
+ const priorBudget=kind==='budget'?data.budgets.find(b=>b.id===oldId||(!oldId&&b.category===v.category)):null;
  if(oldId&&section&&!data[section].some(item=>item.id===oldId)){formError('This record no longer exists. Close this form and review your current records.');return}
  const num=(key)=>Number(v[key]);const validMoney=(n,min=0.01)=>Number.isFinite(n)&&n>=min;
  if(kind==='transaction'){
@@ -1962,7 +2063,15 @@ function submitModal(e){e.preventDefault();const form=e.target;if(!modalState||!
  }else if(kind==='purchase'){
   const price=num('price'),saved=num('saved');if(!v.name?.trim()||!validMoney(price)||v.saved==null||String(v.saved).trim()===''||!Number.isFinite(saved)||saved<0||!v.date||!v.accountId||!next.accounts.some(a=>a.id===v.accountId)){formError('Enter a name, positive price, valid saved amount, target date, and funding account.');return}const status=v.status||'Planning';if(!['Purchased','Cancelled'].includes(status)){const limit=maxPurchaseAllocation(v.accountId,oldId||'');if(saved>limit+0.005){formError('This allocation would bring '+accountName(v.accountId)+' below its minimum balance. You can allocate up to '+money(limit)+' to this purchase while protecting the minimum.');return}}const previous=oldId?next.purchases.find(p=>p.id===oldId):null;const item={...(previous||{}),id:oldId||id(),name:v.name.trim(),price:Math.round(price*100)/100,date:v.date,priority:v.priority||'Medium',category:v.category||'Other',accountId:v.accountId,saved:Math.round(saved*100)/100,status,reminderDays:fd.getAll('reminderDays').map(Number).filter(n=>[30,7,1,0].includes(n)),notes:v.notes||''};next={...next,purchases:oldId?next.purchases.map(p=>p.id===oldId?item:p):[...next.purchases,item]};
  }
- const newGoal=kind==='goal'?next.goals.find(g=>g.id===(oldId||next.goals[next.goals.length-1]?.id)):null;const priorGoal=kind==='goal'?data.goals.find(g=>g.id===newGoal?.id):null;const reachedNow=!!newGoal&&Number(newGoal.target)>0&&Number(newGoal.saved)>=Number(newGoal.target)&&(!priorGoal||Number(priorGoal.saved)<Number(priorGoal.target));data=next;persist();modalState=null;render();showToast(kind==='transaction'?(oldId?'Transaction updated':'Transaction saved'):kind==='account'?(oldId?'Account updated':'Account created'):kind==='budget'?'Budget saved':kind==='goal'?(oldId?'Goal updated':'Goal created'):(oldId?'Purchase updated':'Purchase planned'));if(reachedNow)celebrateGoal(newGoal);
+ const newGoal=kind==='goal'?next.goals.find(g=>g.id===(oldId||next.goals[next.goals.length-1]?.id)):null;const priorGoal=kind==='goal'?data.goals.find(g=>g.id===newGoal?.id):null;const reachedNow=!!newGoal&&Number(newGoal.target)>0&&Number(newGoal.saved)>=Number(newGoal.target)&&(!priorGoal||Number(priorGoal.saved)<Number(priorGoal.target));
+ const newBudget=kind==='budget'?next.budgets.find(b=>b.category===v.category):null;
+ const budgetMotionBefore=kind==='transaction'?data.budgets.map(b=>({id:b.id,limit:Number(b.limit)||0,spent:monthSpend(b.category),category:b.category})):[];
+ data=next;const saveStatus=persist();modalState=null;render();
+ if(saveStatus!==false){
+  showToast(saveStatus==='pending'?'Changes applied · saving the protected device copy…':kind==='transaction'?(oldId?'Transaction updated':'Transaction saved'):kind==='account'?(oldId?'Account updated':'Account created'):kind==='budget'?'Budget saved':kind==='goal'?(oldId?'Goal updated':'Goal created'):(oldId?'Purchase updated':'Purchase planned'));
+  try{globalThis.NorthstarMotion?.formSaved({kind,before:kind==='goal'?priorGoal:priorBudget,after:kind==='goal'?newGoal:kind==='budget'?newBudget:kind==='transaction'?next.transactions[0]:null,oldId,confirmed:saveStatus!=='pending',spentBefore:kind==='budget'&&priorBudget?monthSpend(priorBudget.category):0,spentAfter:kind==='budget'?monthSpend(v.category):0,budgetChanges:budgetMotionBefore.map(b=>({...b,after:monthSpend(b.category)}))})}catch(e){console.warn('Presentation animation was skipped.',e)}
+ }
+ if(reachedNow)celebrateSavedGoal(newGoal,saveStatus);
 }
 async function deleteItem(section,itemId){if(section==='accounts'){if(data.transactions.some(t=>t.accountId===itemId||t.toAccountId===itemId)||data.purchases.some(p=>p.accountId===itemId)){showToast('This account is used by transactions or purchases. Reassign those items first.');return}}if(await showNorthstarDialog({title:'Delete this item?',message:'This item will be removed from your Northstar records.',detail:'This action can’t be undone. The change will be saved to your current dataset.',icon:'⌫',confirmText:'Delete item',cancelText:'Keep item',danger:true,label:'CONFIRM DELETION'})!==true)return;let next={...data};if(section==='transactions'){const t=next.transactions.find(x=>x.id===itemId);if(t)next.accounts=applyTransaction(next.accounts,t,true);next.transactions=next.transactions.filter(x=>x.id!==itemId)}else next[section]=next[section].filter(x=>x.id!==itemId);data=next;persist();showToast('Item deleted')}
 function trapDialogFocus(root,onCancel){
@@ -2030,7 +2139,7 @@ function setPurchaseStatus(purchaseId,status){
   if(existing){
    if(existing.type!=='Expense'){showToast('The linked transaction is no longer an expense. Review it in Transactions before marking this purchase bought.');return}
    data={...data,purchases:data.purchases.map(p=>p.id===purchaseId?{...p,status:'Purchased',transactionId:existing.id}:p)};
-   persist();showToast('This purchase already has an expense recorded. No duplicate was added.');return;
+   const saved=persist();if(saved!==false){showToast(saved==='pending'?'Purchase updated · saving the protected device copy…':'This purchase already has an expense recorded. No duplicate was added.');if(purchase.status!=='Purchased')try{globalThis.NorthstarMotion?.purchaseCompleted(purchaseId)}catch(e){console.warn('Presentation animation was skipped.',e)}}return;
   }
   const account=data.accounts.find(a=>a.id===purchase.accountId);
   if(!account){showToast('Choose a valid funding account before recording this purchase.');return}
@@ -2040,12 +2149,41 @@ function setPurchaseStatus(purchaseId,status){
   if(amount>allowed+0.005){showToast('This purchase would take '+account.name+' below its minimum balance or use money reserved for other purchases. The maximum safe purchase amount is '+money(allowed)+'. Update the account balance or purchase plan first.');return}
   const transaction={id:id(),description:'Purchase: '+purchase.name,amount:roundMoney(amount),type:'Expense',category:purchase.category||'Other',date:today(),accountId:account.id,purchaseId:purchase.id};
   data={...data,accounts:applyTransaction(data.accounts,transaction),transactions:[transaction,...data.transactions],purchases:data.purchases.map(p=>p.id===purchaseId?{...p,status:'Purchased',transactionId:transaction.id}:p)};
-  persist();showToast('Purchase marked bought and expense added to '+account.name+'.');return;
+  const saved=persist();if(saved!==false){showToast(saved==='pending'?'Purchase recorded · saving the protected device copy…':'Purchase marked bought and expense added to '+account.name+'.');if(purchase.status!=='Purchased')try{globalThis.NorthstarMotion?.purchaseCompleted(purchaseId)}catch(e){console.warn('Presentation animation was skipped.',e)}}return;
  }
  data={...data,purchases:data.purchases.map(p=>p.id===purchaseId?{...p,status}:p)};
  persist();showToast(`Purchase marked ${status.toLowerCase()}`);
 }
-function navigate(nextPage){if(nextPage!=='Purchases')purchaseDetailId=null;page=nextPage;$('sidebar').classList.remove('sidebar-open');$('scrim').classList.add('hidden');render();window.scrollTo({top:0,behavior:'smooth'})}
+function positionDockIndicator(){
+ const dock=$('mobileDock');if(!dock)return;
+ let active=[...dock.querySelectorAll('.dock-item[data-page]')].find(el=>el.dataset.page===page&&el.getClientRects().length);
+ if(!active)active=$('dockMoreBtn');if(!active||!active.getClientRects().length)return;
+ const parent=dock.getBoundingClientRect(),rect=active.getBoundingClientRect();dock.style.setProperty('--dock-x',(rect.left-parent.left)+'px');dock.style.setProperty('--dock-width',rect.width+'px');
+}
+function renderDock(){
+ const dock=$('mobileDock');if(!dock)return;
+ dock.querySelectorAll('[data-page]').forEach(b=>{const active=b.dataset.page===page;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+ $('dockMoreBtn')?.classList.toggle('is-current',['Accounts','Budgets','Settings'].includes(page));
+ if(['Accounts','Budgets','Settings'].includes(page))$('dockMoreBtn')?.setAttribute('aria-current','page');else $('dockMoreBtn')?.removeAttribute('aria-current');
+ requestAnimationFrame(positionDockIndicator);
+}
+function setDockMore(open,restoreFocus=false){
+ const menu=$('dockMoreMenu'),button=$('dockMoreBtn');if(!menu||!button)return false;
+ const wasOpen=!menu.hidden,returnFocus=restoreFocus||menu.contains(document.activeElement);
+ menu.hidden=!open;button.setAttribute('aria-expanded',String(open));$('mobileDock')?.classList.toggle('menu-open',!!open);
+ if(!open&&wasOpen&&returnFocus){try{button.focus({preventScroll:true})}catch{button.focus()}}
+ return wasOpen;
+}
+function navigate(nextPage){if(nextPage!=='Purchases'){purchaseDetailId=null;try{globalThis.NorthstarMotion?.cancelPurchase()}catch(e){console.warn('Presentation animation was skipped.',e)}}setDockMore(false);page=nextPage;render();window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}
+function resizeDock(){
+ if(window.matchMedia('(min-width: 701px)').matches){
+  const hadFocus=$('dockMoreMenu')?.contains(document.activeElement);setDockMore(false);
+  if(hadFocus){const target=[...$('mobileDock').querySelectorAll('.dock-item[data-page]')].find(el=>el.dataset.page===page);try{target?.focus({preventScroll:true})}catch{target?.focus()}}
+ }
+ positionDockIndicator();
+}
+window.addEventListener('resize',resizeDock,{passive:true});
+document.addEventListener('click',e=>{const dock=$('mobileDock');if(dock&&!dock.contains(e.target))setDockMore(false)});
 let welcomeDismissTimer=null,welcomeReturnFocus=null;
 function focusWelcomeEntry(){
  if(window.NorthstarVaultLocked||confirmResolver||!isWelcomeVisible()||$('welcomeScreen').classList.contains('welcome-leaving'))return;
@@ -2085,8 +2223,8 @@ function trapWelcomeTab(e){
  }
  return false;
 }
-function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'menu':$('sidebar').classList.add('sidebar-open');$('scrim').classList.remove('hidden');break;case'close-menu':$('sidebar').classList.remove('sidebar-open');$('scrim').classList.add('hidden');break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':purchaseDetailId=null;render();window.scrollTo({top:0,behavior:'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
-document.addEventListener('keydown',e=>{if(trapWelcomeTab(e))return;const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
+function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
+document.addEventListener('keydown',e=>{if(trapWelcomeTab(e))return;const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&setDockMore(false,true)){e.preventDefault();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
 document.addEventListener('click',e=>{
  const option=e.target.closest('[data-confirm-index]');
  if(option&&confirmResolver){e.preventDefault();e.stopPropagation();const index=Number(option.dataset.confirmIndex);settleNorthstarDialog(Number.isInteger(index)&&confirmChoices[index]?confirmChoices[index].value:null);return}
@@ -2418,6 +2556,7 @@ async function writeCloudNow(){
  return cloudWritePayload({data:safeData,updatedAt:Date.now(),schemaVersion:1},uid,epoch);
 }
 async function onAuthChanged(current){
+ if((user?.uid||null)!==(current?.uid||null))try{window.NorthstarJarvis?.resetWorkspace?.()}catch(e){console.warn('Assistant workspace reset was skipped.',e)}
  const epoch=++cloudEpoch;clearTimeout(saveTimer);cloudLoaded=false;cloudFingerprint=undefined;
  if(vault.state==='locked'){
   user=current;lastSyncError=null;setCloudLoading(false);setSync('Protected workspace locked');return;
@@ -2566,7 +2705,7 @@ try{
   Object.defineProperty(window,'NorthstarLedger',{
     configurable:true,
     value:function(){
-      if(window.NorthstarVaultLocked)return null;
+      if(window.NorthstarVaultLocked||syncLoading)return null;
       try{ return JSON.parse(JSON.stringify(data)); }catch(e){ return data; }
     }
   });
@@ -2921,50 +3060,21 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootLayers);
   else bootLayers();
 
-  /* ---------------- motion: stagger + count-up ---------------- */
+  /* Page entrances run on navigation only. Financial figures always show their
+     real value immediately instead of counting through invented amounts. */
+  var lastAnimatedPage = null;
   function animateContent() {
     var content = document.getElementById('content');
-    if (!content) return;
+    if (!content || content.dataset.page === lastAnimatedPage) return;
     var ae = document.activeElement;
     if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+    lastAnimatedPage = content.dataset.page;
     if (!reduce) {
-      var kids = [].slice.call(content.children);
-      kids.forEach(function (el, i) {
-        el.style.animationDelay = (i * 55) + 'ms';
-        el.classList.remove('nsx-enter');
-        void el.offsetWidth;
+      [].slice.call(content.children).forEach(function (el, i) {
+        el.style.animationDelay = (Math.min(i, 4) * 35) + 'ms';
         el.classList.add('nsx-enter');
       });
     }
-    countUp(content);
-  }
-
-  function countUp(root) {
-    if (reduce) return;
-    var nodes = root.querySelectorAll('.metric-value,.account-balance,.purchase-summary strong');
-    [].forEach.call(nodes, function (el) {
-      var text = (el.textContent || '').trim();
-      if (!/\d/.test(text)) return;
-      if (el.dataset.nsxTarget === text) return;
-      var m = text.match(/^([^0-9]*?)(-?[\d,]+(?:\.\d+)?)(.*)$/);
-      if (!m) return;
-      var prefix = m[1], numeric = m[2], suffix = m[3];
-      var neg = numeric.charAt(0) === '-';
-      var raw = parseFloat(numeric.replace(/,/g, '').replace('-', ''));
-      if (!isFinite(raw)) return;
-      el.dataset.nsxTarget = text;
-      var decimals = (numeric.split('.')[1] || '').length;
-      var start = performance.now(), dur = 700;
-      function step(ts) {
-        var p = Math.min(1, (ts - start) / dur);
-        var v = raw * (1 - Math.pow(1 - p, 3));
-        var shown = v.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-        el.textContent = prefix + (neg ? '-' : '') + shown + suffix;
-        if (p < 1) requestAnimationFrame(step);
-        else el.textContent = text;
-      }
-      requestAnimationFrame(step);
-    });
   }
 
   var contentEl = document.getElementById('content');
@@ -3119,6 +3229,8 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
 
   document.addEventListener('keydown', function (e) {
     if (!document.documentElement.classList.contains('northstar-seen')) return;
+    // A shortcut must never replace or re-render an unfinished financial dialog.
+    if (document.querySelector('#modalRoot .modal-backdrop, #confirmRoot .confirm-backdrop')) return;
     var t = e.target;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
     var k = e.key.toLowerCase();
@@ -3152,7 +3264,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   }
 
   (function egg() {
-    var mark = document.querySelector('.brand-mark');
+    var mark = document.querySelector('.breadcrumb-logo');
     if (!mark) return;
     var timer = null;
     mark.addEventListener('pointerdown', function () {
@@ -3175,19 +3287,79 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
 })();
 
 </script>
+<script id="finance-motion-runtime">
+(function(){
+  'use strict';
+  var pendingPurchase = null, sourceRect = null, purchaseObserver = null;
+  function allowed(){return !window.matchMedia('(prefers-reduced-motion: reduce)').matches}
+  function visible(el){if(!el || !el.getClientRects().length)return false;var r=el.getBoundingClientRect();return r.bottom>0&&r.top<window.innerHeight&&r.right>0&&r.left<window.innerWidth}
+  function clamp(n){return Math.max(0,Math.min(100,Number(n)||0))}
+  function findCard(selector,field,id){return [].slice.call(document.querySelectorAll(selector)).find(function(el){return el.dataset[field]===String(id)})}
+  function progress(card,from,to,marker){
+    if(!allowed()||!visible(card))return;
+    var fill=card.querySelector('.progress-fill');
+    if(from!==to&&fill&&fill.animate)fill.animate([{width:clamp(from)+'%'},{width:clamp(to)+'%'}],{duration:600,easing:'cubic-bezier(.2,.8,.2,1)'});
+    var star=marker&&card.querySelector('.goal-progress-marker');
+    if(from!==to&&star&&star.animate)star.animate([{left:'clamp(7px,'+clamp(from)+'%,calc(100% - 7px))'},{left:'clamp(7px,'+clamp(to)+'%,calc(100% - 7px))'}],{duration:600,easing:'cubic-bezier(.2,.8,.2,1)'});
+    if(!marker){card.classList.add('progress-updated');setTimeout(function(){card.classList.remove('progress-updated')},850)}
+  }
+  function formSaved(change){
+    if(change.kind==='goal'&&change.before&&change.after&&Number(change.after.saved)>Number(change.before.saved)){
+      var before=Number(change.before.target)>0?100*Number(change.before.saved)/Number(change.before.target):0;
+      var after=Number(change.after.target)>0?100*Number(change.after.saved)/Number(change.after.target):0;
+      progress(findCard('[data-goal-id]','goalId',change.after.id),before,after,true);
+    }
+    if(change.kind==='budget'&&change.after){
+      var beforeLimit=Number(change.before&&change.before.limit)||0,afterLimit=Number(change.after.limit)||0;
+      progress(findCard('[data-budget-id]','budgetId',change.after.id),beforeLimit?100*change.spentBefore/beforeLimit:0,afterLimit?100*change.spentAfter/afterLimit:0,false);
+    }
+    if(change.kind==='transaction'){
+      (change.budgetChanges||[]).forEach(function(b){
+        if(b.limit>0&&b.spent!==b.after)progress(findCard('[data-budget-id]','budgetId',b.id),100*b.spent/b.limit,100*b.after/b.limit,false);
+      });
+    }
+    if(change.kind==='transaction'&&!change.oldId&&change.confirmed&&change.after){
+      var toast=document.querySelector('#toastRoot .toast'),icon=toast&&toast.firstElementChild;
+      if(!icon)return;
+      var type=change.after.type;toast.classList.add('transaction-flow',type==='Income'?'flow-income':type==='Transfer'?'flow-transfer':'flow-expense');
+      icon.className='transaction-flow-icon';icon.textContent=type==='Income'?'↙':type==='Transfer'?'⇄':'↗';
+    }
+  }
+  function cancelPurchase(){if(purchaseObserver)purchaseObserver.disconnect();purchaseObserver=null;pendingPurchase=null;sourceRect=null}
+  function purchaseCompleted(id){cancelPurchase();pendingPurchase=document.querySelector('.purchase-detail-view')?String(id):null}
+  function beforePurchaseList(id){var detail=document.querySelector('.purchase-detail-view');sourceRect=pendingPurchase===String(id)&&detail?detail.getBoundingClientRect():null}
+  function afterPurchaseList(){
+    if(!pendingPurchase||!sourceRect){cancelPurchase();return}
+    var tile=findCard('.priority-group-purchased .purchase-tile[data-id]','id',pendingPurchase),origin=sourceRect;
+    pendingPurchase=null;sourceRect=null;
+    if(!allowed()||!tile||!tile.animate)return;
+    function moveTile(){
+      if(!tile.isConnected||!allowed())return;
+      var to=tile.getBoundingClientRect(),dx=Math.max(-70,Math.min(70,origin.left-to.left)),dy=Math.max(-70,Math.min(70,origin.top-to.top));
+      // Animate position, not transforms, so the compact SVG badge keeps its stroke geometry.
+      tile.animate([{left:dx+'px',top:dy+'px',opacity:.75},{left:'0px',top:'0px',opacity:1}],{duration:440,easing:'cubic-bezier(.2,.8,.2,1)'});
+    }
+    if(visible(tile))moveTile();
+    else if('IntersectionObserver' in window){
+      purchaseObserver=new IntersectionObserver(function(entries){if(entries.some(function(entry){return entry.isIntersecting})){purchaseObserver.disconnect();purchaseObserver=null;moveTile()}});
+      purchaseObserver.observe(tile);
+    }
+  }
+  window.NorthstarMotion={formSaved:formSaved,purchaseCompleted:purchaseCompleted,beforePurchaseList:beforePurchaseList,afterPurchaseList:afterPurchaseList,cancelPurchase:cancelPurchase};
+})();
+</script>
 <script id="jarvis-runtime">
 /* ============================================================
    NORTHSTAR — JARVIS 2
-   Local, private, data-aware assistant.
-   Reads the live in-memory ledger (cloud included) with a
-   localStorage fallback. No network. No keys.
+   Local rules-based assistant with an optional visitor-supplied cloud provider.
+   Reads the active in-memory ledger; never saves a finance action without review.
    ============================================================ */
 (function () {
   'use strict';
 
   var CFG_KEY = 'northstar-jarvis-v1';
   var cfg = (function () {
-    var base = { tone: 'playful', voice: false };
+    var base = { tone: 'coach', voice: false };
     try { return Object.assign(base, JSON.parse(localStorage.getItem(CFG_KEY) || '{}')); }
     catch (e) { return base; }
   })();
@@ -3195,30 +3367,15 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ---------------- ledger access ---------------- */
-  function scanStorage() {
-    var best = null, bestScore = -1;
-    try {
-      for (var i = 0; i < localStorage.length; i++) {
-        var k = localStorage.key(i);
-        if (!k || !/^northstar-finance-v1(:|$)/.test(k)) continue;
-        var d;
-        try { d = JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { continue; }
-        if (!d || typeof d !== 'object') continue;
-        var score = (d.transactions || []).length * 3 + (d.accounts || []).length * 5 +
-          (d.budgets || []).length * 2 + (d.goals || []).length * 2 + (d.purchases || []).length * 2;
-        if (score > bestScore) { bestScore = score; best = d; }
-      }
-    } catch (e) {}
-    return best;
-  }
   function ledger() {
     if (window.NorthstarVaultLocked || document.documentElement.classList.contains('northstar-vault-locked')) return null;
     var live = null;
-    try { if (typeof window.NorthstarLedger === 'function') live = window.NorthstarLedger(); } catch (e) {}
-    if (live && typeof live === 'object' && (Array.isArray(live.accounts) || Array.isArray(live.transactions))) return live;
-    var stored = scanStorage();
-    if (stored) return stored;
-    try { var legacy = localStorage.getItem('northstar-finance-v1'); if (legacy) return JSON.parse(legacy); } catch (e) {}
+    if (typeof window.NorthstarLedger === 'function') {
+      try { live = window.NorthstarLedger(); } catch (e) { return null; }
+      // Never substitute another browser workspace for the active one.
+      return live && typeof live === 'object' && (Array.isArray(live.accounts) || Array.isArray(live.transactions)) ? live : null;
+    }
+    // If the active app has not started, do not guess which stored workspace belongs to it.
     return null;
   }
 
@@ -3227,10 +3384,9 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     var cur = (d && d.settings && d.settings.currency) || 'USD';
     try {
       return new Intl.NumberFormat(undefined, {
-        style: 'currency', currency: cur,
-        maximumFractionDigits: Math.abs(n) < 100 ? 2 : 0
+        style: 'currency', currency: cur, maximumFractionDigits: 2
       }).format(n);
-    } catch (e) { return '$' + Math.round(n); }
+    } catch (e) { return '$' + num(n).toFixed(2); }
   }
   function pct(n) { return Math.round(n) + '%'; }
   function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
@@ -3268,8 +3424,15 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     var cur = bucket(txs, thisKey), prev = bucket(txs, prevKey);
 
     var accounts = d.accounts || [];
-    var total = accounts.reduce(function (s, a) { return s + num(a.balance); }, 0);
-    var minimums = accounts.reduce(function (s, a) { return s + num(a.minimum); }, 0);
+    var total = accounts.reduce(function (sum, a) { return sum + num(a.balance); }, 0);
+    var accountParts = accounts.map(function (a) {
+      var minimum = Math.max(0, num(a.minimumBalance));
+      var allocated = (d.purchases || []).filter(function (p) {
+        return p.accountId === a.id && p.status !== 'Purchased' && p.status !== 'Cancelled';
+      }).reduce(function (sum, p) { return sum + Math.max(0, num(p.saved)); }, 0);
+      return { account: a, minimum: minimum, allocated: allocated,
+        remaining: Math.max(0, num(a.balance) - minimum - allocated) };
+    });
 
     var budgets = (d.budgets || []).map(function (b) {
       var spent = cur.cats[b.category] || 0;
@@ -3288,7 +3451,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
       };
     });
 
-    var purchases = (d.purchases || []).filter(function (p) { return p.status !== 'Purchased'; })
+    var purchases = (d.purchases || []).filter(function (p) { return p.status !== 'Purchased' && p.status !== 'Cancelled'; })
       .map(function (p) {
         return { name: p.name || 'Purchase', price: num(p.price), saved: num(p.saved), priority: p.priority || 'Medium', date: p.date || '' };
       });
@@ -3306,14 +3469,15 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     return {
       ok: true, d: d, now: now, thisKey: thisKey, prevKey: prevKey,
       cur: cur, prev: prev, deltas: deltas,
-      accounts: accounts, total: total, minimums: minimums, available: total - minimums,
+      accounts: accounts, total: total, accountParts: accountParts,
       budgets: budgets, over: budgets.filter(function (b) { return b.pct > 100; }),
       goals: goals, purchases: purchases,
       purchaseTotal: purchases.reduce(function (s, p) { return s + p.price; }, 0),
       purchaseSaved: purchases.reduce(function (s, p) { return s + p.saved; }, 0),
+      purchaseRemaining: purchases.reduce(function (s, p) { return s + Math.max(0, p.price - p.saved); }, 0),
       elapsed: elapsed, totalDays: totalDays, daysLeft: daysLeft,
       projected: elapsed > 0 ? (cur.spend / elapsed) * totalDays : cur.spend,
-      safeDaily: daysLeft > 0 && cur.income > 0 ? Math.max(0, (cur.income - cur.spend) / daysLeft) : null,
+      safeDaily: daysLeft > 0 && cur.income > 0 ? (cur.income - cur.spend) / daysLeft : null,
       txCount: txs.length
     };
   }
@@ -3349,24 +3513,45 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     custom: { label: 'Custom (OpenAI-compatible)', model: '', url: '', help: 'your own endpoint' }
   };
   var CONN_DEFAULT = { provider: 'gemini', model: 'gemini-2.5-flash-lite', key: '', base: '', remember: false, includeTx: false, enabled: false };
+  var connStorageWarning = false;
   var conn = loadConn();
   var history = [];
   var cloudVerified = false;
 
   function loadConn() {
-    var c = Object.assign({}, CONN_DEFAULT), raw = null;
-    try { raw = localStorage.getItem(CONN_KEY) || sessionStorage.getItem(CONN_KEY); } catch (e) {}
-    if (raw) { try { Object.assign(c, JSON.parse(raw)); } catch (e) {} }
+    var c = Object.assign({}, CONN_DEFAULT), local = null, session = null;
+    try { local = localStorage.getItem(CONN_KEY); } catch (e) { connStorageWarning = true; }
+    try { session = sessionStorage.getItem(CONN_KEY); } catch (e) { connStorageWarning = true; }
+    var raw = local || session;
+    if (local && session) connStorageWarning = true;
+    if (raw) { try { Object.assign(c, JSON.parse(raw)); } catch (e) { connStorageWarning = true; } }
+    // Conflicting or unreadable copies must not silently re-enable an old connection.
+    if (connStorageWarning) c.enabled = false;
     var retired = { gemini: 'gemini-2.0-flash', anthropic: 'claude-3-5-haiku-latest', groq: 'llama-3.3-70b-versatile', openrouter: 'meta-llama/llama-3.3-70b-instruct:free' };
     if (retired[c.provider] === c.model) c.model = PROVIDERS[c.provider].model;
     return c;
   }
+  function paintConnStorageWarning() {
+    var el = panel && panel.querySelector('#nsjStorageWarning');
+    if (el) el.hidden = !connStorageWarning;
+  }
   function saveConn() {
-    var serialised = JSON.stringify(conn);
+    var serialised = JSON.stringify(conn), written = false, removed = false;
+    // Attempt both operations even if one fails: a previous remembered key
+    // must not be silently left behind when switching to session-only storage.
     try {
-      if (conn.remember) { localStorage.setItem(CONN_KEY, serialised); sessionStorage.removeItem(CONN_KEY); }
-      else { sessionStorage.setItem(CONN_KEY, serialised); localStorage.removeItem(CONN_KEY); }
+      var target = conn.remember ? localStorage : sessionStorage;
+      target.setItem(CONN_KEY, serialised);
+      written = target.getItem(CONN_KEY) === serialised;
     } catch (e) {}
+    try {
+      var other = conn.remember ? sessionStorage : localStorage;
+      other.removeItem(CONN_KEY);
+      removed = other.getItem(CONN_KEY) === null;
+    } catch (e) {}
+    connStorageWarning = !written || !removed;
+    paintConnStorageWarning();
+    return !connStorageWarning;
   }
   function providerLabel(id) { return (PROVIDERS[id] || PROVIDERS.custom).label; }
   function connReady() {
@@ -3375,14 +3560,14 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     return true;
   }
 
-  function round(n) { return Math.round(num(n)); }
+  function round(n) { return Math.round((num(n) + Number.EPSILON) * 100) / 100; }
   function brief(s, opts) {
     opts = opts || {};
     if (!s || !s.cur) s = snapshot();
     if (!s || !s.cur) {
       return {
         month: null, currency: 'USD',
-        accounts: { count: 0, total: 0, afterMinimums: 0 },
+        accounts: { count: 0, trackedTotal: 0, note: 'Combined total is not spendable cash.' },
         thisMonth: { income: 0, spend: 0, savingsRatePct: null, topCategories: [] },
         lastMonth: { income: 0, spend: 0 },
         budgets: [], goals: [], plannedPurchases: [], daysLeftInMonth: 0, projectedSpend: 0
@@ -3392,7 +3577,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     var out = {
       month: s.thisKey,
       currency: (d.settings && d.settings.currency) || 'USD',
-      accounts: { count: s.accounts.length, total: round(s.total), afterMinimums: round(s.available) },
+      accounts: { count: s.accounts.length, trackedTotal: round(s.total), note: 'Combined tracked total is not spendable cash; accounts, minimums and allocations must be checked separately.' },
       thisMonth: {
         income: round(s.cur.income), spend: round(s.cur.spend),
         savingsRatePct: s.cur.rate === null ? null : Math.round(s.cur.rate),
@@ -3435,6 +3620,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
       '- If the brief lacks what you need, say exactly what is missing.\n' +
       '- Be concise: under 90 words unless asked for depth. No markdown headings, no bullet spam.\n' +
       '- Do the arithmetic you can do from the brief, and show the number.\n' +
+      '- Never treat combined tracked accounts as spendable cash. Ask for a specific funding account and note that minimums, purchase allocations, savings and future bills are not all in this brief.\n' +
       '- Never present regulated financial advice as certainty; be direct and practical anyway.\n' +
       '- Amounts are in ' + ((s.d && s.d.settings && s.d.settings.currency) || 'USD') + '.\n\n' +
       'FINANCE BRIEF:\n' + JSON.stringify(brief(s, { includeTx: conn.includeTx }));
@@ -3443,7 +3629,8 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   function errText(e) {
     if (!e) return 'unknown error';
     if (e.name === 'AbortError') return 'Request timed out (30 seconds)';
-    var message = String(e.message || e);
+    var message = String(e.message || e), secret = String(conn.key || '');
+    if (secret) { message = message.split(secret).join('[redacted]'); var encoded = encodeURIComponent(secret); if (encoded !== secret) message = message.split(encoded).join('[redacted]'); }
     return message.length > 600 ? message.slice(0, 320) + ' … ' + message.slice(-260) : message;
   }
 
@@ -3473,6 +3660,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
 
   async function callCloudOnce(userText, pastTurns, s, opts) {
     opts = opts || {};
+    if (workspaceBlocked() || !s || !s.ok) throw new Error('Unlock and finish loading the active workspace before using a cloud provider.');
     var key = String(conn.key || '').trim();
     var model = String(conn.model || '').trim();
     if (!key) throw new Error('No API key saved');
@@ -3481,7 +3669,9 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     if (!conn.provider || !PROVIDERS[conn.provider]) throw new Error('Pick a provider');
     var sys = systemPrompt(s);
     var turns = (pastTurns || []).slice(-6);
-    var ctrl = new AbortController();
+    var ctrl = new AbortController(), externalSignal = opts.signal;
+    var abortRequest = function () { ctrl.abort(); };
+    if (externalSignal) { if (externalSignal.aborted) ctrl.abort(); else externalSignal.addEventListener('abort', abortRequest, { once: true }); }
     var timer = setTimeout(function () { ctrl.abort(); }, 30000);
     var maxTok = opts.maxTokens || 420;
 
@@ -3554,6 +3744,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
       return otext;
     } finally {
       clearTimeout(timer);
+      if (externalSignal) externalSignal.removeEventListener('abort', abortRequest);
     }
   }
 
@@ -3561,6 +3752,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     try {
       return await callCloudOnce(userText, pastTurns, s, opts);
     } catch (err) {
+      if (opts && opts.signal && opts.signal.aborted) throw err;
       if ((err && err.name === 'AbortError') || (err && err.status >= 500 && err.status <= 599)) {
         return await callCloudOnce(userText, pastTurns, s, opts);
       }
@@ -3568,11 +3760,10 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     }
   }
 
-  async function testConnection() {
+  async function testConnection(opts) {
     var s = snapshot();
-    if (!s.ok) s = { ok: false, d: { settings: {} }, accounts: [], cur: { income: 0, spend: 0, catsList: [], rate: null }, prev: { income: 0, spend: 0 }, budgets: [], goals: [], purchases: [], total: 0, available: 0, daysLeft: 0, projected: 0 };
-    var replyText = await callCloud('Reply with exactly: connected', [], s, { maxTokens: 64 });
-    return replyText;
+    if (!s.ok || workspaceBlocked()) throw new Error('Unlock and finish loading the active workspace before testing a connection.');
+    return callCloud('Reply with exactly: connected', [], s, { maxTokens: 64, signal: opts && opts.signal });
   }
 
 
@@ -3581,46 +3772,65 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
 
   function categoriesIn(s) {
     var known = {};
-    [s.cur.catsList, s.prev.catsList, s.budgets].forEach(function (list) {
+    ['Housing','Food','Transport','Shopping','Entertainment','Bills','Health','Education','Income','Other'].forEach(function (name) { known[name] = true; });
+    [s.cur.catsList, s.prev.catsList, s.budgets, s.d.transactions].forEach(function (list) {
       (list || []).forEach(function (x) { var n = x.name || x.category || ''; if (n) known[n] = true; });
     });
     s.deltas.forEach(function (d) { known[d.name] = true; });
     return Object.keys(known);
   }
 
-  function parseAmount(text) {
-    var m = text.match(/(?:\$|usd\s*)?(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?\b/i);
+  function removeNumberedNames(text, s) {
+    var cleaned = String(text || '');
+    if (!s || !s.d) return cleaned;
+    var names = (s.accounts || []).concat(s.d.goals || [], s.d.purchases || []).map(function (item) { return String(item.name || ''); })
+      .filter(function (name) { return /\d/.test(name); }).sort(function (a,b) { return b.length-a.length; });
+    names.forEach(function (name) {
+      var escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      cleaned = cleaned.replace(new RegExp(escaped, 'gi'), ' ');
+    });
+    return cleaned;
+  }
+  function parseAmount(text, s) {
+    var cleaned = removeNumberedNames(text, s).replace(/\b(?:19|20)\d{2}-\d{1,2}(?:-\d{1,2})?\b/g, ' ')
+      .replace(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec)\s+(?:19|20)\d{2}\b/gi, '$1');
+    var m = cleaned.match(/(?:-\s*)?(?:\$|usd\s*)?\s*-?\s*(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?\b/i);
     if (!m) return null;
     var v = parseFloat(m[1].replace(/,/g, ''));
     if (!isFinite(v)) return null;
     if (m[2]) v *= 1000;
-    return v;
+    return m[0].indexOf('-') >= 0 ? -v : v;
   }
 
   function parseMonth(text, s) {
-    if (/last month|previous month/i.test(text)) return 'prev';
-    if (/this month|current month/i.test(text)) return 'cur';
-    var lower = text.toLowerCase();
-    for (var i = 0; i < MONTH_NAMES.length; i++) {
-      if (lower.indexOf(MONTH_NAMES[i]) > -1) {
-        var y = s.now.getFullYear();
-        if (i > s.now.getMonth()) y -= 1;
-        return { key: y + '-' + String(i + 1).padStart(2, '0'), name: MONTH_NAMES[i] };
-      }
-    }
-    return null;
+    if (/\blast month\b|\bprevious month\b/i.test(text)) return 'prev';
+    if (/\bthis month\b|\bcurrent month\b/i.test(text)) return 'cur';
+    var lower = text.toLowerCase(), numeric = /\b((?:19|20)\d{2})-(0[1-9]|1[0-2])\b/.exec(lower);
+    if (numeric) return { key: numeric[1] + '-' + numeric[2], name: MONTH_NAMES[+numeric[2]-1] + ' ' + numeric[1] };
+    var names = /\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec)(?:\s+(?:of\s+)?((?:19|20)\d{2}))?\b/.exec(lower);
+    if (!names) return null;
+    var prefixes = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+    var i = prefixes.indexOf(names[1].slice(0,3));
+    var y = names[2] ? Number(names[2]) : s.now.getFullYear() - (i > s.now.getMonth() ? 1 : 0);
+    return { key: y + '-' + String(i + 1).padStart(2, '0'), name: MONTH_NAMES[i] + ' ' + y };
   }
 
   function findCategory(text, s) {
-    var lower = ' ' + text.toLowerCase() + ' ';
+    var lower = ' ' + text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ') + ' ';
     var best = null;
     categoriesIn(s).forEach(function (c) {
-      var cl = c.toLowerCase();
-      if (lower.indexOf(' ' + cl) > -1 || lower.indexOf(cl + ' ') > -1) {
-        if (!best || c.length > best.length) best = c;   /* return canonical casing */
-      }
+      var cl = ' ' + c.toLowerCase().replace(/[^a-z0-9]+/g, ' ') + ' ';
+      if (lower.indexOf(cl) > -1 && (!best || c.length > best.length)) best = c;
     });
-    return best;
+    if (best) return best;
+    var aliases = [
+      [/\b(dining|restaurant|restaurants|grocer(?:y|ies)|coffee|lunch|takeout)\b/, 'Food'],
+      [/\b(gas|fuel|transit|transportation|uber|lyft)\b/, 'Transport'],
+      [/\b(rent|mortgage)\b/, 'Housing'],
+      [/\b(utilities|electricity|internet)\b/, 'Bills']
+    ];
+    for (var i=0;i<aliases.length;i++) if (aliases[i][0].test(lower)) return aliases[i][1];
+    return null;
   }
 
   var INTENTS = [
@@ -3631,7 +3841,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     { id: 'roast', kw: ['roast', 'judge', 'rate my', 'how bad', 'savage', 'mock', 'be honest', 'critique'] },
     { id: 'budget', kw: ['budget', 'over budget', 'overspend', 'over budget', 'limits', 'limit'] },
     { id: 'spend', kw: ['spend', 'spent', 'spending', 'expenses', 'cost me', 'outgoings'] },
-    { id: 'income', kw: ['income', 'earn', 'salary', 'paycheck', 'paid', 'came in'] },
+    { id: 'income', kw: ['income', 'earn', 'earned', 'salary', 'paycheck', 'paid', 'got paid', 'came in'] },
     { id: 'savings', kw: ['save', 'saved', 'saving', 'savings rate', 'surplus', 'left over', 'keep'] },
     { id: 'goals', kw: ['goal', 'goals', 'target', 'progress'] },
     { id: 'purchases', kw: ['purchase', 'purchases', 'wishlist', 'plan to buy', 'planned'] },
@@ -3644,12 +3854,12 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   ];
 
   function classify(text) {
-    var t = ' ' + text.toLowerCase().replace(/[?!.]/g, ' ') + ' ';
+    var t = ' ' + text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
     var best = { id: null, score: 0 };
     INTENTS.forEach(function (it) {
       var score = 0;
       it.kw.forEach(function (k) {
-        if (t.indexOf(' ' + k) > -1) score += k.indexOf(' ') > -1 ? 2.2 : 1;
+        if (t.indexOf(' ' + k + ' ') > -1) score += k.indexOf(' ') > -1 ? 2.2 : 1;
       });
       if (score > best.score) best = { id: it.id, score: score };
     });
@@ -3657,12 +3867,12 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   }
 
   /* ---------------- answers ---------------- */
-  var last = { intent: null, category: null, amount: null, month: null };
+  var last = { intent: null, category: null, amount: null, month: null, accountId: null, merchant: null, foodAlias: false };
 
   function seeAnswer(s) {
     var lines = [
       'I can see ' + s.accounts.length + ' account' + (s.accounts.length === 1 ? '' : 's') +
-        ' (' + fmt(s.total, s.d) + '), ' + s.txCount + ' transaction' + (s.txCount === 1 ? '' : 's') + ' all time,',
+        ', ' + s.txCount + ' transaction' + (s.txCount === 1 ? '' : 's') + ' all time,',
       s.budgets.length + ' budget' + (s.budgets.length === 1 ? '' : 's') + ', ' +
         s.goals.length + ' goal' + (s.goals.length === 1 ? '' : 's') + ' and ' +
         s.purchases.length + ' open purchase plan' + (s.purchases.length === 1 ? '' : 's') + '.'
@@ -3681,13 +3891,14 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
       label = monthRef.name;
     }
     if (category) {
-      var amt = b.cats[category] || 0;
-      var prior = s.prev.cats[category] || 0;
+      function categoryAmount(bucket, name) { return Object.keys(bucket.cats).filter(function (key) { return key.toLowerCase() === name.toLowerCase(); }).reduce(function (sum, key) { return sum + bucket.cats[key]; }, 0); }
+      var amt = categoryAmount(b, category);
+      var prior = categoryAmount(s.prev, category);
       if (!amt) return 'Nothing recorded under ' + category + ' for ' + label + '. ' + (cfg.tone === 'coach' ? 'Which is either discipline or missing data.' : 'Either virtue or a filing error.');
       var line = fmt(amt, s.d) + ' on ' + category + ' ' + label + '.';
-      if (monthRef !== 'prev' && prior) line += ' Last month: ' + fmt(prior, s.d) + ' (' + (amt >= prior ? '+' : '') + fmt(amt - prior, s.d) + ').';
+      if ((!monthRef || monthRef === 'cur') && prior) line += ' Last month: ' + fmt(prior, s.d) + ' (' + (amt >= prior ? '+' : '') + fmt(amt - prior, s.d) + ').';
       if (s.budgets.length) {
-        var bud = s.budgets.filter(function (x) { return x.category.toLowerCase() === category; })[0];
+        var bud = (!monthRef || monthRef === 'cur') && s.budgets.filter(function (x) { return x.category.toLowerCase() === category.toLowerCase(); })[0];
         if (bud) line += ' Budget: ' + fmt(bud.spent, s.d) + ' of ' + fmt(bud.limit, s.d) + ' — ' + pct(bud.pct) + '.';
       }
       return line;
@@ -3696,24 +3907,35 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     var out = fmt(b.spend, s.d) + ' out ' + label + ' across ' + b.expenses + ' charge' + (b.expenses === 1 ? '' : 's') + '.';
     if (b.top) out += ' Biggest: ' + b.top.name + ' at ' + fmt(b.top.amount, s.d) + ' (' + pct((b.top.amount / b.spend) * 100) + ' of spending).';
     if (b.catsList[1]) out += ' Then ' + b.catsList[1].name + ' at ' + fmt(b.catsList[1].amount, s.d) + '.';
-    if (monthRef !== 'prev' && s.prev.spend > 0) {
+    if ((!monthRef || monthRef === 'cur') && s.prev.spend > 0) {
       var diff = s.cur.spend - s.prev.spend;
-      out += '\nVs last month: ' + (diff >= 0 ? '+' : '') + fmt(diff, s.d) + (diff > 0 ? ' more.' : ' less.');
+      out += diff === 0 ? '\nThe recorded total matches last month.' : '\nVs last month: ' + (diff > 0 ? '+' + fmt(diff, s.d) + ' more.' : fmt(-diff, s.d) + ' less.');
     }
     return out;
   }
 
+  function merchantAnswer(s, monthRef, merchant) {
+    var key = monthRef === 'prev' ? s.prevKey : monthRef && typeof monthRef === 'object' ? monthRef.key : s.thisKey;
+    var label = monthRef === 'prev' ? 'last month' : monthRef && typeof monthRef === 'object' ? monthRef.name : 'this month';
+    var found = (s.d.transactions || []).filter(function (tx) {
+      return tx.type === 'Expense' && String(tx.date || '').slice(0, 7) === key && String(tx.description || '').toLowerCase().indexOf(merchant.toLowerCase()) >= 0;
+    });
+    if (!found.length) return 'No expense descriptions containing “' + merchant + '” were recorded ' + label + '.';
+    var total = found.reduce(function (sum, tx) { return sum + num(tx.amount); }, 0);
+    return fmt(total, s.d) + ' recorded ' + label + ' across ' + found.length + ' expense' + (found.length === 1 ? '' : 's') + ' with “' + merchant + '” in the description.';
+  }
+
   function projectionAnswer(s) {
-    if (!s.cur.count) return 'Nothing logged this month, so there is nothing to project. My crystal ball is a spreadsheet.';
+    if (!s.cur.expenses) return 'No expenses recorded this month, so there is not enough spending history for a projection.';
     var remaining = s.cur.income > 0 ? s.cur.income - s.cur.spend : null;
     var out = 'You’re ' + s.elapsed + ' days in with ' + fmt(s.cur.spend, s.d) + ' spent. At this pace you finish ' +
       new Date(s.now.getFullYear(), s.now.getMonth() + 1, 0).toLocaleString(undefined, { month: 'long' }) +
-      ' at about ' + fmt(s.projected, s.d) + '.';
+      ' at about ' + fmt(s.projected, s.d) + '. This is a simple estimate based on recorded spending, not a prediction.';
     if (remaining !== null) {
       out += '\nThat would leave ' + fmt(s.cur.income - s.projected, s.d) + ' from ' + fmt(s.cur.income, s.d) + ' income.';
-      if (s.cur.income - s.projected < 0) out += ' You are on pace to overspend.';
+      if (s.cur.income - s.projected < 0) out += ' That exceeds the income recorded so far; future income and bills may not yet be entered.';
     }
-    if (s.safeDaily !== null) out += '\nSafe daily spend for the remaining ' + s.daysLeft + ' days: ' + fmt(s.safeDaily, s.d) + '.';
+    if (s.safeDaily !== null) out += s.safeDaily < 0 ? '\nRecorded expenses already exceed recorded income by ' + fmt(s.cur.spend - s.cur.income, s.d) + '; future income and bills may not be entered.' : '\nRecorded income minus spending, divided over the remaining ' + s.daysLeft + ' days: ' + fmt(s.safeDaily, s.d) + '/day. Future bills and goals are not included.';
     return out;
   }
 
@@ -3725,7 +3947,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
       return category + ': ' + fmt(a, s.d) + ' this month vs ' + fmt(b, s.d) + ' last month (' + (d >= 0 ? '+' : '') + fmt(d, s.d) + ').';
     }
     if (!s.cur.count && !s.prev.count) return 'Two empty months is not a comparison, it’s a gap.';
-    var lines = ['This month: ' + fmt(s.cur.spend, s.d) + ' out / ' + fmt(s.cur.income, s.d) + ' in.',
+    var lines = ['This month so far: ' + fmt(s.cur.spend, s.d) + ' out / ' + fmt(s.cur.income, s.d) + ' in.',
                  'Last month: ' + fmt(s.prev.spend, s.d) + ' out / ' + fmt(s.prev.income, s.d) + ' in.'];
     if (s.deltas.length) {
       var big = s.deltas[0];
@@ -3734,8 +3956,13 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     return lines.join('\n');
   }
 
-  function budgetsAnswer(s) {
-    if (!s.budgets.length) return 'No budgets set. Nothing can be over budget when nothing is defined — technically true, practically useless.';
+  function budgetsAnswer(s, category) {
+    if (!s.budgets.length) return 'No budgets are set yet. Create a category budget to track it against recorded expenses.';
+    if (category) {
+      var selected = s.budgets.find(function (b) { return b.category.toLowerCase() === category.toLowerCase(); });
+      if (!selected) return 'No ' + category + ' budget is set. You can create one in Budgets.';
+      return selected.category + ': ' + fmt(selected.spent, s.d) + ' of ' + fmt(selected.limit, s.d) + ' recorded this month (' + pct(selected.pct) + '). ' + (selected.remaining < 0 ? fmt(-selected.remaining, s.d) + ' over budget.' : fmt(selected.remaining, s.d) + ' remaining.');
+    }
     if (s.over.length) {
       return 'Over budget:\n' + s.over.map(function (b) {
         return '• ' + b.category + ': ' + fmt(b.spent, s.d) + ' of ' + fmt(b.limit, s.d) + ' (' + pct(b.pct) + ', over by ' + fmt(b.spent - b.limit, s.d) + ')';
@@ -3745,9 +3972,12 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     return 'Nothing over budget. Closest is ' + closest.category + ' at ' + pct(closest.pct) + ' (' + fmt(closest.spent, s.d) + ' of ' + fmt(closest.limit, s.d) + '), ' + fmt(closest.remaining, s.d) + ' still available.';
   }
 
-  function goalsAnswer(s) {
-    if (!s.goals.length) return 'No goals set. Saving with no target is just money hiding.';
-    return s.goals.map(function (g) {
+  function goalsAnswer(s, text) {
+    if (!s.goals.length) return 'No goals are set yet. Create a savings goal to track your progress.';
+    var named = s.goals.filter(function (g) { return g.name && String(text || '').toLowerCase().indexOf(g.name.toLowerCase()) >= 0; }).sort(function(a,b){return b.name.length-a.name.length;});
+    if (named.length > 1 && named[0].name.toLowerCase() === named[1].name.toLowerCase()) return 'More than one goal has that name. Please review them in Goals.';
+    var shown = named.length ? [named[0]] : s.goals;
+    return shown.map(function (g) {
       return '• ' + g.name + ': ' + fmt(g.saved, s.d) + ' of ' + fmt(g.target, s.d) + ' (' + pct(g.pct) + '), ' + fmt(g.remaining, s.d) + ' to go.';
     }).join('\n');
   }
@@ -3755,46 +3985,64 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   function purchasesAnswer(s) {
     if (!s.purchases.length) return 'No planned purchases. Either discipline or denial — I won’t pry.';
     var out = s.purchases.length + ' open plan' + (s.purchases.length === 1 ? '' : 's') + ', ' +
-      fmt(s.purchaseTotal, s.d) + ' total, ' + fmt(s.purchaseTotal - s.purchaseSaved, s.d) + ' still unfunded.\n';
+      fmt(s.purchaseTotal, s.d) + ' total, ' + fmt(s.purchaseRemaining, s.d) + ' still unfunded.\n';
     out += s.purchases.slice(0, 4).map(function (p) {
       return '• ' + p.name + ' — ' + fmt(p.price, s.d) + ' (' + fmt(p.saved, s.d) + ' saved, ' + p.priority + ' priority)';
     }).join('\n');
     return out;
   }
 
-  function balanceAnswer(s) {
-    if (!s.accounts.length) return 'No accounts tracked. Add one with its real balance and I can start counting.';
-    var out = fmt(s.total, s.d) + ' across ' + s.accounts.length + ' account' + (s.accounts.length === 1 ? '' : 's') + '.';
-    out += '\nAfter minimum balances: ' + fmt(s.available, s.d) + ' actually movable.';
-    var low = s.accounts.filter(function (a) { return a.minimum != null && num(a.balance) < num(a.minimum); });
-    if (low.length) out += '\n⚠ ' + low.map(function (a) { return a.name; }).join(', ') + ' below its minimum.';
-    return out;
+  function accountPart(s, account) {
+    return s.accountParts.find(function (p) { return p.account.id === account.id; });
   }
 
-  function affordAnswer(s, amount, label) {
-    var cover = s.available;
-    var pctCover = cover > 0 ? (amount / cover) * 100 : 999;
-    var fits = amount <= cover;
-    var tail = label ? ' on ' + label : '';
-    if (cfg.tone === 'coach') {
-      return (fits
-        ? 'Yes — ' + fmt(amount, s.d) + tail + ' fits inside ' + fmt(cover, s.d) + ' of uncommitted balance.'
-        : 'Not comfortably. ' + fmt(amount, s.d) + ' exceeds the ' + fmt(cover, s.d) + ' you have free after minimums.') +
-        ' It would use ' + pct(pctCover) + ' of your cushion.' +
-        (pctCover > 30 ? ' I’d wait a cycle and fund it deliberately.' : '');
-    }
-    if (fits && pctCover < 12) return 'Yes. ' + fmt(amount, s.d) + ' is ' + pct(pctCover) + ' of your cushion. Barely a scratch' + tail + '. Go.';
-    if (fits && pctCover < 30) return 'You can afford ' + fmt(amount, s.d) + ' — ' + pct(pctCover) + ' of your cushion' + tail + '. Not fatal, not clever. Your call.';
-    if (fits) return 'Technically yes: ' + fmt(amount, s.d) + ' would eat ' + pct(pctCover) + ' of your cushion' + tail + '. That’s the kind of yes that becomes a story later.';
-    return 'No. You have ' + fmt(cover, s.d) + ' free and you’re asking about ' + fmt(amount, s.d) + tail + '. That’s not a purchase, that’s a loan from your future self.';
+  function balanceAnswer(s, matches) {
+    if (!s.accounts.length) return 'No accounts tracked yet. Add one with its manually entered balance first.';
+    if (matches && matches.length > 1) return 'Which account do you mean? ' + matches.map(function (a) { return a.name; }).join(', ') + '.';
+    var accounts = matches && matches.length === 1 ? matches : s.accounts;
+    var lines = accounts.slice(0, 8).map(function (a) {
+      var p = accountPart(s, a);
+      var out = '• ' + a.name + ' (' + (a.type || 'account') + '): ' + fmt(num(a.balance), s.d) + ' tracked';
+      if (p.minimum || p.allocated) out += ' · minimum ' + fmt(p.minimum, s.d) + ' · purchase allocations ' + fmt(p.allocated, s.d);
+      if (a.protectFromSpending) out += ' · marked protected';
+      return out + '.';
+    });
+    if (accounts.length > 8) lines.push('Ask about a specific account to see the rest.');
+    lines.push('Balances are manually tracked; check your real accounts before spending.');
+    return lines.join('\n');
+  }
+
+  function affordAnswer(s, amount, label, account) {
+    if (amount < 0) return 'Please use a non-negative purchase amount for that comparison.';
+    if (!s.accounts.length) return 'Add a tracked account first; I cannot check a purchase against an unknown balance.';
+    if (!account && s.accounts.length === 1) account = s.accounts[0];
+    if (!account) return 'Which account would fund ' + fmt(amount, s.d) + '? I keep accounts separate: ' + s.accounts.map(function (a) { return a.name; }).join(', ') + '.';
+    var p = accountPart(s, account), kind = String(account.type || '').toLowerCase();
+    if (kind === 'credit' || kind === 'investment') return account.name + ' is a ' + (account.type || 'tracked') + ' account. Its tracked balance does not establish available credit or cash; check the account before deciding.';
+    var result = amount <= p.remaining ? 'fits within' : 'exceeds';
+    var out = fmt(amount, s.d) + (label ? ' for ' + label : '') + ' ' + result + ' the ' + fmt(p.remaining, s.d) + ' remaining in ' + account.name + ' after its ' + fmt(p.minimum, s.d) + ' minimum and ' + fmt(p.allocated, s.d) + ' in planned-purchase allocations.';
+    var shortfall = p.minimum + p.allocated - num(account.balance);
+    if (shortfall > 0.005) out += ' Its tracked balance is ' + fmt(shortfall, s.d) + ' below the minimum plus allocations.';
+    if (account.protectFromSpending) out += ' This account is marked protected.';
+    return out + ' This is not a bank-verified balance and does not account for future bills or savings goals; review those before spending.';
   }
 
   function safeAnswer(s) {
-    if (s.safeDaily === null) return 'I need income recorded this month before I can calculate a safe daily number.';
-    var out = 'Safe daily spend: ' + fmt(s.safeDaily, s.d) + ' for the remaining ' + s.daysLeft + ' day' + (s.daysLeft === 1 ? '' : 's') + '.';
-    var committed = s.purchases.reduce(function (a, p) { return a + Math.max(0, p.price - p.saved); }, 0);
-    if (committed > 0) out += '\nThat leaves nothing for the ' + fmt(committed, s.d) + ' of unfunded purchases unless you cut elsewhere.';
-    return out;
+    if (s.safeDaily === null) return s.daysLeft === 0 ? 'There are no days left after today in this month. Review your upcoming bills and account balances directly.' : 'I need income recorded this month before I can estimate a daily amount.';
+    var out = s.safeDaily < 0 ? 'Recorded expenses exceed recorded income by ' + fmt(s.cur.spend - s.cur.income, s.d) + '; there is no positive amount left under this simple calculation.' : 'Recorded income minus recorded spending, divided over the remaining ' + s.daysLeft + ' day' + (s.daysLeft === 1 ? '' : 's') + ': ' + fmt(s.safeDaily, s.d) + '/day.';
+    return out + ' This is not a safe-spending guarantee: future income, bills, account minimums, purchase allocations and savings goals may not be included.';
+  }
+
+  function incomeAnswer(s, monthRef) {
+    var b = monthRef === 'prev' ? s.prev : monthRef && typeof monthRef === 'object' ? bucket(s.d.transactions || [], monthRef.key) : s.cur;
+    var label = monthRef === 'prev' ? 'last month' : monthRef && typeof monthRef === 'object' ? monthRef.name : 'this month';
+    return b.income > 0 ? fmt(b.income, s.d) + ' of income recorded ' + label + '.' : 'No income recorded ' + label + '.';
+  }
+  function savingsAnswer(s, monthRef) {
+    var b = monthRef === 'prev' ? s.prev : monthRef && typeof monthRef === 'object' ? bucket(s.d.transactions || [], monthRef.key) : s.cur;
+    var label = monthRef === 'prev' ? 'last month' : monthRef && typeof monthRef === 'object' ? monthRef.name : 'this month';
+    if (b.rate === null) return 'I need income recorded ' + label + ' to calculate a savings rate.';
+    return 'Recorded savings rate ' + label + ': ' + pct(b.rate) + '. Recorded income minus expenses: ' + fmt(b.income - b.spend, s.d) + '. This is not a verified bank balance.';
   }
 
   function roastAnswer(s) {
@@ -3817,7 +4065,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
       bits.push('At this pace you finish the month at ' + fmt(s.projected, s.d) + ' — ' + fmt(s.projected - s.cur.income, s.d) + ' past your income.');
     }
     if (s.purchases.length) {
-      bits.push(s.purchases.length + ' planned purchase' + (s.purchases.length === 1 ? '' : 's') + ' with ' + fmt(s.purchaseTotal - s.purchaseSaved, s.d) + ' unfunded. A wishlist with dates is still a wishlist.');
+      bits.push(s.purchases.length + ' planned purchase' + (s.purchases.length === 1 ? '' : 's') + ' with ' + fmt(s.purchaseRemaining, s.d) + ' unfunded. A wishlist with dates is still a wishlist.');
     }
     if (!bits.length) {
       bits.push(pick([
@@ -3838,18 +4086,18 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   function adviceAnswer(s) {
     var moves = [];
     if (s.over.length) moves.push('Cut ' + s.over[0].category + ' — already ' + pct(s.over[0].pct) + ' of its budget with ' + s.daysLeft + ' days left.');
-    if (s.projected > s.cur.income && s.cur.income > 0) moves.push('You’re tracking ' + fmt(s.projected - s.cur.income, s.d) + ' over income. Cap the remaining ' + s.daysLeft + ' days at ' + fmt(s.safeDaily || 0, s.d) + '/day.');
-    else if (s.safeDaily !== null && s.safeDaily > 0) moves.push('Keep daily spending under ' + fmt(s.safeDaily, s.d) + ' to stay inside this month’s income.');
-    if (s.cur.rate !== null && s.cur.rate < 10) moves.push('Move 10% of income out the day it lands — before it’s visible, before it’s spent.');
+    if (s.projected > s.cur.income && s.cur.income > 0) moves.push('The spending estimate is ' + fmt(s.projected - s.cur.income, s.d) + ' above income recorded so far. Check upcoming bills and any income not yet entered.');
+    else if (s.safeDaily !== null && s.safeDaily > 0) moves.push('Recorded income minus spending averages ' + fmt(s.safeDaily, s.d) + ' per remaining day. This excludes future bills, goals and account minimums.');
+    if (s.cur.rate !== null && s.cur.rate < 10) moves.push('Consider a savings target after checking bills and the balances of the accounts you would use.');
     if (s.purchases.length) {
       var top = s.purchases.slice().sort(function (a, b) { return b.price - a.price; })[0];
-      moves.push('Fund ' + top.name + ' (' + fmt(top.price - top.saved, s.d) + ' short) before adding anything new to the list.');
+      moves.push('Review ' + top.name + ' (' + fmt(Math.max(0, top.price - top.saved), s.d) + ' still unfunded) before adding anything new to the list.');
     }
     if (s.goals.length) {
       var slow = s.goals.slice().sort(function (a, b) { return a.pct - b.pct; })[0];
       if (slow.pct < 60) moves.push(slow.name + ' is at ' + pct(slow.pct) + ' (' + fmt(slow.remaining, s.d) + ' to go) — automate a weekly amount instead of waiting for leftovers.');
     }
-    if (s.available < s.cur.spend) moves.push('Your cushion (' + fmt(s.available, s.d) + ') is smaller than one month’s spending. That’s the actual emergency.');
+    if (s.accounts.length) moves.push('Review your individual account balances, minimums and upcoming bills before deciding what is available to spend.');
     if (!moves.length) moves.push('Nothing is on fire. Move the surplus somewhere it can’t be spent and keep doing exactly this.');
     return moves.slice(0, 3).map(function (m, i) { return (i + 1) + '. ' + m; }).join('\n');
   }
@@ -3858,7 +4106,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     return 'I read your ledger locally and answer:\n' +
       '• “what can you see” — what I’m working from\n' +
       '• “roast me” — honest assessment\n' +
-      '• “can I afford 400” — verdict against your real cushion\n' +
+      '• “can I afford 400 from checking” — compare one tracked account, its minimum and allocations\n' +
       '• “how much did I spend on dining last month”\n' +
       '• “am I on track this month” — projection\n' +
       '• “compare to last month”\n' +
@@ -3869,106 +4117,92 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   }
 
   function greeting(s) {
-    if (!s.ok) return 'I can’t reach your ledger yet. Add an account, or reload once you’re signed in — then I’ll start reading.';
-    if (!s.accounts.length && !s.txCount) {
-      return 'Online, but the ledger is empty. Add one account with its real balance and log a transaction — then I have something to work with.';
-    }
-    var head = 'Online. ' + s.accounts.length + ' account' + (s.accounts.length === 1 ? '' : 's') + ', ' + s.txCount + ' transaction' + (s.txCount === 1 ? '' : 's') + '. ';
-    if (s.over.length) return head + s.over[0].category + ' is already at ' + pct(s.over[0].pct) + ' of budget. We should talk about that.';
-    if (s.cur.rate !== null && s.cur.rate < 0) return head + 'You’re ' + fmt(s.cur.spend - s.cur.income, s.d) + ' negative this month. Ask for a roast or a plan.';
-    if (s.projected > s.cur.income && s.cur.income > 0) return head + 'At this pace you’ll overspend by ' + fmt(s.projected - s.cur.income, s.d) + '.';
-    if (s.purchases.length) return head + s.purchases.length + ' purchase plan' + (s.purchases.length === 1 ? '' : 's') + ' open, ' + fmt(s.purchaseTotal - s.purchaseSaved, s.d) + ' unfunded.';
-    return head + (s.cur.count ? fmt(s.cur.spend, s.d) + ' out this month. ' : 'Quiet month. ') + 'What are we deciding?';
+    if (!s.ok) return 'Hi, I’m Jarvis. I can help once the active workspace is unlocked and loaded.';
+    if (!s.accounts.length && !s.txCount) return 'Hi, I’m Jarvis. Add an account and some transactions, then ask me about spending, budgets or goals. I can open forms for you to review before saving.';
+    var head = 'Hi, I’m Jarvis. I can use your ' + s.accounts.length + ' tracked account' + (s.accounts.length === 1 ? '' : 's') + ' and ' + s.txCount + ' recorded transaction' + (s.txCount === 1 ? '' : 's') + '. ';
+    if (s.over.length) head += s.over[0].category + ' is over its recorded budget this month. ';
+    return head + 'Ask a question or use a shortcut below. Financial changes always require your review.';
   }
 
   /* ---------------- the brain ---------------- */
   function reply(text) {
     var s = snapshot();
-    if (!s.ok) return 'I can’t read the ledger. If you’re signed in, reload once — the app may still be loading your cloud copy.';
-    var raw = String(text || '').trim();
-    var t = raw.toLowerCase();
-    if (!t) return 'Say something specific. “Roast me” works.';
-
-    var category = findCategory(t, s);
-    var amount = parseAmount(t);
-    var monthRef = parseMonth(t, s);
-
-    /* follow-ups that lean on the previous answer */
-    if (/^(why|how come|explain|really)\b/.test(t) && last.intent) {
-      if (last.category) {
-        var whyBucket = last.month === 'prev' ? s.prev : s.cur;
-        var whyLabel = last.month === 'prev' ? 'last month' : 'this month';
-        var whyOther = last.month === 'prev' ? s.cur : s.prev;
-        var whyAmt = whyBucket.cats[last.category] || 0;
-        var otherAmt = whyOther.cats[last.category] || 0;
-        var hasBudget = s.budgets.some(function (b) { return b.category.toLowerCase() === String(last.category).toLowerCase(); });
-        return 'Because ' + last.category + ' came to ' + fmt(whyAmt, s.d) + ' ' + whyLabel +
-          ', against ' + fmt(otherAmt, s.d) + ' in the other month. ' +
-          (hasBudget ? 'And it has a budget it’s supposed to respect.' : 'No budget on it, which is how these things drift.');
-      }
-      return 'The numbers are the reason: ' + fmt(s.cur.spend, s.d) + ' out versus ' + fmt(s.cur.income, s.d) + ' in, with ' + s.daysLeft + ' days still to go.';
+    if (!s.ok) return 'I cannot read the active ledger right now. Check that the workspace is unlocked and finished loading.';
+    var raw = String(text || '').trim(), t = raw.toLowerCase();
+    if (!t) return 'Ask about spending, accounts, budgets or goals, or choose a suggested question.';
+    var category = findCategory(t, s), amount = parseAmount(t, s), monthRef = parseMonth(t, s);
+    var matches = accountMentions(t, s);
+    var account = matches.length === 1 ? matches[0] : null;
+    var foodAlias = category === 'Food' && /\b(dining|restaurant|restaurants|grocer(?:y|ies)|coffee|lunch|takeout)\b/.test(t);
+    var merchantMatch = /\bat\s+(.+?)(?=\s+(?:this|last|in|during)\b|[?.!]|$)/i.exec(raw);
+    var merchant = merchantMatch ? merchantMatch[1].trim().slice(0, 80) : null;
+    function answerSpend(month, cat, term, alias) {
+      var out = term ? merchantAnswer(s, month, term) : spendAnswer(s, month, cat);
+      if (alias && !term) out += '\nDining and groceries are grouped under Food, so this includes other Food entries too.';
+      return out;
     }
-    if (/^(and|what about|how about)\b/.test(t) && (category || amount) && last.intent) {
-      if (last.intent === 'spend' && category) { last.category = category; return spendAnswer(s, monthRef, category); }
-      if (last.intent === 'afford' && amount) { last.amount = amount; return affordAnswer(s, amount, category || ''); }
+
+    if (/^(why|how come|explain|really)\b/.test(t) && last.intent) {
+      if (last.intent === 'spend') return 'Here is the recorded total behind that answer: ' + answerSpend(last.month, last.category, last.merchant, last.foodAlias);
+      if (last.intent === 'income') return incomeAnswer(s, last.month);
+      if (last.intent === 'afford') return 'The comparison uses the selected account’s tracked balance, its minimum and its active purchase allocations; other obligations may not be recorded.';
+      return 'I use the information you have entered in Northstar. Ask about a specific account, budget, goal or month for the details.';
+    }
+    // Short follow-ups keep the previous subject without pretending to understand an unrelated question.
+    var shortFollow = /^(and|what about|how about)\b/.test(t) || /^(?:last|previous|this|current) month[?.!]*$/.test(t);
+    if (shortFollow && last.intent && (category || amount !== null || monthRef || account || merchant)) {
+      if (last.intent === 'spend') { if (category) { last.category = category; last.merchant = null; last.foodAlias = foodAlias; } else if (merchant) { last.merchant = merchant; last.category = null; last.foodAlias = false; } last.month = monthRef || last.month; return answerSpend(last.month, last.category, last.merchant, last.foodAlias); }
+      if (last.intent === 'income') { last.month = monthRef || last.month; return incomeAnswer(s, last.month); }
+      if (last.intent === 'savings') { last.month = monthRef || last.month; return savingsAnswer(s, last.month); }
+      if (last.intent === 'afford' && matches.length > 1) return 'Which account would fund this? ' + matches.map(function(a){return a.name;}).join(', ') + '.';
+      if (last.intent === 'afford' && (amount !== null || account) && (amount !== null || last.amount !== null)) { last.amount = amount !== null ? amount : last.amount; last.accountId = account ? account.id : last.accountId; return affordAnswer(s, last.amount, '', account || s.accounts.find(function(a){return a.id===last.accountId;})); }
+      if (last.intent === 'balance' && matches.length) { last.accountId = account && account.id; return balanceAnswer(s, matches); }
     }
 
     var bareAmount = /^\s*\$?\s*\d[\d,.]*\s*k?\s*$/.test(t);
-    var intent = bareAmount ? 'afford' : classify(t) || (last.intent && t.split(/\s+/).length <= 3 ? last.intent : null);
-    if (intent === 'compare' && monthRef && /spend|spent|cost|pay|paid/.test(t)) intent = 'spend';
-    if (!intent) {
-      if (amount !== null) intent = 'afford';
-      else if (category) intent = 'spend';
+    if (last.intent === 'afford' && ((bareAmount && amount !== null) || (matches.length && t.split(/\s+/).length <= 5 && !/[?]/.test(t)))) {
+      if (matches.length > 1) return 'Which account would fund this? ' + matches.map(function(a){return a.name;}).join(', ') + '.';
+      if (amount !== null) last.amount = amount;
+      if (account) last.accountId = account.id;
+      if (last.amount === null) return 'What amount are you considering?';
+      return affordAnswer(s, last.amount, '', account || s.accounts.find(function(a){return a.id===last.accountId;}));
     }
-
-    if (intent) { last.intent = intent; last.category = category || last.category; last.amount = amount || last.amount; }
-    if (monthRef) last.month = monthRef;
-    else if (intent === 'spend' || intent === 'afford' || intent === 'budget') last.month = 'cur';
+    var intent = bareAmount ? 'afford' : classify(t);
+    var explicitComparison = /\b(compare|versus|vs|difference between)\b/.test(t);
+    if (monthRef && !explicitComparison && /\b(spend|spent|spending|expense|expenses|outgoings)\b/.test(t)) intent = 'spend';
+    if (monthRef && !explicitComparison && /\b(income|earn|earned|salary|paycheck|paid)\b/.test(t)) intent = 'income';
+    if (/\bbudget\b/.test(t) && !/\b(set|create|update|add)\b/.test(t)) intent = 'budget';
+    if (!intent && s.goals.some(function (g) { return g.name && t.indexOf(g.name.toLowerCase()) >= 0; })) intent = 'goals';
+    if (!intent) { if (amount !== null) intent = 'afford'; else if (category) intent = 'spend'; else if (matches.length) intent = 'balance'; }
+    if (intent) { last = { intent: intent, category: category, amount: amount, month: monthRef || 'cur', accountId: account && account.id, merchant: merchant, foodAlias: foodAlias }; }
 
     switch (intent) {
       case 'see': return seeAnswer(s);
-      case 'spend': return spendAnswer(s, monthRef, category);
-      case 'afford': {
-        if (amount === null) return 'Afford what? Give me a number — “can I afford 400” — and I’ll judge it against your ' + fmt(s.available, s.d) + ' of free balance.';
-        var label = raw.replace(/.*(?:buy|afford|get)\s*/i, '').replace(/[?.!]/g, '').trim();
-        if (!label || /^[\d\s,.$k]+$/i.test(label)) label = category || '';
-        return affordAnswer(s, amount, label);
-      }
+      case 'spend': return answerSpend(monthRef, category, merchant, foodAlias);
+      case 'afford':
+        if (amount === null) return 'What amount are you considering? If you track multiple accounts, include the account you would use.';
+        if (matches.length > 1) return 'Which account would fund this? ' + matches.map(function(a){return a.name;}).join(', ') + '.';
+        return affordAnswer(s, amount, '', account);
       case 'projection': return projectionAnswer(s);
       case 'compare': return compareAnswer(s, category);
       case 'roast': return roastAnswer(s);
-      case 'budget': return budgetsAnswer(s);
-      case 'income':
-        return s.cur.income > 0
-          ? fmt(s.cur.income, s.d) + ' in this month' + (s.cur.rate !== null ? ', keeping ' + pct(s.cur.rate) + '.' : '.')
-          : 'No income recorded this month. That’s a data gap, not a character flaw. Probably.';
-      case 'savings':
-        if (s.cur.rate === null) return 'I need income recorded before I can compute a savings rate. Otherwise it’s just vibes.';
-        return 'Savings rate: ' + pct(s.cur.rate) + ' — ' + (s.cur.rate >= 20 ? 'genuinely good' : s.cur.rate >= 10 ? 'acceptable' : s.cur.rate >= 0 ? 'thin' : 'negative') +
-          '. ' + fmt(s.cur.income - s.cur.spend, s.d) + ' left from ' + fmt(s.cur.income, s.d) + '.';
-      case 'goals': return goalsAnswer(s);
+      case 'budget': return budgetsAnswer(s, category);
+      case 'income': return incomeAnswer(s, monthRef);
+      case 'savings': return savingsAnswer(s, monthRef);
+      case 'goals': return goalsAnswer(s, raw);
       case 'purchases': return purchasesAnswer(s);
-      case 'balance': return balanceAnswer(s);
+      case 'balance': return balanceAnswer(s, matches);
       case 'safe': return safeAnswer(s);
       case 'advice': return adviceAnswer(s);
       case 'help': return helpAnswer();
-      case 'tone':
-        return 'Tone is ' + cfg.tone + '. Chips up top switch it: Playful teases, Ruthless doesn’t flinch, Coach is kind about it.';
-      case 'greet':
-        return s.accounts.length || s.txCount
-          ? greeting(s)
-          : 'Online. No ledger yet — add an account and I’ll have something to judge.';
-      default:
-        return pick([
-          'I don’t follow. I speak ledger: try “roast me”, “can I afford 250”, or “what should I do next”.',
-          'That’s outside what I can compute. Ask me about spending, budgets, goals, or a purchase.',
-          'No idea what that means, but I’m confident about your money. Try “am I on track this month”.'
-        ]);
+      case 'tone': return 'Choose Coach, Playful or Ruthless in the assistant header.';
+      case 'greet': return greeting(s);
+      default: return 'I can help with recorded spending, income, accounts, budgets, goals and purchase plans. Try “spending last month” or “what can you do?”.';
     }
   }
 
   /* ---------------- UI ---------------- */
-  var panel, log, input, orb, built = false, focusTimer = null;
+  var panel, log, input, orb, built = false, focusTimer = null, cloudController = null, chatGeneration = 0, testController = null, testGeneration = 0;
 
   function icon(path, size) {
     return '<svg viewBox="0 0 24 24" width="' + (size || 16) + '" height="' + (size || 16) + '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + path + '</svg>';
@@ -4003,23 +4237,31 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
           '<button type="button" class="nsj-tone" data-tone="ruthless" aria-pressed="' + (cfg.tone === 'ruthless') + '">Ruthless</button>' +
           '<button type="button" class="nsj-tone" data-tone="coach" aria-pressed="' + (cfg.tone === 'coach') + '">Coach</button>' +
         '</div>' +
+        '<button type="button" class="nsj-clear" id="nsjClearChat" aria-label="Clear conversation" title="Clear conversation">' + icon('<path d="M4 7h16M9 7V4.5h6V7M7 7l.7 12h8.6L17 7M10 10v6M14 10v6"/>') + '</button>' +
         '<button type="button" class="nsj-gear" id="nsjGear" aria-label="Connections">' + icon('<path d="M4 7h9M18 7h2M4 17h3M12 17h8"/><circle cx="15.5" cy="7" r="2"/><circle cx="9.5" cy="17" r="2"/>') + '</button>' +
         '<button type="button" class="nsj-close" aria-label="Close assistant">' + icon('<path d="M6 6l12 12M18 6 6 18"/>') + '</button>' +
       '</header>' +
-      '<div class="nsj-log" id="nsjLog" role="log" aria-live="polite"></div>' +
-      '<div class="nsj-chips">' +
-        '<button type="button" class="nsj-chip" data-ask="what can you see">What do you see?</button>' +
-        '<button type="button" class="nsj-chip" data-ask="roast me">Roast me</button>' +
-        '<button type="button" class="nsj-chip" data-ask="am I on track this month">On track?</button>' +
-        '<button type="button" class="nsj-chip" data-ask="how much did I spend on dining this month">Dining?</button>' +
-        '<button type="button" class="nsj-chip" data-ask="what should I do next">Next move</button>' +
+      '<div class="nsj-log" id="nsjLog" role="log" aria-label="Assistant conversation" aria-live="polite" tabindex="0"></div>' +
+      '<div class="nsj-suggestions" role="group" aria-label="Suggested questions">' +
+        '<button type="button" class="nsj-chip" data-ask="How much did I spend this month?">Spending</button>' +
+        '<button type="button" class="nsj-chip" data-ask="How are my budgets?">Budgets</button>' +
+        '<button type="button" class="nsj-chip" data-ask="How are my goals?">Goals</button>' +
+        '<button type="button" class="nsj-chip" data-ask="What can you do?">Help</button>' +
       '</div>' +
+      '<div class="nsj-quick" role="group" aria-label="Open a finance draft">' +
+        '<button type="button" class="nsj-chip" data-draft="Expense">+ Expense</button>' +
+        '<button type="button" class="nsj-chip" data-draft="Income">+ Income</button>' +
+        '<button type="button" class="nsj-chip" data-draft="Transfer">+ Transfer</button>' +
+        '<button type="button" class="nsj-chip" data-draft="Goal">+ Goal</button>' +
+      '</div>' +
+      '<div class="nsj-action-hint">Actions open a form. Review it before saving.</div>' +
       '<div class="nsj-foot">' +
         '<button type="button" class="nsj-btn" id="nsjVoice" aria-pressed="' + (cfg.voice ? 'true' : 'false') + '" aria-label="Toggle spoken replies">' + icon('<path d="M4 9.5h3.2L12 5.5v13L7.2 14.5H4z"/><path d="M15.6 9a4 4 0 0 1 0 6"/>') + '</button>' +
         '<input class="nsj-input" id="nsjInput" type="text" placeholder="Ask about your money…" autocomplete="off" aria-label="Ask the assistant">' +
         '<button type="button" class="nsj-btn" id="nsjMic" aria-label="Voice input">' + icon('<path d="M12 4.5a2.6 2.6 0 0 0-2.6 2.6v4.4a2.6 2.6 0 0 0 5.2 0V7.1A2.6 2.6 0 0 0 12 4.5z"/><path d="M6.5 11a5.5 5.5 0 0 0 11 0"/><path d="M12 16.5V20"/>') + '</button>' +
         '<button type="button" class="nsj-btn send" id="nsjSend" aria-label="Send">' + icon('<path d="M5 12h13M13 6.5 18.5 12 13 17.5"/>') + '</button>' +
       '</div>' +
+      '<div class="nsj-busy" id="nsjBusy" aria-live="polite"></div>' +
       '<div class="nsj-footnote" id="nsjFootnote">Assistant answers run locally</div>' +
       '<div class="nsj-sheet" id="nsjSheet" aria-hidden="true">' +
         '<div class="nsj-sheet-head"><b>CONNECTIONS</b><span>bring your own key</span><button type="button" class="nsj-close" id="nsjSheetClose" aria-label="Close connections">' + icon('<path d="M6 6l12 12M18 6 6 18"/>') + '</button></div>' +
@@ -4030,9 +4272,11 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
           '<div class="nsj-field"><label for="nsjModel">Model</label><input id="nsjModel" type="text" placeholder="model id" autocomplete="off" spellcheck="false"></div>' +
           '<div class="nsj-field" id="nsjBaseWrap" hidden><label for="nsjBase">Base URL</label><input id="nsjBase" type="text" placeholder="https://your-endpoint/v1" autocomplete="off" spellcheck="false"></div>' +
           '<div class="nsj-row"><div class="nsj-row-text"><b>Remember key</b><small>Off: cleared when this tab closes.</small></div><button type="button" class="nsj-switch" id="nsjRemember" role="switch" aria-checked="false" aria-label="Remember key"></button></div>' +
-          '<div class="nsj-row"><div class="nsj-row-text"><b>Include transactions</b><small>Sends 8 recent descriptions as well as the totals.</small></div><button type="button" class="nsj-switch" id="nsjTx" role="switch" aria-checked="false" aria-label="Include transactions"></button></div>' +
+          '<div class="nsj-row"><div class="nsj-row-text"><b>Include transactions</b><small>Sends up to 8 recent entries, including dates, amounts, categories and descriptions.</small></div><button type="button" class="nsj-switch" id="nsjTx" role="switch" aria-checked="false" aria-label="Include transactions"></button></div>' +
           '<div class="nsj-actions"><button type="button" class="nsj-mini primary" id="nsjSave">Save &amp; test</button><button type="button" class="nsj-mini" id="nsjPreview">Preview payload</button><button type="button" class="nsj-mini danger" id="nsjClear">Clear key</button></div>' +
+          '<div class="nsj-hint">Save &amp; test sends your key and finance summary to the selected provider. A successful test turns Cloud brain on; preview the payload first if you wish.</div>' +
           '<div class="nsj-status-line" id="nsjConnStatus"><i></i><span>Not connected</span></div>' +
+          '<div class="nsj-hint nsj-storage-warning" id="nsjStorageWarning" role="alert" hidden>Connection storage is unavailable, inconsistent, or could not be updated. Your key may not persist, or an older key may remain. Check browser storage settings; back up your finance data before clearing site data.</div>' +
           '<pre class="nsj-preview" id="nsjPreviewBox" hidden></pre>' +
           '<div class="nsj-hint">Providers include <b>Gemini</b> (AI Studio), <b>Groq</b>, and <b>OpenRouter</b>. Check current pricing and limits before connecting.</div>' +
         '</div>' +
@@ -4047,6 +4291,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
 
     orb.addEventListener('click', function () { toggle(); });
     panel.querySelector('.nsj-close').addEventListener('click', function () { toggle(false); });
+    panel.querySelector('#nsjClearChat').addEventListener('click', clearConversation);
 
     panel.querySelectorAll('.nsj-tone').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -4055,8 +4300,11 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
         say('Tone: ' + cfg.tone + '.', true);
       });
     });
-    panel.querySelectorAll('.nsj-chip').forEach(function (b) {
+    panel.querySelectorAll('[data-ask]').forEach(function (b) {
       b.addEventListener('click', function () { send(b.getAttribute('data-ask')); });
+    });
+    panel.querySelectorAll('[data-draft]').forEach(function (b) {
+      b.addEventListener('click', function () { startQuickDraft(b.getAttribute('data-draft')); });
     });
     panel.querySelector('#nsjSend').addEventListener('click', function () { send(input.value); });
     input.addEventListener('keydown', function (e) {
@@ -4118,7 +4366,8 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
       setSwitch(panel.querySelector('#nsjTx'), conn.includeTx);
       setConnStatus(connReady() && cloudVerified ? 'ok' : '', connReady()
         ? (cloudVerified ? 'Connected · ' : 'Cloud on · unverified · ') + providerLabel(conn.provider) + ' · ' + (conn.model || 'no model')
-        : (conn.key ? 'Key saved — switch Cloud brain on' : 'Not connected'));
+        : (conn.key ? 'Key entered — switch Cloud brain on' : 'Not connected'));
+      paintConnStorageWarning();
     }
 
     var gear = panel.querySelector('#nsjGear');
@@ -4127,6 +4376,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
       sheet.inert = true;
       function showSheet(open) {
         clearTimeout(focusTimer); focusTimer = null;
+        if (!open) cancelConnectionTest();
         sheet.classList.toggle('open', open);
         sheet.inert = !open;
         sheet.setAttribute('aria-hidden', String(!open));
@@ -4142,6 +4392,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
         else toggle(false);
       }, true);
       panel.querySelector('#nsjProvider').addEventListener('change', function (e) {
+        cancelConnectionTest();
         var next = e.target.value;
         var wasDefault = !conn.model || conn.model === (PROVIDERS[conn.provider] || {}).model;
         conn.provider = next; cloudVerified = false;
@@ -4151,6 +4402,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
       ['#nsjKey', '#nsjModel', '#nsjBase'].forEach(function (sel) {
         var field = panel.querySelector(sel);
         var sync = function (e) {
+          cancelConnectionTest();
           if (sel === '#nsjKey') conn.key = e.target.value.trim();
           if (sel === '#nsjModel') conn.model = e.target.value.trim();
           if (sel === '#nsjBase') conn.base = e.target.value.trim();
@@ -4161,6 +4413,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
         field.addEventListener('change', sync);
       });
       panel.querySelector('#nsjEnabled').addEventListener('click', function () {
+        cancelConnectionTest();
         conn.enabled = !conn.enabled;
         if (conn.enabled && !conn.key) {
           conn.enabled = false;
@@ -4172,26 +4425,33 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
         saveConn(); paintSheet(); refreshStatus();
       });
       panel.querySelector('#nsjRemember').addEventListener('click', function () {
-        conn.remember = !conn.remember; saveConn(); paintSheet();
+        cancelConnectionTest(); conn.remember = !conn.remember; saveConn(); paintSheet();
       });
       panel.querySelector('#nsjTx').addEventListener('click', function () {
-        conn.includeTx = !conn.includeTx; saveConn(); paintSheet();
+        cancelConnectionTest(); conn.includeTx = !conn.includeTx; saveConn(); paintSheet();
       });
       panel.querySelector('#nsjSave').addEventListener('click', function () {
+        cancelConnectionTest();
         conn.key = panel.querySelector('#nsjKey').value.trim();
         conn.model = panel.querySelector('#nsjModel').value.trim();
         conn.base = panel.querySelector('#nsjBase').value.trim();
         saveConn();
         cloudVerified = false;
+        var controller = new AbortController(), generation = testGeneration;
+        testController = controller; panel.querySelector('#nsjSave').disabled = true;
         setConnStatus('', 'Testing connection…');
-        testConnection().then(function (r) {
+        testConnection({ signal: controller.signal }).then(function () {
+          if (generation !== testGeneration || controller.signal.aborted || workspaceBlocked()) return;
           conn.enabled = true; cloudVerified = true; saveConn();
           setConnStatus('ok', 'Connected · ' + providerLabel(conn.provider) + ' · ' + conn.model);
           refreshStatus(); paintSheet();
         }).catch(function (err) {
+          if (generation !== testGeneration || controller.signal.aborted || workspaceBlocked()) return;
           cloudVerified = false;
           setConnStatus('err', errText(err));
           refreshStatus();
+        }).finally(function () {
+          if (testController === controller) { testController = null; panel.querySelector('#nsjSave').disabled = false; }
         });
       });
       panel.querySelector('#nsjPreview').addEventListener('click', function () {
@@ -4209,12 +4469,14 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
         box.hidden = false;
       });
       panel.querySelector('#nsjClear').addEventListener('click', function () {
-        conn.key = ''; conn.enabled = false; cloudVerified = false; saveConn(); paintSheet(); refreshStatus();
-        setConnStatus('', 'Key cleared');
+        cancelConnectionTest(); conn.key = ''; conn.enabled = false; cloudVerified = false;
+        var cleared = saveConn(); paintSheet(); refreshStatus();
+        setConnStatus(cleared ? '' : 'err', cleared ? 'Key cleared' : 'Key cleared in memory only — check the storage warning');
       });
     }
 
     refreshStatus();
+    if (document.querySelector('.app-shell')?.inert) setWorkspaceBlocked(true, window.NorthstarVaultLocked || document.querySelector('#content')?.getAttribute('aria-busy') === 'true');
   }
 
   function refreshStatus() {
@@ -4238,17 +4500,9 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     return n;
   }
   function typeThen(text, source) {
-    var t = document.createElement('div');
-    t.className = 'nsj-typing';
-    t.innerHTML = '<i></i><i></i><i></i>';
-    log.appendChild(t);
-    log.scrollTop = log.scrollHeight;
-    var wait = reduce ? 60 : Math.min(900, 260 + text.length * 5);
-    setTimeout(function () {
-      t.remove();
-      addMsgWithSource(text, source || 'Local rules engine');
-      speak(text);
-    }, wait);
+    // Local answers are ready immediately; typing dots are reserved for a real network request.
+    addMsgWithSource(text, source || 'Local rules engine');
+    speak(text);
   }
   function say(text, instant) { if (instant) { addMsgWithSource(text, 'Local rules engine'); speak(text); } else typeThen(text, 'Local rules engine'); }
 
@@ -4282,36 +4536,76 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     var relative = /\b(today|yesterday|tomorrow)\b/.exec(t);
     if (relative) { var d = new Date(now.getFullYear(), now.getMonth(), now.getDate()); d.setDate(d.getDate() + (relative[1] === 'yesterday' ? -1 : relative[1] === 'tomorrow' ? 1 : 0)); return { value: iso(d), defaulted: false }; }
     var ymd = /\b(20\d{2})-(\d{1,2})-(\d{1,2})\b/.exec(t);
-    if (ymd) { var yd = new Date(+ymd[1], +ymd[2] - 1, +ymd[3]); if (yd.getFullYear() === +ymd[1] && yd.getMonth() === +ymd[2] - 1 && yd.getDate() === +ymd[3]) return { value: iso(yd), defaulted: false }; }
+    if (ymd) { var yd = new Date(+ymd[1], +ymd[2] - 1, +ymd[3]); if (yd.getFullYear() === +ymd[1] && yd.getMonth() === +ymd[2] - 1 && yd.getDate() === +ymd[3]) return { value: iso(yd), defaulted: false }; return { value: '', defaulted: false, invalid: true }; }
     var slash = /\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/.exec(t);
-    if (slash) { var sy = slash[3] ? +slash[3] : now.getFullYear(); if (sy < 100) sy += 2000; var sd = new Date(sy, +slash[1] - 1, +slash[2]); if (sd.getFullYear() === sy && sd.getMonth() === +slash[1] - 1 && sd.getDate() === +slash[2]) return { value: iso(sd), defaulted: false }; }
+    if (slash) { var sy = slash[3] ? +slash[3] : now.getFullYear(); if (sy < 100) sy += 2000; var sd = new Date(sy, +slash[1] - 1, +slash[2]); if (sd.getFullYear() === sy && sd.getMonth() === +slash[1] - 1 && sd.getDate() === +slash[2]) return { value: iso(sd), defaulted: false }; return { value: '', defaulted: false, invalid: true }; }
     var months = { jan:0,january:0,feb:1,february:1,mar:2,march:2,apr:3,april:3,may:4,jun:5,june:5,jul:6,july:6,aug:7,august:7,sep:8,sept:8,september:8,oct:9,october:9,nov:10,november:10,dec:11,december:11 };
     var named = /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+(\d{1,2})(?:,?\s+(20\d{2}))?\b/.exec(t);
-    if (named) { var mi = months[named[1]], ny = named[3] ? +named[3] : now.getFullYear(), nd = new Date(ny, mi, +named[2]); if (nd.getFullYear() === ny && nd.getMonth() === mi && nd.getDate() === +named[2]) return { value: iso(nd), defaulted: false }; }
+    if (named) { var mi = months[named[1]], ny = named[3] ? +named[3] : now.getFullYear(), nd = new Date(ny, mi, +named[2]); if (nd.getFullYear() === ny && nd.getMonth() === mi && nd.getDate() === +named[2]) return { value: iso(nd), defaulted: false }; return { value: '', defaulted: false, invalid: true }; }
     return { value: iso(now), defaulted: true };
   }
 
-  function actionAmount(text) {
-    var cleaned = String(text || '').replace(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g, ' ')
+  // Prefer an explicit currency amount, exclude dates and numbered record names,
+  // and ask rather than silently selecting between multiple candidate amounts.
+  function actionAmount(text, s) {
+    var cleaned = removeNumberedNames(text, s).replace(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g, ' ')
       .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, ' ')
       .replace(/\b(?:today|yesterday|tomorrow)\b/gi, ' ')
       .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,?\s+20\d{2})?\b/gi, ' ');
-    var currency = /(?:\$|usd\s*)(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?\b/i.exec(cleaned);
-    if (currency) { var value = parseFloat(currency[1].replace(/,/g, '')); if (currency[2]) value *= 1000; return isFinite(value) ? value : null; }
-    return parseAmount(cleaned);
+    function valueOf(match) {
+      var value = parseFloat(match[1].replace(/[\s,]/g, ''));
+      if (match[2]) value *= 1000;
+      if (!isFinite(value)) return null;
+      return match[0].indexOf('-') >= 0 ? -value : value;
+    }
+    var explicit = Array.from(cleaned.matchAll(/(?:-\s*)?(?:\$\s*|usd\s+)(?:-\s*)?(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?\b/gi));
+    if (explicit.length > 1) return NaN;
+    if (explicit.length === 1) return valueOf(explicit[0]);
+    var matches = Array.from(cleaned.matchAll(/(?:^|[^a-z0-9])(-?\s*\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?\b/gi));
+    if (matches.length > 1) return NaN;
+    if (!matches.length) return null;
+    var before = cleaned.slice(0, matches[0].index + matches[0][0].indexOf(matches[0][1])).trim();
+    if (/\b(?:bought|purchased)\b/i.test(before) && !/\b(?:for|cost|price|paid)\s*$/i.test(before) && !/^\s*(?:dollars?|bucks)\b/i.test(cleaned.slice(matches[0].index + matches[0][0].length))) return null;
+    return valueOf(matches[0]);
+  }
+
+  function stripActionAmount(text, amount) {
+    var input = String(text || ''), candidates = Array.from(input.matchAll(/(^|[^a-z0-9])((?:-\s*)?(?:\$\s*|usd\s+)?(?:-\s*)?(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?\b)/gi));
+    var matching = candidates.filter(function (m) {
+      var n = parseFloat(m[3].replace(/,/g, '')) * (m[4] ? 1000 : 1);
+      if (m[2].indexOf('-') >= 0) n = -n;
+      return Math.abs(n - amount) < 0.00001;
+    });
+    var chosen = matching.find(function (m) { return /\$|usd\s/i.test(m[2]); }) || matching[0];
+    if (!chosen) return input;
+    var start = chosen.index + chosen[1].length;
+    return input.slice(0, start) + ' ' + input.slice(start + chosen[2].length);
   }
 
   function accountMentions(text, s) {
-    var t = String(text || '').toLowerCase(), words = t.split(/[^a-z0-9]+/), found = [];
-    (s.accounts || []).forEach(function (a) {
-      var name = String(a.name || '').trim().toLowerCase(), index = name ? t.indexOf(name) : -1;
-      if (index < 0) {
-        var type = String(a.type || '').trim().toLowerCase();
-        if (type && words.indexOf(type) >= 0) index = t.indexOf(type);
-      }
-      if (index >= 0 && !found.some(function (x) { return x.account.id === a.id; })) found.push({ account: a, index: index, length: name.length });
+    var t = ' ' + String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim() + ' ';
+    function phrase(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+    function locations(value) {
+      var term = phrase(value), needle = ' ' + term + ' ', found = [], from = 0, at;
+      if (!term) return found;
+      while ((at = t.indexOf(needle, from)) >= 0) { found.push({ start: at, end: at + needle.length, term: term }); from = at + 1; }
+      return found;
+    }
+    var accounts = s.accounts || [], exact = [];
+    accounts.forEach(function (a) { locations(a.name).forEach(function (span) { exact.push({ account: a, span: span }); }); });
+    var selected = [];
+    exact.forEach(function (hit) {
+      var nested = exact.some(function (other) { return other !== hit && other.span.term.length > hit.span.term.length && other.span.start <= hit.span.start && other.span.end >= hit.span.end; });
+      if (!nested && selected.indexOf(hit.account) < 0) selected.push(hit.account);
     });
-    return found.sort(function (a, b) { return a.index - b.index || b.length - a.length; }).map(function (x) { return x.account; });
+    accounts.forEach(function (a) {
+      if (selected.indexOf(a) >= 0) return;
+      var standaloneType = locations(a.type).some(function (span) {
+        return !exact.some(function (hit) { return hit.span.start <= span.start && hit.span.end >= span.end; });
+      });
+      if (standaloneType) selected.push(a);
+    });
+    return selected;
   }
 
   function actionCategory(text, s) {
@@ -4337,7 +4631,8 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
 
   function openActionDraft(action, values, itemId) {
     var root = document.getElementById('modalRoot');
-    if (!root || root.querySelector('.modal-backdrop')) return false;
+    if (!root || root.querySelector('.modal-backdrop') || document.querySelector('#confirmRoot .confirm-backdrop')) return false;
+    clearTimeout(focusTimer); focusTimer = null;
     var trigger = document.createElement('button');
     trigger.type = 'button'; trigger.dataset.action = action; trigger.style.display = 'none';
     if (itemId) trigger.dataset.id = itemId;
@@ -4359,27 +4654,47 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     return true;
   }
 
+  var pendingAction = null;
   function routeMoneyAction(raw) {
-    var text = String(raw || '').trim(), t = text.toLowerCase(), s = snapshot();
-    if (!s.ok) return null;
-    var amount = actionAmount(text), accounts = accountMentions(text, s);
+    if (workspaceBlocked()) { pendingAction = null; return 'Unlock or finish loading the workspace before opening a draft.'; }
+    var text = String(raw || '').trim(), s = snapshot();
+    if (!s.ok) { pendingAction = null; return null; }
+    var forcedAccount = null;
+    if (pendingAction) {
+      if (/^(?:cancel|never ?mind|nevermind|stop)\s*[.!]?$/i.test(text)) { pendingAction = null; return 'Cancelled. No financial changes were made.'; }
+      var followAmount = /^\s*(?:-\s*)?(?:\$|usd\s*)?\s*-?\s*\d[\d,]*(?:\.\d+)?\s*(?:k|thousand)?\s*[.!]?$/i.test(text);
+      var shortReply = text.split(/\s+/).length <= 5 && !/[?]/.test(text) && !/\b(what|why|how|when|can|show)\b/i.test(text);
+      var followAccount = pendingAction.waiting === 'account' && shortReply && accountMentions(text, s).length === 1;
+      var followCategory = pendingAction.waiting === 'category' && shortReply && (actionCategory(text, s) !== 'Other' || /\bother\b/i.test(text));
+      var followName = pendingAction.waiting === 'name' && shortReply && !followAmount;
+      if (followAccount) forcedAccount = accountMentions(text, s)[0];
+      if ((pendingAction.waiting === 'amount' && followAmount) || followAccount || followCategory || followName) text = pendingAction.text + ' ' + text;
+      pendingAction = null;
+    }
+    var t = text.toLowerCase();
+    var amount = actionAmount(text, s), accounts = forcedAccount ? [forcedAccount] : accountMentions(text, s);
     var names = (s.accounts || []).map(function (a) { return a.name; }).join(', ');
     var hasBalance = /\bbalance\b/.test(t);
     var balanceVerb = /\b(set|update|change|correct)\b/.test(t);
-    var balanceAssignment = amount !== null && /\b(to|at|is|now)\b/.test(t);
+    var balanceAssignment = amount !== null && !/[?]\s*$/.test(t) && !/^(?:what|how|why|when|where|is|can|should|does|do)\b/.test(t) && /\b(to|at|is|now)\b/.test(t);
     var balanceIntent = hasBalance && (balanceVerb || balanceAssignment);
     if (balanceIntent) {
+      if (Number.isNaN(amount)) return 'I found more than one amount. Please give one new balance; nothing was changed.';
       if (amount === null && !balanceVerb) return null;
-      if (amount === null) return 'What is the new balance amount? I will fill the account form, but won’t save until you confirm.';
+      if (amount === null) { pendingAction = { waiting: 'amount', text: text }; return 'What is the new balance amount? I will fill the account form, but won’t save until you confirm.'; }
       var acc = accounts.length === 1 ? accounts[0] : (accounts.length === 0 && s.accounts.length === 1 ? s.accounts[0] : null);
-      if (!acc) return s.accounts.length ? 'Which account should I update? Your accounts are: ' + names + '. I won’t change any balance until you choose one.' : 'Create an account first, then tell me its current balance.';
+      if (!acc) { if (s.accounts.length) pendingAction = { waiting: 'account', text: text }; return s.accounts.length ? 'Which account should I update? Your accounts are: ' + names + '. I won’t change any balance until you choose one.' : 'Create an account first, then tell me its current balance.'; }
       if (!openActionDraft('edit-account', { balance: amount.toFixed(2) }, acc.id)) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
       return 'I filled the current balance for ' + acc.name + ' as ' + fmt(amount, s.d) + '. Review it and press Save to replace the tracked balance; this does not move money or add a transaction.';
     }
 
-    var goal = (s.d && s.d.goals || []).slice().sort(function(a,b){return String(b.name||'').length-String(a.name||'').length;}).find(function(g){return g.name&&t.indexOf(String(g.name).toLowerCase())>=0;});
+    var matchingGoals = (s.d && s.d.goals || []).slice().sort(function(a,b){return String(b.name||'').length-String(a.name||'').length;}).filter(function(g){return g.name&&t.indexOf(String(g.name).toLowerCase())>=0;});
+    var goal = matchingGoals[0];
     var goalContribution = /^(?:please\s+)?(?:add|put|save|contribute)\b/.test(t) && /\b(to|toward|towards|into|in|for)\b/.test(t) && goal && amount !== null;
     if (goalContribution) {
+      if (Number.isNaN(amount)) return 'I found more than one amount. Please specify one contribution; nothing was changed.';
+      if (amount < 0) return 'Please use a positive contribution amount; nothing was changed.';
+      if (matchingGoals.length > 1 && matchingGoals[0].name.toLowerCase() === matchingGoals[1].name.toLowerCase()) return 'More than one goal has that name. Please update the correct goal in Goals.';
       var newSaved = Math.round(((Number(goal.saved)||0)+amount)*100)/100;
       if (!openActionDraft('edit-goal', { saved: newSaved.toFixed(2) }, goal.id)) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
       return 'I drafted a ' + fmt(amount, s.d) + ' contribution for “' + goal.name + '” and updated its saved-to-date field to ' + fmt(newSaved, s.d) + '. This only updates your tracker; it does not move money. Review and press Save to apply.';
@@ -4387,9 +4702,11 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
 
     var budgetIntent = /^(?:please\s+)?(?:set|create|add|update)\b.*\bbudget\b/.test(t) || /^budget\s+(?:for|on)\b/.test(t);
     if (budgetIntent) {
-      if (amount === null) return 'What monthly budget limit should I enter?';
+      if (Number.isNaN(amount)) return 'I found more than one amount. Please specify one budget limit; nothing was changed.';
+      if (amount !== null && amount < 0) return 'Please use a positive amount for a budget limit; nothing was changed.';
+      if (amount === null) { pendingAction = { waiting: 'amount', text: text }; return 'What monthly budget limit should I enter?'; }
       var category = actionCategory(text, s);
-      if (category === 'Other' && !/\bother\b/.test(t)) return 'Which expense category should get that budget? Try Housing, Food, Transport, Shopping, Entertainment, Bills, Health, Education, or Other.';
+      if (category === 'Other' && !/\bother\b/.test(t)) { pendingAction = { waiting: 'category', text: text }; return 'Which expense category should get that budget? Try Housing, Food, Transport, Shopping, Entertainment, Bills, Health, Education, or Other.'; }
       var budget = (s.d && s.d.budgets || []).find(function(b){return String(b.category).toLowerCase()===category.toLowerCase();});
       if (!openActionDraft(budget?'edit-budget':'add-budget', { category: category, limit: amount.toFixed(2) }, budget && budget.id)) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
       return 'I drafted a monthly ' + category + ' budget of ' + fmt(amount, s.d) + (budget?' by updating the existing budget':'') + '. Review and press Save to apply.';
@@ -4397,15 +4714,17 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
 
     var createGoalIntent = /^(?:please\s+)?(?:create|make|start|add|set\s+up)\b.*\bgoal\b/.test(t);
     if (createGoalIntent) {
-      if (amount === null) return 'What target amount should I put on the goal?';
-      var goalName = text.replace(/^\s*(?:please\s+)?(?:create|make|start|add|set\s+up)\s+(?:a\s+)?/i,'')
+      if (Number.isNaN(amount)) return 'I found more than one amount. Please specify one goal target; nothing was changed.';
+      if (amount !== null && amount < 0) return 'Please use a positive amount for a goal target; nothing was changed.';
+      if (amount === null) { pendingAction = { waiting: 'amount', text: text }; return 'What target amount should I put on the goal?'; }
+      var goalName = stripActionAmount(text, amount).replace(/^\s*(?:please\s+)?(?:create|make|start|add|set\s+up)\s+(?:a\s+)?/i,'')
         .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,?\s+20\d{2})?\b/ig,' ')
         .replace(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g,' ')
         .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g,' ')
-        .replace(/(?:\$|usd\s*)?\d[\d,]*(?:\.\d+)?\s*(?:k|thousand)?\b/ig,' ')
+        .replace(/(?:-\s*)?(?:\$\s*|usd\s+)(?:-\s*)?\d[\d,]*(?:\.\d+)?\s*(?:k|thousand)?\b/ig,' ')
         .replace(/\b(?:savings\s+)?goal\b/ig,' ').replace(/\b(?:called|named|with|target|amount|of|for|a)\b/ig,' ')
         .replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim();
-      if (!goalName) return 'What should I call the savings goal?';
+      if (!goalName) { pendingAction = { waiting: 'name', text: text }; return 'What should I call the savings goal?'; }
       if (!openActionDraft('add-goal', { name: goalName, target: amount.toFixed(2), saved: '0' })) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
       return 'I drafted the savings goal “' + goalName + '” with a target of ' + fmt(amount, s.d) + '. The saved amount starts at zero; review and press Save to create it.';
     }
@@ -4413,6 +4732,8 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     var editablePurchases = (s.d && s.d.purchases || []).filter(function(p){return p.status !== 'Purchased' && p.status !== 'Cancelled' && p.name && t.indexOf(String(p.name).toLowerCase()) >= 0;}).sort(function(a,b){return String(b.name).length-String(a.name).length;});
     var purchaseUpdateIntent = /^(?:please\s+)?(?:update|change|edit|adjust)\b/.test(t) && (editablePurchases.length > 0 || /\b(?:planned\s+)?purchase\b/.test(t));
     if (purchaseUpdateIntent) {
+      if (Number.isNaN(amount)) return 'I found more than one amount. Please specify one purchase price; nothing was changed.';
+      if (amount !== null && amount < 0) return 'Please use a positive amount for a purchase price; nothing was changed.';
       if (!editablePurchases.length) {
         var plannedNames = (s.d && s.d.purchases || []).filter(function(p){return p.status !== 'Purchased' && p.status !== 'Cancelled';}).map(function(p){return p.name;}).join(', ');
         return plannedNames ? 'Which planned purchase should I update? Your open plans are: ' + plannedNames + '.' : 'There are no open planned purchases to update yet.';
@@ -4422,7 +4743,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
       var priceMentioned = /(?:\$|usd\s*)\d/i.test(text) || /\b(?:price|cost|amount)\b/i.test(t) || /\bto\s+\d/i.test(t);
       if (amount !== null && priceMentioned) purchaseChanges.price = amount.toFixed(2);
       var dateMentioned = /\b(?:today|yesterday|tomorrow|20\d{2}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}(?:\/\d{2,4})?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2})\b/i.test(text);
-      if (dateMentioned) purchaseChanges.date = actionDate(text).value;
+      if (dateMentioned) { var changedDate = actionDate(text); if (changedDate.invalid) return 'That date is not valid. Please provide a valid date; nothing was changed.'; purchaseChanges.date = changedDate.value; }
       if (accounts.length === 1) purchaseChanges.accountId = accounts[0].id;
       var changedPriority = /\b(high|medium|low)\s+priority\b/i.exec(text);
       if (changedPriority) purchaseChanges.priority = changedPriority[1][0].toUpperCase() + changedPriority[1].slice(1).toLowerCase();
@@ -4434,23 +4755,26 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
 
     var purchaseIntent = (/^(?:please\s+)?(?:plan|create)\b/.test(t) && !/\bbudget\b/.test(t)) || /^(?:please\s+)?(?:add|create)\b.*\b(?:planned\s+)?purchase\b/.test(t);
     if (purchaseIntent) {
-      if (amount === null) return 'What price should I put on the planned purchase?';
+      if (Number.isNaN(amount)) return 'I found more than one amount. Please specify one purchase price; nothing was changed.';
+      if (amount !== null && amount < 0) return 'Please use a positive amount for a purchase price; nothing was changed.';
+      if (amount === null) { pendingAction = { waiting: 'amount', text: text }; return 'What price should I put on the planned purchase?'; }
       if (!s.accounts.length) return 'Create an account first, then tell me which account will fund the purchase. I won’t invent an account or balance.';
       if (accounts.length > 1) return 'Which account should fund the planned purchase? Your accounts are: ' + names + '.';
       var purchaseAccountId = accounts.length === 1 ? accounts[0].id : s.accounts.length === 1 ? s.accounts[0].id : '';
       var purchaseDate = actionDate(text);
-      var purchaseName = text.replace(/^\s*(?:please\s+)?(?:plan|create|add)\s+(?:a\s+|an\s+)?(?:new\s+)?(?:planned\s+)?(?:purchase\s+(?:for|of)\s+)?/i, '')
+      if (purchaseDate.invalid) return 'That date is not valid. Please provide a valid date; nothing was changed.';
+      var purchaseName = stripActionAmount(text, amount).replace(/^\s*(?:please\s+)?(?:plan|create|add)\s+(?:a\s+|an\s+)?(?:new\s+)?(?:planned\s+)?(?:purchase\s+(?:for|of)\s+)?/i, '')
         .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,?\s+20\d{2})?\b/ig,' ')
         .replace(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g,' ')
         .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g,' ')
-        .replace(/(?:\$|usd\s*)?\d[\d,]*(?:\.\d+)?\s*(?:k|thousand)?\b/ig, ' ')
+        .replace(/(?:-\s*)?(?:\$\s*|usd\s+)(?:-\s*)?\d[\d,]*(?:\.\d+)?\s*(?:k|thousand)?\b/ig, ' ')
         .replace(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g, ' ')
         .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g, ' ')
         .replace(/\b(?:today|yesterday|tomorrow|by|on|with|from|using|account|purchase|planned|for|a|an|priority|high|medium|low)\b/ig, ' ')
         .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,?\s+20\d{2})?\b/ig, ' ');
       accounts.forEach(function(a){ if(a.name){ var p=purchaseName.toLowerCase().indexOf(String(a.name).toLowerCase()); if(p>=0) purchaseName=purchaseName.slice(0,p)+' '+purchaseName.slice(p+String(a.name).length); } });
       purchaseName = purchaseName.replace(/[.,:!?]/g, ' ').replace(/\s+/g, ' ').trim().slice(0,100);
-      if (!purchaseName) return 'What should I call the planned purchase?';
+      if (!purchaseName) { pendingAction = { waiting: 'name', text: text }; return 'What should I call the planned purchase?'; }
       var priority = /\bhigh\s+priority\b/i.test(text) ? 'High' : /\blow\s+priority\b/i.test(text) ? 'Low' : 'Medium';
       var purchaseCategory = actionCategory(text, s);
       var purchaseValues = { name: purchaseName, price: amount.toFixed(2), date: purchaseDate.value, priority: priority, category: purchaseCategory, accountId: purchaseAccountId, saved: '0', status: 'Planning' };
@@ -4462,35 +4786,33 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     var income = /^(?:(?:i|we)\s+)?(?:just\s+)?(?:received|earned|deposited|got\s+paid|was\s+paid|my\s+paycheck\s+was)\b/.test(t) || /^(?:please\s+)?(?:log|record|add)\b.*\b(?:income|paycheck)\b/.test(t);
     var expense = /^(?:(?:i|we)\s+)?(?:just\s+)?(?:spent|paid|bought|purchased|was\s+charged|got\s+charged)\b/.test(t) || /^(?:please\s+)?(?:log|record|add)\b.*\b(?:expense|transaction|purchase)\b/.test(t);
     if (transfer || income || expense) {
-      if (amount === null) return 'What amount should I put in the transaction? I’ll fill the form for review, then wait for you to save it.';
+      if (Number.isNaN(amount)) return 'I found more than one amount. Please specify one transaction amount; nothing was changed.';
+      if (amount !== null && amount < 0) return 'Please use a positive amount for a transaction amount; nothing was changed.';
+      if (amount === null) { pendingAction = { waiting: 'amount', text: text }; return 'What amount should I put in the transaction? I’ll fill the form for review, then wait for you to save it.'; }
       if (!s.accounts.length) return 'Create an account first, then tell me the transaction again. I won’t invent an account or balance.';
       var type = transfer ? 'Transfer' : income ? 'Income' : 'Expense';
-      var accountId = accounts.length ? accounts[0].id : s.accounts.length === 1 ? s.accounts[0].id : '';
+      var accountId = accounts.length === 1 ? accounts[0].id : accounts.length === 0 && s.accounts.length === 1 ? s.accounts[0].id : '';
       var toAccountId = '';
       if (type === 'Transfer') {
-        function accountAfter(marker) {
-          var start = t.indexOf(marker);
-          if (start < 0) return null;
-          start += marker.length;
-          return accounts.find(function(a) {
-            var name = String(a.name || '').trim().toLowerCase(), typeName = String(a.type || '').trim().toLowerCase();
-            return (name && t.indexOf(name, start) >= start) || (typeName && t.indexOf(typeName, start) >= start);
-          }) || null;
+        function directedAccount(pattern) {
+          var part = pattern.exec(t), found = part ? accountMentions(part[1], s) : [];
+          return found.length === 1 ? found[0] : null;
         }
-        var source = accountAfter('from ') || accounts[0] || null;
-        var destination = accountAfter('to ') || accountAfter('into ') || accounts.find(function(a){return !source||a.id!==source.id;}) || null;
+        var source = directedAccount(/\bfrom\s+(.+?)(?=\s+(?:to|into)\b|[.!?]|$)/);
+        var destination = directedAccount(/\b(?:to|into)\s+(.+?)(?=\s+from\b|[.!?]|$)/);
         accountId = source ? source.id : '';
-        toAccountId = destination ? destination.id : '';
+        toAccountId = destination && (!source || destination.id !== source.id) ? destination.id : '';
       }
       var date = actionDate(text);
+      if (date.invalid) return 'That date is not valid. Please provide a valid date; nothing was changed.';
       var category = type === 'Income' ? 'Income' : type === 'Transfer' ? 'Other' : actionCategory(text, s);
-      var description = text.replace(/^\s*(?:please\s+)?(?:(?:i|we)\s+)?(?:just\s+)?/i,'')
+      var description = stripActionAmount(text, amount).replace(/^\s*(?:please\s+)?(?:(?:i|we)\s+)?(?:just\s+)?/i,'')
         .replace(/^(?:log|record|add)\s+(?:a\s+)?(?:new\s+)?(?:transaction|expense|income|transfer|purchase)?\s*/i,'')
         .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,?\s+20\d{2})?\b/ig,' ')
         .replace(/\b20\d{2}-\d{1,2}-\d{1,2}\b/g,' ')
         .replace(/\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b/g,' ')
         .replace(/^(?:spent|paid|bought|purchased|received|earned|deposited|transferred|moved|was\s+charged|got\s+paid)\b/i,' ')
-        .replace(/(?:\$|usd\s*)?\d[\d,]*(?:\.\d+)?\s*(?:k|thousand)?\b/ig,' ')
+        .replace(/(?:-\s*)?(?:\$\s*|usd\s+)(?:-\s*)?\d[\d,]*(?:\.\d+)?\s*(?:k|thousand)?\b/ig,' ')
         .replace(/\b(?:today|yesterday|tomorrow|on|from|to|using|with|my|the|account|expense|income|transaction|transfer|purchase|spent|paid|bought|purchased|received|earned|deposited|transferred|moved|at|for)\b/ig,' ');
       accounts.forEach(function(a){ if(a.name){ var p=description.toLowerCase().indexOf(String(a.name).toLowerCase()); if(p>=0) description=description.slice(0,p)+' '+description.slice(p+String(a.name).length); } });
       description=description.replace(/[.,!?]/g,' ').replace(/\s+/g,' ').trim().slice(0,120);
@@ -4498,7 +4820,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
       var values={ description: description, amount: amount.toFixed(2), type: type, category: category, accountId: accountId, date: date.value };
       if (type === 'Transfer') values.toAccountId = toAccountId;
       if (!openActionDraft('add-transaction', values)) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
-      return 'I drafted ' + (type === 'Expense' ? 'an expense' : type === 'Income' ? 'income' : 'a transfer') + ' for ' + fmt(amount, s.d) + (description?' · '+description:'') + (accountId?' · '+accountNameFromSnapshot(s,accountId):' · choose an account') + (date.defaulted?' · date set to today':' · '+date.value) + '. Review every field and press Save; nothing has been recorded yet.' + (type === 'Transfer' ? ' This is only a ledger entry; it does not move money.' : '');
+      return 'I drafted ' + (type === 'Expense' ? 'an expense' : type === 'Income' ? 'income' : 'a transfer') + ' for ' + fmt(amount, s.d) + (description?' · '+description:'') + (accountId?' · '+accountNameFromSnapshot(s,accountId):' · choose an account') + (date.defaulted?' · date set to today':' · '+date.value) + '. Review every field and press Save; nothing has been recorded yet.' + (type === 'Transfer' ? ' Choose or check both accounts. This is only a ledger entry; it does not move money.' : '');
     }
     return null;
   }
@@ -4508,7 +4830,69 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     return a ? a.name : 'account';
   }
 
+  function setAssistantBusy(busy) {
+    if (!panel) return;
+    input.disabled = busy;
+    panel.querySelector('#nsjSend').disabled = busy;
+    panel.querySelector('#nsjGear').disabled = busy;
+    panel.querySelectorAll('[data-ask],[data-draft]').forEach(function (b) { b.disabled = busy; });
+    panel.querySelector('#nsjBusy').textContent = busy ? 'Waiting for provider… Clear conversation to cancel the reply.' : '';
+  }
+  function workspaceBlocked() {
+    return !!window.NorthstarVaultLocked || !document.documentElement.classList.contains('northstar-seen') || !!document.querySelector?.('.app-shell')?.inert;
+  }
+  function cancelConnectionTest() {
+    testGeneration++;
+    var wasTesting = !!testController;
+    if (testController) testController.abort();
+    testController = null;
+    var button = panel && panel.querySelector('#nsjSave');
+    if (button) button.disabled = false;
+    var status = panel && panel.querySelector('#nsjConnStatus');
+    if (wasTesting && status) { status.className = 'nsj-status-line'; status.querySelector('span').textContent = 'Test cancelled. Save & test again.'; }
+  }
+  function cancelCloudReply(notice) {
+    if (!cloudController) return;
+    chatGeneration++; cloudController.abort(); cloudController = null;
+    panel?.querySelector('.nsj-typing')?.remove(); setAssistantBusy(false);
+    if (notice && log) addMsgWithSource('Cloud request cancelled. Nothing was changed.', 'Local');
+  }
+  function clearConversation(options) {
+    options = options || {};
+    cancelCloudReply(false); chatGeneration++;
+    history = []; pendingAction = null;
+    last = { intent: null, category: null, amount: null, month: null, accountId: null, merchant: null, foodAlias: false };
+    if (log) log.replaceChildren();
+    if (input && options.quiet) input.value = '';
+    setAssistantBusy(false);
+    if (log && !options.quiet) addMsgWithSource('Conversation cleared. Your financial records were not changed.', 'Local');
+    if (input && !options.noFocus) { try { input.focus({ preventScroll: true }); } catch (e) { input.focus(); } }
+  }
+  function resetWorkspace() {
+    cancelConnectionTest();
+    clearConversation({ quiet: true, noFocus: true });
+    greeted = false;
+    if (built) toggle(false, false);
+  }
+  function setWorkspaceBlocked(blocked, clear) {
+    if (!built) return;
+    if (blocked) {
+      if (clear) resetWorkspace(); else toggle(false, false);
+    }
+    orb.inert = !!blocked;
+  }
+  function startQuickDraft(kind) {
+    if (workspaceBlocked() || cloudController) return;
+    var s = snapshot();
+    if (!s.ok) { say('Unlock or finish loading the active workspace first.', true); return; }
+    if (kind !== 'Goal' && !s.accounts.length) { say('Create an account first, then open a transaction draft. Nothing has been saved.', true); return; }
+    pendingAction = null;
+    var opened = kind === 'Goal' ? openActionDraft('add-goal', {}) : openActionDraft('add-transaction', { type: kind, category: kind === 'Income' ? 'Income' : 'Other' });
+    if (opened) say('A ' + kind.toLowerCase() + ' form is open. Review the details and press Save to record it; nothing has been changed yet.', true);
+    else say('Close the form you are editing first. I will not replace unsaved changes.', true);
+  }
   function send(raw) {
+    if (workspaceBlocked() || cloudController) return;
     var text = String(raw || '').trim();
     if (!text) return;
     input.value = '';
@@ -4517,44 +4901,43 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
 
     var actionAnswer = routeMoneyAction(text);
     if (actionAnswer) { pushTurn(text, actionAnswer); typeThen(actionAnswer, 'Local action draft'); return; }
-
     if (!connReady()) {
       var localAnswer = reply(text);
       pushTurn(text, localAnswer);
       typeThen(localAnswer);
       return;
     }
-
     var snap = snapshot();
-    var typing = makeTyping();
-    callCloud(text, history.slice(), snap).then(function (answer) {
-      typing.remove();
-      cloudVerified = true;
-      refreshStatus();
-      addMsgWithSource(answer, 'Cloud · ' + providerLabel(conn.provider) + ' · ' + conn.model);
-      pushTurn(text, answer);
-      speak(answer);
+    if (!snap.ok) { typeThen('I cannot read the active workspace right now.', 'Local'); return; }
+    var typing = makeTyping(), generation = chatGeneration;
+    var provider = providerLabel(conn.provider), model = conn.model;
+    var controller = new AbortController(); cloudController = controller; setAssistantBusy(true);
+    callCloud(text, history.slice(), snap, { signal: controller.signal }).then(function (answer) {
+      if (generation !== chatGeneration || window.NorthstarVaultLocked) return;
+      typing.remove(); cloudVerified = true; refreshStatus();
+      addMsgWithSource(answer, 'Cloud · ' + provider + ' · ' + model);
+      pushTurn(text, answer); speak(answer);
     }).catch(function (err) {
-      typing.remove();
-      cloudVerified = false;
-      refreshStatus();
+      if (generation !== chatGeneration || controller.signal.aborted || window.NorthstarVaultLocked) return;
+      typing.remove(); cloudVerified = false; refreshStatus();
       var fallback = reply(text);
       addMsgWithSource(fallback, 'Local fallback · ' + errText(err));
-      pushTurn(text, fallback);
-      speak(fallback);
+      pushTurn(text, fallback); speak(fallback);
+    }).finally(function () {
+      if (cloudController === controller) { cloudController = null; setAssistantBusy(false); }
     });
   }
 
   var greeted = false;
-  function toggle(force) {
+  function toggle(force, restoreFocus) {
     build();
     var open = typeof force === 'boolean' ? force : !panel.classList.contains('open');
-    if (open && (window.NorthstarVaultLocked || !document.documentElement.classList.contains('northstar-seen'))) return;
+    if (open && (workspaceBlocked() || document.querySelector('#modalRoot .modal-backdrop, #confirmRoot .confirm-backdrop'))) return;
     clearTimeout(focusTimer); focusTimer = null;
     var focusWasInside = panel.contains(document.activeElement);
     var sheet = panel.querySelector('#nsjSheet');
     // A closed Connections sheet must not intercept taps or keyboard focus.
-    if (!open && sheet) { sheet.classList.remove('open'); sheet.inert = true; sheet.setAttribute('aria-hidden', 'true'); }
+    if (!open && sheet) { cancelConnectionTest(); cancelCloudReply(true); sheet.classList.remove('open'); sheet.inert = true; sheet.setAttribute('aria-hidden', 'true'); }
     panel.classList.toggle('open', open);
     panel.inert = !open;
     panel.setAttribute('aria-hidden', String(!open));
@@ -4563,16 +4946,17 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     orb.setAttribute('aria-label', open ? 'Close Northstar assistant' : 'Open Northstar assistant');
     if (open) {
       refreshStatus();
-      focusTimer = setTimeout(function () { if (panel.classList.contains('open') && !sheet?.classList.contains('open')) input.focus(); }, 180);
+      focusTimer = setTimeout(function () { if (panel.classList.contains('open') && !sheet?.classList.contains('open') && !document.querySelector('#modalRoot .modal-backdrop, #confirmRoot .confirm-backdrop')) { var target = window.matchMedia('(pointer: coarse)').matches ? panel.querySelector('.nsj-close') : input; try { target.focus({preventScroll:true}); } catch (e) { target.focus(); } } }, 180);
       if (!greeted) { greeted = true; typeThen(greeting(snapshot())); }
     } else {
-      if (focusWasInside) orb.focus({ preventScroll: true });
+      if (focusWasInside && restoreFocus !== false && !orb.inert) { try { orb.focus({ preventScroll: true }); } catch (e) { orb.focus(); } }
       if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); } catch (e) {} }
     }
   }
 
   document.addEventListener('keydown', function (e) {
     var t = e.target;
+    if (e.defaultPrevented || document.querySelector('#modalRoot .modal-backdrop, #confirmRoot .confirm-backdrop')) return;
     if (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable)) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === 'j' || e.key === 'J') { e.preventDefault(); toggle(); }
@@ -4584,7 +4968,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
 
   window.NorthstarJarvis = {
     open: function () { toggle(true); },
-    ask: function (q) { toggle(true); send(q); },
+    ask: function (q) { toggle(true); if (panel && panel.classList.contains('open')) send(q); },
     reply: reply,
     draftMoneyAction: routeMoneyAction,
     snapshot: snapshot,
@@ -4592,8 +4976,10 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     brief: brief,
     systemPrompt: systemPrompt,
     conn: function () { return Object.assign({}, conn); },
-    setConn: function (patch) { Object.assign(conn, patch || {}); cloudVerified = false; saveConn(); },
-    clearConn: function () { conn.key = ''; conn.enabled = false; saveConn(); },
+    setConn: function (patch) { cancelConnectionTest(); Object.assign(conn, patch || {}); cloudVerified = false; saveConn(); },
+    clearConn: function () { cancelConnectionTest(); conn.key = ''; conn.enabled = false; cloudVerified = false; saveConn(); },
+    setWorkspaceBlocked: setWorkspaceBlocked,
+    resetWorkspace: resetWorkspace,
     callCloud: function (text, opts) { return callCloud(text, [], snapshot(), opts); },
     testConnection: testConnection
   };

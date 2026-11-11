@@ -11,9 +11,11 @@ Recorded expenses now appear as completed purchase tiles, with explicitly linked
 ## Included features
 
 - Overview, transactions, accounts, budgets, savings goals, and planned purchases.
-- Goal progress states and optional sound/visual celebration when a goal is first reached.
-- Responsive phone navigation and an optional, scrollable introduction. **Enter Northstar** skips it immediately; you can replay it from Settings.
+- Goal and budget progress feedback, transaction and purchase animations, and an optional goal-completion chime. Reduced-motion preferences are respected.
+- A floating glass navigation dock on desktop and mobile. On narrow screens, **More** contains Accounts, Budgets, and Settings.
+- An optional, scrollable introduction. **Enter Northstar** skips it immediately; you can replay it from Settings.
 - Northstar Guide with a saved planning profile, remembered preferences, and rule-based saving/purchase suggestions.
+- Jarvis, a local assistant that can answer questions about your recorded finances and prepare reviewable drafts for common actions. Nothing is recorded until you save the form.
 - Purchase priority ordering, links to search current shopping listings, and manual price-history logging.
 - Recorded expenses appear as completed purchase tiles. Linked expense/plan pairs appear once; selecting an expense-only tile edits the original transaction. Income and transfers are excluded.
 - A simple 30-day price trend estimate after at least three price checks on different dates. This estimate uses only prices you enter; it is not a live retailer feed or guaranteed prediction.
@@ -21,7 +23,9 @@ Recorded expenses now appear as completed purchase tiles, with explicitly linked
 
 The intro remembers dismissal when browser storage is available. If saving that preference is blocked, you can still enter but the intro may return on reload. If storage cannot be read at all, the protected-workspace check fails closed rather than bypassing a possible vault; restore browser storage access before proceeding.
 
-The Guide is a local rules-based helper, not an external generative AI service. Jarvis also has an optional visitor-supplied cloud connection; if enabled, selected data and the key are sent to the chosen provider. Its key is stored separately in browser storage (session by default, optionally remembered), not encrypted by workspace protection or included in finance backups. The separate Cloudflare Worker is not wired into the site. Do not put private API keys in this static site.
+The Guide is a local rules-based helper, not an external generative AI service. Jarvis also works locally by default and offers an optional visitor-supplied cloud connection. **Save & test** sends the key and a finance summary to the selected provider, even if the cloud switch was previously off. Questions sent while cloud is on include a summary and recent conversation; the optional transaction setting adds up to eight recent entries, including dates, amounts, categories, and descriptions. Preview the payload before connecting if you wish.
+
+Jarvis's key is stored separately in browser storage (tab session by default, optionally remembered on the device), not encrypted by workspace protection or included in finance backups. If storage cannot be updated or has conflicting copies, Connections warns that a key may remain; back up finance data before clearing site data. The separate Cloudflare Worker is not wired into the site. Never put private API keys in the repository or page source.
 
 Northstar does not connect to bank accounts or verify your real balance. Figures depend on information you enter. Double-check your actual accounts before spending.
 
@@ -38,16 +42,17 @@ Northstar does not connect to bank accounts or verify your real balance. Figures
 
 ## Optional developer checks
 
-Run `node --test tests/*.test.*` with Node.js 18 or later. These dependency-free tests cover welcome entry and replay, release links, purchase projections, transaction/link integrity, encryption, and mocked sync/storage conflicts. They do not validate deployed Firestore rules. The website itself remains a static page and does not require Node.js or a build step.
+Run `node --test tests/*.test.*` with Node.js 18 or later. These dependency-free tests cover Jarvis answers and drafts, welcome entry and replay, purchase projections, transaction/link integrity, encryption, and mocked sync/storage conflicts. They do not validate deployed Firestore rules. The website itself remains a static page and does not require Node.js or a build step.
 
-For optional Chromium touch and interface checks, install `puppeteer-core` outside this repository and point the script to a Chromium executable (Node.js 22 recommended):
+For optional Chromium touch and interface checks, install `puppeteer-core` outside this repository and point the scripts to a Chromium executable (Node.js 22 recommended):
 
 ```sh
 npm install --prefix /tmp/northstar-browser-qa --no-save puppeteer-core
+NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/interface-browser.cjs
 NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/welcome-browser.cjs
 ```
 
-The browser checks block or mock external services; they are not a physical iPhone, Safari, or live Firebase test. Some sandboxed Chromium builds need additional flags via `CHROMIUM_FLAGS`.
+The browser checks use synthetic records and block or mock external services; they are not a physical iPhone, Safari, live AI-provider, or live Firebase test. Some sandboxed Chromium builds need additional flags via `CHROMIUM_FLAGS`.
 
 ## GitHub Pages publishing
 
