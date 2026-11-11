@@ -16,6 +16,14 @@ function addCents(current, addition) {
   return Number.isSafeInteger(current + addition) ? current + addition : null;
 }
 
+/* Match the graph models' monetary validation in presentation-only views. */
+export function graphAmount(value) {
+  const result = cents(value);
+  return result === null ? null : result / 100;
+}
+
+const hasId = value => (typeof value === 'string' && value.trim() !== '') || (typeof value === 'number' && Number.isFinite(value));
+
 /* Reject impossible and partial dates rather than moving them into another month. */
 export function graphMonthFromDate(value) {
   if (typeof value !== 'string') return null;
@@ -54,20 +62,21 @@ export function monthlyGraph(transactions, endMonth, count = 6, accountId = null
   let excluded = 0;
   for (const tx of Array.isArray(transactions) ? transactions : []) {
     if (!tx || typeof tx !== 'object') continue;
-    let direction = '';
+    let direction = '', invalidTransfer = false;
     if (accountId === null) {
       direction = tx.type === 'Income' ? 'in' : tx.type === 'Expense' ? 'out' : '';
     } else if (tx.type === 'Income' && tx.accountId === accountId) direction = 'in';
     else if (tx.type === 'Expense' && tx.accountId === accountId) direction = 'out';
-    else if (tx.type === 'Transfer' && tx.accountId !== tx.toAccountId) {
-      if (tx.accountId === accountId) direction = 'out';
-      else if (tx.toAccountId === accountId) direction = 'in';
+    else if (tx.type === 'Transfer' && (tx.accountId === accountId || tx.toAccountId === accountId)) {
+      invalidTransfer = !hasId(tx.accountId) || !hasId(tx.toAccountId) || tx.accountId === tx.toAccountId;
+      if (!invalidTransfer) direction = tx.accountId === accountId ? 'out' : 'in';
     }
-    if (!direction) continue;
+    if (!direction && !invalidTransfer) continue;
     const month = graphMonthFromDate(tx.date);
     if (!month) { excluded++; continue; }
     const bucket = byMonth.get(month);
     if (!bucket) continue;
+    if (invalidTransfer) { excluded++; continue; }
     const value = cents(tx.amount);
     if (value === null) { excluded++; continue; }
     const field = direction === 'in' ? 'inCents' : 'outCents';

@@ -33,9 +33,10 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
     return res.end(fs.readFileSync(path.join(root, 'index.html')));
   }
-  if (pathname === '/personal-finance/vault-crypto.mjs') {
-    res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
-    return res.end(fs.readFileSync(path.join(root, 'vault-crypto.mjs')));
+  const filename = pathname.replace('/personal-finance/', '');
+  if (pathname.startsWith('/personal-finance/') && ['vault-crypto.mjs', 'finance-graphs.mjs', 'financial-graphs-view.mjs', 'financial-graphs.css'].includes(filename)) {
+    res.writeHead(200, { 'Content-Type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
+    return res.end(fs.readFileSync(path.join(root, filename)));
   }
   res.writeHead(404); res.end('Not found');
 });

@@ -1,7 +1,7 @@
 // Run with: node --test tests/finance-graphs.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { graphMonthFromDate, graphMonths, monthlyGraph, categoryGraph, transactionGraph, goalScenarioGraph } from '../finance-graphs.mjs';
+import { graphAmount, graphMonthFromDate, graphMonths, monthlyGraph, categoryGraph, transactionGraph, goalScenarioGraph } from '../finance-graphs.mjs';
 
 const record = (type, amount, date, extras = {}) => ({ type, amount, date, accountId: 'spending', ...extras });
 
@@ -41,6 +41,28 @@ test('account charts keep accounts separate and include both sides of a valid tr
   assert.deepEqual(monthlyGraph(entries, '2026-11', 1, 'savings').rows[0],
     { month: '2026-11', incoming: 620, outgoing: 0, count: 2 });
   assert.equal(monthlyGraph(entries, '2026-11', 1, 'other').hasRecords, false);
+  assert.equal(monthlyGraph(entries, '2026-11', 1, 'spending').excluded, 1, 'a transfer to the same account is not a valid flow');
+});
+
+test('incomplete transfers do not invent account inflows or outflows', () => {
+  const entries = [record('Transfer', 40, '2026-11-02'),
+    record('Transfer', 60, '2026-11-03', { accountId: '', toAccountId: 'savings' }),
+    record('Transfer', 70, '2026-10-03', { toAccountId: '' }),
+    record('Transfer', 10, '2026-11-04', { toAccountId: 'savings' })];
+  const spending = monthlyGraph(entries, '2026-11', 1, 'spending');
+  const savings = monthlyGraph(entries, '2026-11', 1, 'savings');
+  assert.deepEqual(spending.rows[0], { month: '2026-11', incoming: 0, outgoing: 10, count: 1 });
+  assert.equal(spending.excluded, 1, 'an invalid transfer outside the window is not counted');
+  assert.deepEqual(savings.rows[0], { month: '2026-11', incoming: 10, outgoing: 0, count: 1 });
+  assert.equal(savings.excluded, 1);
+  assert.equal(monthlyGraph(entries, '2026-11', 1).excluded, 0, 'global activity ignores all transfers');
+});
+
+test('amount validation rejects missing, negative, nonnumeric and unsupported values', () => {
+  for (const value of [null, undefined, '', '   ', 'no', -1, Infinity, '999999999999999']) assert.equal(graphAmount(value), null);
+  assert.equal(graphAmount(0), 0);
+  assert.equal(graphAmount('2.345'), 2.35);
+  assert.equal(graphAmount('9.99'), 9.99);
 });
 
 test('expense categories use actual valid amounts and preserve arbitrary category names as data', () => {
