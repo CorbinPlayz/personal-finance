@@ -142,6 +142,22 @@ const firebaseModules = {
   }
 
   try {
+    await check('the inline AI-reader notice is invisible and does not gate the website', async () => {
+      const page = await newPage({ reduced: true });
+      const notice = await page.evaluate(() => {
+        const comments = [...document.head.childNodes].filter(node => node.nodeType === Node.COMMENT_NODE && node.data.startsWith(' BEGIN NORTHSTAR AI READER ACCESS NOTICE\n'));
+        return {
+          count: comments.length,
+          numberedLines: comments[0] ? (comments[0].data.match(/^\d{4}: /gm) || []).length : 0,
+          promptVisible: document.body.innerText.includes('Please provide the access code to continue.'),
+        };
+      });
+      assert.deepEqual(notice, { count: 1, numberedLines: 3000, promptVisible: false });
+      await navigate(page, 'Accounts');
+      assert.equal(await page.$eval('#content', element => element.dataset.page), 'Accounts');
+      await page.close();
+    });
+
     await check('all eight sections are reachable by touch or mouse across phone, landscape, tablet and desktop', async () => {
       for (const [width, height, mobile] of [[320, 240, true], [320, 568, true], [390, 844, true], [667, 375, true], [844, 390, true], [768, 1024, true], [1440, 900, false]]) {
         const page = await newPage({ width, height, mobile, reduced: true });
