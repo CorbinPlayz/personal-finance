@@ -141,11 +141,62 @@ const firebaseModules = {
     await page.waitForSelector('[data-action="welcome-again"]');
   }
   async function check(name, fn) {
+    if (process.env.WELCOME_QA_ONLY && !name.toLowerCase().includes(process.env.WELCOME_QA_ONLY.toLowerCase())) return;
     try { await fn(); console.log('PASS', name); count++; }
     catch (error) { console.error('FAIL', name); throw error; }
   }
 
   try {
+    await check('garage entry opens over the real dashboard and never rewrites finance records', async () => {
+      for (const [width, height, mobile] of [[320, 240, true], [390, 844, true], [1440, 900, false]]) {
+        const page = await newPage({ width, height, mobile });
+        const original = await page.evaluate(ledger => {
+          const raw = JSON.stringify(ledger); localStorage.setItem('northstar-finance-v1:local', raw); return raw;
+        }, sampleLedger);
+        await load(page);
+        const before = await page.evaluate(() => JSON.stringify(window.NorthstarLedger()));
+        assert.equal(await page.$eval('.ns-garage', el => getComputedStyle(el).display), 'none', 'the shutter does not play before entry');
+        if (mobile) await page.tap('#welcomeEnter'); else await page.click('#welcomeEnter');
+        await page.waitForFunction(() => document.querySelector('.ns-garage-door').getAnimations().some(a => a.animationName === 'nsGarageLift'));
+        const active = await page.evaluate(() => document.activeElement.id);
+        await page.keyboard.press('Tab');
+        assert.equal(await page.evaluate(() => document.activeElement.id), active, 'focus stays put until the shutter finishes');
+        const frame = await page.evaluate(() => {
+          const door = document.querySelector('.ns-garage-door'), animation = door.getAnimations().find(a => a.animationName === 'nsGarageLift');
+          animation.pause(); animation.currentTime = 0; const closed = door.getBoundingClientRect().bottom;
+          animation.currentTime = 625; const lifting = door.getBoundingClientRect().bottom;
+          const hit = document.elementFromPoint(innerWidth / 2, innerHeight - 10);
+          const blocksClicks = document.getElementById('welcomeScreen').contains(hit);
+          animation.currentTime = 1240; const opened = door.getBoundingClientRect().bottom;
+          animation.play();
+          return { closed, lifting, opened, height: innerHeight, blocksClicks, inert: document.querySelector('.app-shell').inert,
+            decorative: document.querySelector('.ns-garage').getAttribute('aria-hidden') };
+        });
+        assert.ok(frame.closed >= height - 1, `${width}: shutter starts closed`);
+        assert.ok(frame.lifting < frame.closed - height * .1, `${width}: shutter lifts to reveal the app`);
+        assert.ok(frame.opened < height * .05, `${width}: shutter finishes offscreen`);
+        assert.equal(frame.inert, true); assert.equal(frame.decorative, 'true');
+        assert.equal(frame.blocksClicks, true, 'revealed controls cannot be tapped before the transition finishes');
+        await page.waitForFunction(() => document.getElementById('welcomeScreen').classList.contains('hidden'));
+        assert.equal(await page.evaluate(() => document.querySelector('.app-shell').inert), false);
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'content');
+        assert.equal(await page.evaluate(() => JSON.stringify(window.NorthstarLedger())), before);
+        assert.equal(await page.evaluate(() => localStorage.getItem('northstar-finance-v1:local')), original);
+        await page.close();
+      }
+    });
+
+    await check('garage entry immediately finishes if reduced motion is enabled mid-reveal', async () => {
+      const page = await newPage(); await load(page);
+      await page.tap('#welcomeEnter');
+      await page.waitForFunction(() => document.querySelector('.ns-garage-door').getAnimations().some(a => a.animationName === 'nsGarageLift'));
+      await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+      await page.waitForFunction(() => document.getElementById('welcomeScreen').classList.contains('hidden'), { timeout: 1000 });
+      assert.equal(await page.evaluate(() => document.querySelector('.app-shell').inert), false);
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'content');
+      await page.close();
+    });
+
     await check('entry is visible without scrolling at phone, short, landscape, tablet, and desktop sizes', async () => {
       for (const [width, height, mobile] of [[320, 240, true], [320, 568, true], [390, 844, true], [667, 375, true], [844, 390, true], [768, 1024, true], [1440, 900, false]]) {
         const page = await newPage({ width, height, mobile });
@@ -249,7 +300,7 @@ const firebaseModules = {
       await page.close();
     });
 
-    await check('keyboard focus stays in the dialog and Enter/Escape work; reduced motion skips the fade', async () => {
+    await check('keyboard focus stays in the dialog and Enter/Escape work; reduced motion skips the reveal', async () => {
       const page = await newPage(); await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]); await load(page);
       await page.keyboard.press('n');
       assert.equal(await page.$eval('#modalRoot', el => el.childElementCount), 0, 'global app shortcuts do not open behind the intro');
@@ -340,6 +391,28 @@ const firebaseModules = {
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
       assert.equal(await page.evaluate(() => window.NorthstarLedger().accounts[0].balance), 123.45);
       assert.equal(await page.evaluate(() => window.__cloudWrites || 0), 0);
+      await page.close();
+    });
+
+    await check('encrypted cloud data arriving during the garage reveal still locks the workspace', async () => {
+      const page = await newPage({ mockFirebase: true });
+      const envelope = await page.evaluate(async ({ password, ledger }) => {
+        const { newKdf, deriveVaultKey, encryptLedger } = await import('/personal-finance/vault-crypto.mjs');
+        const kdf = newKdf(), key = await deriveVaultKey(password, kdf);
+        return encryptLedger(ledger, key, kdf);
+      }, { password: passphrase, ledger: sampleLedger });
+      await load(page);
+      await page.waitForFunction(() => typeof window.__resolveMockCloud === 'function');
+      await page.tap('#welcomeEnter');
+      await page.waitForFunction(() => document.querySelector('.ns-garage-door').getAnimations().some(a => a.animationName === 'nsGarageLift'));
+      await page.evaluate(data => window.__resolveMockCloud({ exists: () => true, data: () => data }), envelope);
+      await page.waitForFunction(() => window.NorthstarVaultLocked === true);
+      assert.equal(await page.evaluate(() => window.NorthstarLedger()), null);
+      assert.equal(await page.evaluate(() => document.querySelector('.app-shell').inert), true);
+      assert.equal(await page.$eval('#welcomeScreen', el => getComputedStyle(el).visibility), 'hidden');
+      assert.equal(await page.evaluate(() => window.__cloudWrites || 0), 0);
+      await page.waitForFunction(() => document.getElementById('welcomeScreen').classList.contains('hidden'));
+      assert.equal(await page.evaluate(() => document.querySelector('.app-shell').inert), true, 'the timer must not unlock the app');
       await page.close();
     });
 

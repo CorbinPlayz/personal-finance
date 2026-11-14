@@ -14,8 +14,8 @@ Recorded expenses now appear as completed purchase tiles, with explicitly linked
 - Read-only graphs across the finance pages, Guide, and Settings: recorded income and spending, category mix, account activity, budget and goal progress, purchase funding and manually logged prices, a saved-profile picture, and workspace record counts. See the exact values in text or the expandable tables.
 - A goal what-if graph compares up to two **explicitly entered** monthly contributions. It assumes no interest or fees, does not check account balances or move money, and does not save the scenario inputs.
 - Goal and budget progress feedback, transaction and purchase animations, and an optional goal-completion chime. Graph entry animation is decorative and respects reduced-motion preferences.
-- A floating glass navigation dock on desktop and mobile. On narrow screens, **More** contains Accounts, Budgets, and Settings.
-- An optional, scrollable introduction. **Enter Northstar** skips it immediately; you can replay it from Settings.
+- A floating glass navigation dock on desktop and mobile. On narrow screens, **More** contains Accounts, Budgets, and Settings. The top-left compass icon also opens Home; when Home is already open, it keeps your scroll position. The adjacent Northstar word is not a button.
+- An optional, scrollable introduction. **Enter Northstar** opens a short garage-inspired reveal; you can replay it from Settings. Reduced-motion preferences skip the animation.
 - Northstar Guide with a saved planning profile, remembered preferences, and rule-based saving/purchase suggestions.
 - Jarvis, a local assistant that can answer questions about your recorded finances and prepare reviewable drafts for common actions. Nothing is recorded until you save the form.
 - Purchase priority ordering, links to search current shopping listings, and manual price-history logging.
@@ -46,7 +46,7 @@ The six-month overview excludes transfers; the three-month account charts show e
 
 ## Optional developer checks
 
-Run `node --test tests/*.test.*` with Node.js 18 or later. These dependency-free tests cover graph calculations and rendering, Jarvis answers and drafts, welcome entry and replay, purchase projections, transaction/link integrity, encryption, and mocked sync/storage conflicts. They do not validate deployed Firestore rules. The website itself remains a static page and does not require Node.js or a build step.
+Run `node --test tests/*.test.*` with Node.js 18 or later. These dependency-free tests cover graph calculations and rendering, the Home shortcut, Jarvis answers and drafts, welcome entry and replay, purchase projections, transaction/link integrity, encryption, and mocked sync/storage conflicts. They do not validate deployed Firestore rules. The website itself remains a static page and does not require Node.js or a build step.
 
 For optional Chromium touch, graph, accessibility and interface checks, install `puppeteer-core` and `axe-core` outside this repository and point the scripts to a Chromium executable (Node.js 22 recommended):
 
@@ -54,6 +54,7 @@ For optional Chromium touch, graph, accessibility and interface checks, install 
 npm install --prefix /tmp/northstar-browser-qa --no-save puppeteer-core axe-core
 NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/finance-graphs-browser.cjs
 NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/interface-browser.cjs
+NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/home-shortcut-browser.cjs
 NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/welcome-browser.cjs
 ```
 

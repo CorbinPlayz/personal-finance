@@ -193,7 +193,7 @@
 .welcome-motion-ready [data-welcome-reveal]{opacity:0;transform:translateY(19px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}.welcome-motion-ready [data-welcome-reveal].is-visible{opacity:1;transform:translateY(0)}
 .mobile-dock{display:none}.dock-item{border:0;background:transparent;color:#8a8a8a;min-width:0;min-height:45px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-radius:11px;font:inherit}.dock-item>span{font-size:19px;line-height:1.15}.dock-item small{font-size:9px;font-weight:600;letter-spacing:.1px}.dock-item.active{color:#ffffff;background:linear-gradient(135deg,#080808,#080808);box-shadow:inset 0 0 0 1px #a8a8a82b}.dock-item.active>span{color:#a8a8a8}
 @media(max-width:600px){.mobile-dock{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;position:fixed;z-index:35;left:9px;right:9px;bottom:calc(8px + env(safe-area-inset-bottom));padding:7px 5px;background:rgba(9,21,42,.96);border:1px solid #080808;border-radius:17px;box-shadow:0 10px 34px #0b0b0b4a;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}.topbar{position:sticky;top:0;z-index:12;min-width:0}.breadcrumb{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.breadcrumb strong{white-space:nowrap}.top-actions{flex-shrink:0;max-width:56%}.sync-state{max-width:66px;font-size:9px}.top-actions #signInBtn,.top-actions #signOutBtn{padding:7px 8px;font-size:9px}.page-heading{flex-wrap:wrap}.page-heading>div{min-width:0}.page-heading .primary-btn{max-width:100%;white-space:normal}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.recent-amount{min-width:0}.recent-item{gap:8px}.recent-amount strong{font-size:10px}.panel-head{align-items:flex-start}.inline-tools{width:100%}.filter-select{max-width:100%;flex:1}.tx-table{min-width:610px}.goal-card,.purchase-card,.account-card{padding:16px}.welcome-screen{padding:19px 14px 28px;align-items:flex-start}.welcome-content{margin:0 auto}.welcome-wordmark{gap:9px;margin-bottom:18px}.welcome-mini-mark{width:35px;height:35px}.welcome-wordmark-type strong{font-size:19px}.welcome-version{font-size:8px;letter-spacing:.7px;padding:7px 6px;white-space:nowrap}.welcome-main{grid-template-columns:minmax(0,1fr);gap:0;padding:0 0 20px}.welcome-art{min-height:210px}.welcome-orbit-outer{width:205px;height:205px}.welcome-orbit-inner{width:165px;height:165px}.welcome-orbit-tilt{width:218px;height:110px}.welcome-hero-logo{width:67px;height:67px}.welcome-copy{text-align:left;padding:0 3px}.welcome-copy h1{font-size:clamp(32px,9vw,45px);line-height:1.08}.welcome-copy>p{font-size:13px;line-height:1.8}.welcome-continue{width:100%;min-height:48px}.welcome-benefits{grid-template-columns:1fr;gap:10px;margin-top:9px}.welcome-benefits>div{padding:11px 12px}.welcome-scroll-cue{font-size:8px;letter-spacing:1.4px;margin:22px auto 28px}.welcome-journey-grid{grid-template-columns:1fr;gap:10px}.welcome-step{min-height:0;padding:19px 18px}.welcome-step-symbol{margin:14px 0 12px;width:40px;height:40px}.welcome-step h2{font-size:17px}.welcome-guide-note{grid-template-columns:1fr;gap:15px;padding:21px}.welcome-guide-orbit{width:51px;height:51px;font-size:25px}.welcome-final{padding:30px 18px 25px;margin:8px auto 24px}.welcome-bottomline{flex-wrap:wrap;gap:10px;font-size:8px}.welcome-bottomline>span{text-align:center}}
-@media(max-width:380px){.topbar{padding:0 10px}.breadcrumb span:first-child{display:none}.top-actions{max-width:62%}.page-heading h1{font-size:22px}.metric-value{font-size:18px}.dock-item small{font-size:8px}.purchase-summary{grid-template-columns:1fr}.recent-amount span{font-size:8px}}
+@media(max-width:380px){.topbar{padding:0 10px}.breadcrumb>span.breadcrumb-brand{display:inline-flex}.top-actions{max-width:62%}.page-heading h1{font-size:22px}.metric-value{font-size:18px}.dock-item small{font-size:8px}.purchase-summary{grid-template-columns:1fr}.recent-amount span{font-size:8px}}
 @media(prefers-reduced-motion:reduce){.welcome-screen{scroll-behavior:auto}.welcome-scroll-cue-arrow,.welcome-guide-orbit{animation:none!important}.welcome-motion-ready [data-welcome-reveal]{opacity:1;transform:none;transition:none}.welcome-step,.dock-item{transition:none!important}}
 .goal-card-journey{position:relative;overflow:hidden}.goal-card-journey:after{content:"";position:absolute;left:0;top:0;width:100%;height:2px;background:linear-gradient(90deg,#141414,#999999,#999999);transform:scaleX(0);transform-origin:left;transition:transform .65s ease}.goal-card-journey.goal-complete:after{transform:scaleX(1)}.goal-card-journey.goal-complete{background:radial-gradient(ellipse at 100% 0,#e4e4e4 0,transparent 53%),#ffffff;border-color:#b8b8b8}.goal-card-journey.goal-complete .goal-icon{background:linear-gradient(135deg,#e4e4e4,#e4e4e4);color:#141414;box-shadow:0 0 0 4px #ebebeb}.goal-progress-complete{background:linear-gradient(90deg,#141414,#8a8a8a,#999999);box-shadow:0 0 13px #8a8a8a5c}.goal-achieved-badge{border:1px solid #b8b8b8;border-radius:7px;background:#ebebeb;color:#080808;padding:5px 7px;font-size:9px;font-weight:800;white-space:nowrap}
 .goal-celebration{position:fixed;inset:0;z-index:110;pointer-events:none;display:grid;place-items:center;overflow:hidden;animation:goalCelebrateFade 2.7s ease forwards}.goal-celebration:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at center,#8a8a8a2b,transparent 47%);animation:goalCelebrateGlow 1.4s ease-in-out 2}.goal-celebration-card{position:relative;z-index:2;text-align:center;padding:27px 32px;max-width:calc(100% - 36px);border:1px solid #b8b8b88c;border-radius:22px;background:linear-gradient(140deg,#080808f2,#080808f5);box-shadow:0 20px 90px #0b0b0b60;animation:goalCelebratePop .55s cubic-bezier(.16,.8,.2,1.3)}.goal-celebration-mark{font-size:35px;color:#a8a8a8;display:block;filter:drop-shadow(0 0 18px #99999970);margin-bottom:5px}.goal-celebration-card small{color:#a8a8a8;font-size:9px;letter-spacing:2px;font-weight:800}.goal-celebration-card h2{font-family:Manrope,sans-serif;font-size:clamp(20px,5vw,30px);color:#ffffff;margin:9px 0 7px}.goal-celebration-card p{font-size:11px;line-height:1.6;color:#b8b8b8;margin:0}.goal-confetti{position:absolute;top:-12px;left:var(--x);width:var(--w);height:var(--h);background:var(--c);border-radius:2px;opacity:0;animation:goalConfettiFall var(--d) cubic-bezier(.2,.6,.45,1) var(--delay) forwards;transform:rotate(var(--r))}
@@ -1371,6 +1371,23 @@ body.nsx-grain:after{
 }
 </style>
 <style id="glass-dock-design">
+/* Keep the shortcut reachable while scrolling, without covering dialogs or the dock. */
+html{scroll-padding-top:72px}
+.topbar{top:0;z-index:12}
+@media(max-width:600px){html{scroll-padding-top:64px}}
+/* Only the mark is a shortcut; its 44px target stays separate from the wordmark. */
+.breadcrumb .breadcrumb-brand{display:inline-flex;align-items:center;gap:2px;padding-right:0}
+.breadcrumb-home{display:inline-grid;place-items:center;flex:0 0 44px;width:44px;height:44px;padding:0;border:0;border-radius:12px;background:transparent;-webkit-tap-highlight-color:transparent;transition:background .18s ease,transform .18s ease}
+.breadcrumb-home:hover{background:rgba(51,42,65,.08)}
+@media(pointer:coarse){.breadcrumb-home:hover{background:transparent}}
+.breadcrumb-home:active{background:rgba(51,42,65,.13);transform:scale(.94)}
+.breadcrumb-home:focus-visible{outline:2px solid #393044;outline-offset:-3px;border-radius:12px}
+@media(max-width:430px){
+  /* The page heading and dock still identify the section; keep all header controls on-screen. */
+  .breadcrumb>span:not(.breadcrumb-brand),.breadcrumb>strong{display:none}
+  .top-actions{flex:0 0 auto;max-width:none}
+}
+@media(max-width:390px){.breadcrumb-brand b{font-size:9px;letter-spacing:.08em}}
 /* A single compact frosted-glass navigation surface, shared by all screens. */
 .app-shell .main-area{margin-left:0}
 .app-shell .content{padding-bottom:calc(118px + env(safe-area-inset-bottom, 0px))}
@@ -1391,6 +1408,8 @@ body.nsx-grain:after{
 #mobileDock .dock-item:hover{background:rgba(255,255,255,.1)!important}
 #mobileDock .dock-item.active,#mobileDock .dock-more.is-current{color:#171a1e}
 #mobileDock .dock-item:active{transform:scale(.94)}
+#mobileDock .dock-item.home-shortcut-highlight:after{content:"";position:absolute;inset:2px;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 0 2px rgba(110,79,160,.9),0 0 14px rgba(183,156,255,.6);animation:homeShortcutHighlight 1s ease-out both}
+@keyframes homeShortcutHighlight{0%,65%{opacity:1}100%{opacity:0}}
 #mobileDock .dock-icon{width:23px;height:23px;display:grid;place-items:center;color:inherit}
 #mobileDock .dock-icon svg{display:block;width:21px;height:21px;stroke-width:1.7}
 #mobileDock .dock-item small{font-size:9.5px;line-height:1.15;font-weight:700;white-space:nowrap;letter-spacing:0}
@@ -1413,7 +1432,7 @@ body.nsx-grain:after{
   #mobileDock .dock-item small{font-size:8.5px}
   #mobileDock .dock-indicator{top:6px;bottom:6px;border-radius:17px}
 }
-@media(prefers-reduced-motion:reduce){#mobileDock .dock-indicator,#mobileDock .dock-item{transition:none!important}#mobileDock .dock-item:active{transform:none!important}}
+@media(prefers-reduced-motion:reduce){.breadcrumb-home{transition:none!important}.breadcrumb-home:active{transform:none!important}#mobileDock .dock-indicator,#mobileDock .dock-item{transition:none!important}#mobileDock .dock-item:active{transform:none!important}#mobileDock .dock-item.home-shortcut-highlight:after{animation:none!important}}
 @media(prefers-reduced-transparency:reduce){#mobileDock{background:#292b30!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}}
 </style>
 <style id="finance-motion">
@@ -1480,6 +1499,39 @@ body.nsx-grain:after{
 @media(max-width:900px),(pointer:coarse){#welcomeScroll .welcome-content{animation:none;transform:none}}
 @media(prefers-reduced-motion:reduce){#welcomeScreen,.welcome-leaving .welcome-content{transition:none}}
 </style>
+<style id="welcome-garage-motion">
+/* A quiet, premium shutter lifts away on entry; the app underneath is real. */
+.welcome-enter{transition:transform .14s ease,box-shadow .2s ease,background .2s ease}
+.welcome-enter:hover{box-shadow:0 6px 24px #ffffff26}
+.welcome-enter:active{transform:scale(.97)}
+.welcome-enter:focus-visible{outline:2px solid #fff;outline-offset:4px}
+.ns-garage{display:none;position:absolute;inset:0;z-index:10;overflow:hidden;pointer-events:none}
+.ns-garage-door{
+  position:absolute;inset:0;will-change:transform;
+  background:
+    radial-gradient(ellipse 90% 80% at 50% -10%,#ffffff26,transparent 65%),
+    linear-gradient(100deg,#ffffff0d,transparent 27%,#ffffff08 62%,#0006),
+    repeating-linear-gradient(to bottom,#1b1d20 0,#131518 calc(16.666vh - 4px),#08090a calc(16.666vh - 3px),#363a3d calc(16.666vh - 2px),#0a0b0d 16.666vh);
+  box-shadow:0 12px 30px #0008;
+}
+.ns-garage-door::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:linear-gradient(90deg,transparent,#b9c8c7 20%,#f9ffff 50%,#b9c8c7 80%,transparent);box-shadow:0 3px 20px #e6fffa70}
+.ns-garage-stamp{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);display:grid;justify-items:center;gap:9px;color:#f2f6f4;text-align:center;white-space:nowrap}
+.ns-garage-stamp svg{width:55px;height:55px;filter:drop-shadow(0 2px 12px #e6fffa40)}
+.ns-garage-stamp strong{font-size:11px;letter-spacing:.32em;font-weight:800;padding-left:.32em}
+.ns-garage-stamp small{font-size:8px;letter-spacing:.2em;color:#c3cfcb;padding-left:.2em}
+#welcomeScreen.welcome-leaving{opacity:1;transform:none;background:transparent;transition:none;pointer-events:auto}
+#welcomeScreen.welcome-leaving::before,#welcomeScreen.welcome-leaving::after{opacity:0;animation:none}
+#welcomeScreen.welcome-leaving > :not(.ns-garage){opacity:0;animation:none;pointer-events:none}
+#welcomeScreen.welcome-leaving .ns-garage{display:block}
+#welcomeScreen.welcome-leaving .ns-garage-door{animation:nsGarageLift 1.25s cubic-bezier(.68,0,.18,1) both}
+@keyframes nsGarageLift{0%,9%{transform:translate3d(0,0,0)}14%{transform:translate3d(0,.6%,0)}100%{transform:translate3d(0,-104%,0)}}
+@media(prefers-reduced-motion:reduce){
+  #welcomeScreen.welcome-leaving{opacity:0}
+  #welcomeScreen.welcome-leaving .ns-garage{display:none}
+  .welcome-enter{transition:none}
+  .welcome-enter:active{transform:none}
+}
+</style>
 <style id="vault-design">
 html.northstar-vault-locked .app-shell,html.northstar-vault-locked #welcomeScreen,
 html.northstar-vault-locked .nsj-orb,html.northstar-vault-locked .nsj-panel,
@@ -1513,6 +1565,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 </head>
 <body>
 <section class="welcome-screen" id="welcomeScreen" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
+  <div class="ns-garage" aria-hidden="true"><div class="ns-garage-door"><div class="ns-garage-stamp"><svg viewBox="0 0 80 80" focusable="false"><circle cx="40" cy="40" r="32" fill="none" stroke="currentColor" stroke-opacity=".45"/><path d="M40 8 46 32 72 40 46 46 40 72 34 46 8 40 34 32Z" fill="currentColor"/><circle cx="40" cy="40" r="4" fill="#151719"/></svg><strong>NORTHSTAR</strong><small>PERSONAL FINANCE</small></div></div></div>
   <div class="welcome-scroll-progress" aria-hidden="true"><span id="welcomeProgressBar"></span></div>
   <div class="welcome-glow welcome-glow-a" aria-hidden="true"></div><div class="welcome-glow welcome-glow-b" aria-hidden="true"></div>
   <div class="welcome-starfield" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -1536,7 +1589,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 </section>
 <div class="app-shell">
 <div class="main-area">
-<header class="topbar"><div style="display:flex;align-items:center;min-width:0"><div class="breadcrumb"><span class="breadcrumb-brand"><svg class="breadcrumb-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgCrumb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarCrumb" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgCrumb)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarCrumb)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg><b>NORTHSTAR</b></span><span>/</span> <strong id="breadcrumbTitle">Overview</strong></div></div><div class="top-actions"><span class="sync-state" id="syncStatus" aria-live="polite">Local only</span><button id="signInBtn" class="secondary-btn small" data-action="signin">Connect Google</button><button id="signOutBtn" class="secondary-btn small hidden" data-action="signout">Sign out</button><div class="avatar" id="avatar" aria-label="Northstar"><svg class="avatar-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgAvatar" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarAvatar" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgAvatar)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarAvatar)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg></div></div></header>
+<header class="topbar"><div style="display:flex;align-items:center;min-width:0"><div class="breadcrumb"><span class="breadcrumb-brand"><button type="button" class="breadcrumb-home" id="homeShortcut" data-action="home-shortcut" aria-label="Go to Home, Overview"><svg class="breadcrumb-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgCrumb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarCrumb" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgCrumb)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarCrumb)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg></button><b>NORTHSTAR</b></span><span>/</span> <strong id="breadcrumbTitle">Overview</strong></div></div><div class="top-actions"><span class="sync-state" id="syncStatus" aria-live="polite">Local only</span><button id="signInBtn" class="secondary-btn small" data-action="signin">Connect Google</button><button id="signOutBtn" class="secondary-btn small hidden" data-action="signout">Sign out</button><div class="avatar" id="avatar" aria-label="Northstar"><svg class="avatar-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgAvatar" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarAvatar" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgAvatar)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarAvatar)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg></div></div></header>
 <main class="content" id="content" tabindex="-1"></main>
 <footer class="page-footer"><span>Northstar Personal Finance</span><span>Manual tracking <b>·</b> Optional cloud sync; protection off by default</span></footer>
 </div></div>
@@ -2181,7 +2234,27 @@ function setDockMore(open,restoreFocus=false){
  if(!open&&wasOpen&&returnFocus){try{button.focus({preventScroll:true})}catch{button.focus()}}
  return wasOpen;
 }
-function navigate(nextPage){if(nextPage!=='Purchases'){purchaseDetailId=null;try{globalThis.NorthstarMotion?.cancelPurchase()}catch(e){console.warn('Presentation animation was skipped.',e)}}setDockMore(false);page=nextPage;render();window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}
+let homeShortcutHighlightTimer=null;
+function clearHomeShortcutHighlight(){
+ if(homeShortcutHighlightTimer!==null)window.clearTimeout(homeShortcutHighlightTimer);
+ homeShortcutHighlightTimer=null;$('mobileDock')?.querySelector('.dock-item[data-page="Overview"]')?.classList.remove('home-shortcut-highlight');
+}
+function highlightHomeShortcut(){
+ clearHomeShortcutHighlight();const home=$('mobileDock')?.querySelector('.dock-item[data-page="Overview"]');if(!home)return;
+ void home.offsetWidth; // Restart the brief highlight on repeated activations.
+ home.classList.add('home-shortcut-highlight');homeShortcutHighlightTimer=window.setTimeout(clearHomeShortcutHighlight,1000);
+}
+function navigate(nextPage){clearHomeShortcutHighlight();if(nextPage!=='Purchases'){purchaseDetailId=null;try{globalThis.NorthstarMotion?.cancelPurchase()}catch(e){console.warn('Presentation animation was skipped.',e)}}setDockMore(false);page=nextPage;render();window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'})}
+function navigateHomeShortcut(){
+ // A background shortcut must not replace an unfinished form or a locked/loading workspace.
+ if(modalState||confirmResolver||window.NorthstarVaultLocked||syncLoading||isWelcomeVisible())return;
+ if(page!=='Overview'){
+  navigate('Overview');
+  // Announce the new page to keyboard and screen-reader users without a second scroll.
+  const heading=$('content')?.querySelector('h1');if(heading){heading.tabIndex=-1;try{heading.focus({preventScroll:true})}catch{heading.focus()}}
+ }else setDockMore(false); // No rerender or scroll when Home is already open.
+ highlightHomeShortcut();
+}
 function resizeDock(){
  if(window.matchMedia('(min-width: 701px)').matches){
   const hadFocus=$('dockMoreMenu')?.contains(document.activeElement);setDockMore(false);
@@ -2191,7 +2264,14 @@ function resizeDock(){
 }
 window.addEventListener('resize',resizeDock,{passive:true});
 document.addEventListener('click',e=>{const dock=$('mobileDock');if(dock&&!dock.contains(e.target))setDockMore(false)});
-let welcomeDismissTimer=null,welcomeReturnFocus=null;
+let welcomeDismissTimer=null,welcomeReturnFocus=null,welcomeMotionQuery=null,welcomeMotionListener=null;
+function clearWelcomeMotionListener(){
+ if(welcomeMotionQuery&&welcomeMotionListener){
+  if(welcomeMotionQuery.removeEventListener)welcomeMotionQuery.removeEventListener('change',welcomeMotionListener);
+  else if(welcomeMotionQuery.removeListener)welcomeMotionQuery.removeListener(welcomeMotionListener);
+ }
+ welcomeMotionQuery=null;welcomeMotionListener=null;
+}
 function focusWelcomeEntry(){
  if(window.NorthstarVaultLocked||confirmResolver||!isWelcomeVisible()||$('welcomeScreen').classList.contains('welcome-leaving'))return;
  const entry=$('welcomeEnter');try{entry?.focus({preventScroll:true})}catch{entry?.focus()}
@@ -2200,8 +2280,10 @@ function dismissWelcome(){
  const screen=$('welcomeScreen');if(window.NorthstarVaultLocked||!screen||!isWelcomeVisible()||screen.classList.contains('welcome-leaving'))return;
  screen.classList.add('welcome-leaving');let remembered=true;
  try{localStorage.setItem('northstar-welcome-seen-v1','1')}catch{remembered=false}
- const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
- welcomeDismissTimer=window.setTimeout(()=>{
+ const motion=window.matchMedia?.('(prefers-reduced-motion: reduce)'),reduced=!!motion?.matches;
+ const finish=()=>{
+  if(welcomeDismissTimer===null)return;
+  clearWelcomeMotionListener();
   screen.classList.add('hidden');screen.classList.remove('welcome-leaving');screen.setAttribute('aria-hidden','true');document.documentElement.classList.add('northstar-seen');
   updateBackgroundAvailability();
   if(!window.NorthstarVaultLocked&&!syncLoading&&!confirmResolver){
@@ -2209,12 +2291,21 @@ function dismissWelcome(){
   }
   if(!remembered&&!window.NorthstarVaultLocked)showToast('The intro may return on reload because browser storage is unavailable.');
   welcomeReturnFocus=null;welcomeDismissTimer=null;
- },reduced?0:390);
+ };
+ welcomeDismissTimer=window.setTimeout(finish,reduced?0:1300);
+ if(!reduced&&motion){
+  welcomeMotionQuery=motion;welcomeMotionListener=event=>{
+   if(!event.matches||welcomeDismissTimer===null)return;
+   window.clearTimeout(welcomeDismissTimer);welcomeDismissTimer=window.setTimeout(finish,0);
+  };
+  if(motion.addEventListener)motion.addEventListener('change',welcomeMotionListener);
+  else if(motion.addListener)motion.addListener(welcomeMotionListener);
+ }
 }
 function showWelcome(trigger){
  const screen=$('welcomeScreen');if(window.NorthstarVaultLocked||!screen)return;
  if(welcomeDismissTimer!==null)window.clearTimeout(welcomeDismissTimer);
- welcomeDismissTimer=null;welcomeReturnFocus=trigger||document.activeElement;
+ clearWelcomeMotionListener();welcomeDismissTimer=null;welcomeReturnFocus=trigger||document.activeElement;
  document.documentElement.classList.remove('northstar-seen');screen.classList.remove('hidden','welcome-leaving');screen.setAttribute('aria-hidden','false');
  const scroll=$('welcomeScroll');if(scroll)scroll.scrollTop=0;updateWelcomeProgress();updateBackgroundAvailability();
  try{localStorage.removeItem('northstar-welcome-seen-v1')}catch{}
@@ -2222,7 +2313,9 @@ function showWelcome(trigger){
 }
 function trapWelcomeTab(e){
  if(e.key!=='Tab'||!isWelcomeVisible()||window.NorthstarVaultLocked||confirmResolver)return false;
- const screen=$('welcomeScreen');const items=[...screen.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]')].filter(el=>el.getClientRects().length);
+ const screen=$('welcomeScreen');
+ if(screen.classList.contains('welcome-leaving')){e.preventDefault();return true}
+ const items=[...screen.querySelectorAll('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]')].filter(el=>el.getClientRects().length);
  if(!items.length)return false;
  const first=items[0],last=items[items.length-1],active=document.activeElement;
  if(!screen.contains(active)||(e.shiftKey&&active===first)||(!e.shiftKey&&active===last)){
@@ -2230,7 +2323,7 @@ function trapWelcomeTab(e){
  }
  return false;
 }
-function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
+function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
 document.addEventListener('keydown',e=>{if(trapWelcomeTab(e))return;const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&setDockMore(false,true)){e.preventDefault();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
 document.addEventListener('click',e=>{
  const option=e.target.closest('[data-confirm-index]');

@@ -21,8 +21,8 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | Area | Current status |
 |---|---|
 | Main website | Implemented in root `index.html` |
-| Mobile layout and navigation | Responsive floating glass dock replaces the sidebar on both desktop and mobile; narrow screens place Accounts, Budgets, and Settings under More. See 4n. |
-| Mobile scrolling and intro access | The user had confirmed the earlier main-page issue fixed, then reported a **new intro-specific block**. The intro now has a pinned direct-entry button and a native touch scroller. Simulated Chromium swipes pass; confirmation on the user's phone is still needed. See 4m and section 6. |
+| Mobile layout and navigation | Responsive floating glass dock replaces the sidebar on both desktop and mobile; narrow screens place Accounts, Budgets, and Settings under More. The top-left icon is a Home shortcut; the adjacent word is not clickable. See 4n and 4r. |
+| Mobile scrolling and intro access | The user had confirmed the earlier main-page issue fixed, then reported a **new intro-specific block**. The intro has a pinned direct-entry button, a native touch scroller, and a short garage-inspired reveal on entry. Simulated Chromium swipes pass; confirmation on the user's phone is still needed. See 4m, 4q and section 6. |
 | Visual design | Monochrome glass shell with semantic money colors, presentation-only finance feedback, and the compact red purchased badge; see 4a, 4d, and 4n. |
 | Local persistence | Browser `localStorage`; plaintext by default. Optional passphrase-protected workspace uses a separate encrypted device copy. |
 | Google sign-in / Firestore sync | Implemented in the front end. The user previously reported that Google sign-in and cloud sync worked; this has not been freshly tested during this handoff update. |
@@ -54,6 +54,7 @@ The product is deliberately manual-entry. It is not a bank aggregator, payment a
 | `cloudflare-worker/wrangler.toml` | Wrangler configuration; Worker name is `northstar-finance-ai`, entry point is `src/index.js`, and AI binding is named `AI`. |
 | `tests/major-update.test.cjs`, `tests/welcome.test.cjs` | Dependency-free checks for release links, welcome entry/scroll/replay, focus, storage failure, and vault/sync guards. |
 | `tests/welcome-browser.cjs`, `tests/interface-browser.cjs` | Optional Chromium touch/keyboard/viewport, dock, Jarvis, motion, and mocked-provider checks; setup is in README. External services are blocked or mocked. Not Safari, physical-phone, live-provider, or live-Firebase tests. |
+| `tests/home-shortcut.test.cjs`, `tests/home-shortcut-browser.cjs` | Dependency-free checks plus 30 optional Chromium scenarios for icon-only Home navigation, responsive hit areas, scroll/focus, reduced motion, timing and workspace safeguards. |
 | `tests/jarvis.test.cjs` | Dependency-free tests for the local assistant's arithmetic, follow-ups, reviewable drafts, storage failures, and workspace guards. |
 | `tests/source-cleanup.test.cjs` | Checks that the removed AI-reader notices are absent from the current site source. |
 | `tests/purchase-expenses.test.cjs` | Node tests for completed purchase projections, explicit ID links, price/date labels, finance edits, and duplicate-charge regressions. |
@@ -318,6 +319,22 @@ Strict graph validation can make a graph differ from older list/card calculation
 
 **Verification:** 76 dependency-free Node tests, 11 synthetic/mocked graph Chromium scenarios, nine interface Chromium scenarios and 11 welcome Chromium scenarios passed. Graph checks covered 320, 390, 768 and 1440 CSS-pixel widths, duplicate IDs, filter/Save/read-only behavior, a missing imported Guide buffer, keyboard controls, long escaped labels, empty and invalid data, and reduced motion. HTML, CSS and inline scripts parsed without errors, and `git diff --check` passed. Scoped axe found no definite violations but returned 10 incomplete/manual-review results on translucent surfaces; a separate conservative opaque-background contrast check passed, not a complete accessibility audit. External services were mocked or blocked; no physical iPhone, Safari, live AI provider, or live Firebase/rules test was performed.
 
+## 4q. Garage-inspired entrance (2026-11-09)
+
+At the user's request, the existing **Enter Northstar** action now feels like opening a luxury garage: a dark, paneled shutter carrying the Northstar mark lifts away to reveal the actual app beneath it. The bottom intro action and Escape use the same transition. It is a CSS-only visual treatment with no sound, external image, fake financial data, or change to the ledger; it takes about 1.3 seconds and the app remains inert until it finishes. The pinned entry and native intro scroller remain in place. The animation only plays when the intro is shown; Settings can replay it.
+
+The shutter is decorative and hidden from assistive technology. Focus stays in the intro while it opens and returns to the dashboard or replay control afterward. Reduced motion skips the reveal, including when the preference changes mid-animation. A replay cancels a pending entry; a locked vault and unresolved cloud load still prevent editing. The implementation landmarks are `#welcome-garage-motion`, `.ns-garage`, `dismissWelcome`, and `clearWelcomeMotionListener`.
+
+**Verification:** 77 dependency-free Node tests and 14 welcome, nine interface, and 11 graph Chromium scenarios passed with external services mocked or blocked. Synthetic phone/desktop frames were inspected; browser tests covered a short viewport, keyboard focus, storage failures, reduced-motion changes, replay, and encrypted cloud data arriving during the animation. HTML, CSS, inline JavaScript, duplicate-ID and diff checks passed. No physical iPhone, Safari, live Firebase/rules, or independent accessibility/security review was performed.
+
+## 4r. Icon-only Home shortcut (2026-11-09)
+
+The top-left compass **icon** is a native, labeled button for the existing Home/Overview destination. The adjacent NORTHSTAR word remains plain text, with no onboarding hint. The icon has subtle hover/press feedback and a 44px target; Home briefly highlights in the dock after activation. Reduced motion keeps a short static highlight and disables scaling/transitions. A second activation restarts the timer, and navigating elsewhere clears it.
+
+The header is sticky at desktop as well as phone widths, so the shortcut can be reached without first losing the current scroll position; scroll padding keeps focused or scrolled-to controls clear of it. At the narrowest widths the page name is omitted from the breadcrumb to make room for the wordmark and header controls; the page heading and active dock item still identify the destination. From another section, the shortcut uses the existing navigation and moves focus to the Overview heading. On Home it does not rerender or scroll, and it closes an open More menu. It is blocked behind unfinished financial forms, confirmations, welcome, vault lock, and pending sync; it neither saves nor changes financial data.
+
+**Verification:** 30 focused Chromium scenarios, 83 dependency-free Node tests, and 14 welcome, nine interface, and 11 graph Chromium scenarios passed. The focused checks used synthetic records, covered seven source sections, 320px through desktop and short/landscape viewports, keyboard and accessibility-tree semantics, hover/press feedback, scroll preservation, repeated highlights, reduced-motion changes, unclickable text, modal drafts, intro, pending mocked sync, and encrypted vault lock. External services were blocked or mocked; this is not a physical-phone, Safari, screen-reader, live Firebase/rules, or independent accessibility/security audit.
+
 ## 5. User requirements and non-negotiable design constraints
 
 These requirements come from prior Northstar discussions and should guide future work.
@@ -432,6 +449,8 @@ Recent work includes local Jarvis review-before-save drafts (PR #12), the compac
 
 ## Work log
 
+- 2026-11-09: Added an icon-only Home shortcut with scroll preservation on Home, brief dock feedback, keyboard support and 30 focused browser checks. See 4r.
+- 2026-11-09: Added a brief, reduced-motion-aware garage-door reveal to the existing welcome entry, preserving intro replay, focus and vault/cloud guards. See 4q.
 - 2026-11-09: Added read-only graphs across all eight sections and transient goal contribution comparisons, with exact-value alternatives, responsive layouts, reduced motion, and synthetic model/browser checks. See 4p for graph meanings and verification limits.
 - 2026-11-09: Removed the inline and legacy AI-reader notices at the owner's request. The page otherwise matches the previous release byte-for-byte; the removed inline comment reduced the uncompressed page by about 258 KB. All 54 Node tests, 20 simulated Chromium scenarios, HTML/CSS/JavaScript parser checks, and duplicate-ID checks passed. Services were mocked or blocked; no physical device or live-provider test was performed. See 4o.
 - 2026-11-09 (superseded by removal; see 4o): Replaced the original source pointer with a 3,000-line HTML comment. All 57 Node tests and 21 simulated Chromium scenarios passed; the notice stayed invisible, navigation worked, and the page was otherwise byte-for-byte unchanged. HTML/CSS/JavaScript parser and duplicate-ID checks passed. Services were mocked or blocked; no physical device or live-provider test was performed.
