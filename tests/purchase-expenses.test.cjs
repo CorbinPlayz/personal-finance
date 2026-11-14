@@ -21,6 +21,8 @@ function sourceLine(prefix) {
 }
 const renderers = section('function sortPurchaseItems(', 'function getGuideProfile()');
 const helpers = ['const esc=', 'const money=', 'const fmtDate=', 'function accountName(', 'function sortedTransactions('].map(sourceLine).join('\n');
+let graphViews;
+test.before(async () => { graphViews = await import('../financial-graphs-view.mjs'); });
 
 function makeData(overrides = {}) {
   return { accounts: [{ id: 'checking', name: 'Everyday checking', balance: 500 }], transactions: [], purchases: [], budgets: [], goals: [], settings: { currency: 'USD' }, ...overrides };
@@ -34,7 +36,8 @@ function plan(id, overrides = {}) {
 function makeRenderContext(data, options = {}) {
   const context = vm.createContext({ data, purchaseDetailId: options.detail || null, completedPurchaseQuery: options.query || '',
     getReminders: () => [], pageHeading: (title, action = '') => `<header>${title}${action}</header>`,
-    emptyState: title => `<div class="empty-state">${title}</div>`, renderPurchaseCard: () => '<div>Purchase detail</div>' });
+    emptyState: title => `<div class="empty-state">${title}</div>`, renderPurchaseCard: () => '<div>Purchase detail</div>',
+    renderPurchaseGraph: graphViews.renderPurchaseGraph, renderPriceChecksGraph: graphViews.renderPriceChecksGraph });
   vm.runInContext(`${helpers}\n${renderers}`, context);
   return context;
 }
@@ -124,7 +127,7 @@ test('a linked expense without a usable date never borrows the plan target date'
 
 test('malformed transaction dates do not break the overview or transaction month filters', () => {
   const data = makeData({ transactions: [expense('bad', 123), expense('good', '2026-11-08')] });
-  const ctx = vm.createContext({ data, query: '', txTypeFilter: 'All', txMonthFilter: 'All', monthNow: () => '2026-11', pageHeading: () => '', options: () => '', emptyState: () => '' });
+  const ctx = vm.createContext({ data, query: '', txTypeFilter: 'All', txMonthFilter: 'All', monthNow: () => '2026-11', pageHeading: () => '', options: () => '', emptyState: () => '', renderTransactionGraph: graphViews.renderTransactionGraph });
   vm.runInContext(helpers + '\n' + sourceLine('function thisMonthTx(') + '\n' + section('function renderTransactions(', '\nfunction renderAccountBalanceBreakdown('), ctx);
   assert.deepEqual(Array.from(ctx.thisMonthTx('Expense'), t => t.id), ['good']);
   assert.match(ctx.renderTransactions(), /No date/);

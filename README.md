@@ -11,9 +11,11 @@ Recorded expenses now appear as completed purchase tiles, with explicitly linked
 ## Included features
 
 - Overview, transactions, accounts, budgets, savings goals, and planned purchases.
-- Goal and budget progress feedback, transaction and purchase animations, and an optional goal-completion chime. Reduced-motion preferences are respected.
-- A floating glass navigation dock on desktop and mobile. On narrow screens, **More** contains Accounts, Budgets, and Settings.
-- An optional, scrollable introduction. **Enter Northstar** skips it immediately; you can replay it from Settings.
+- Read-only graphs across the finance pages, Guide, and Settings: recorded income and spending, category mix, account activity, budget and goal progress, purchase funding and manually logged prices, a saved-profile picture, and workspace record counts. See the exact values in text or the expandable tables.
+- A goal what-if graph compares up to two **explicitly entered** monthly contributions. It assumes no interest or fees, does not check account balances or move money, and does not save the scenario inputs.
+- Goal and budget progress feedback, transaction and purchase animations, and an optional goal-completion chime. Graph entry animation is decorative and respects reduced-motion preferences.
+- A floating glass navigation dock on desktop and mobile. On narrow screens, **More** contains Accounts, Budgets, and Settings. The top-left compass icon also opens Home; when Home is already open, it keeps your scroll position. The adjacent Northstar word is not a button.
+- An optional, scrollable introduction. **Enter Northstar** opens a short garage-inspired reveal; you can replay it from Settings. Reduced-motion preferences skip the animation.
 - Northstar Guide with a saved planning profile, remembered preferences, and rule-based saving/purchase suggestions.
 - Jarvis, a local assistant that can answer questions about your recorded finances and prepare reviewable drafts for common actions. Nothing is recorded until you save the form.
 - Purchase priority ordering, links to search current shopping listings, and manual price-history logging.
@@ -29,6 +31,8 @@ Jarvis's key is stored separately in browser storage (tab session by default, op
 
 Northstar does not connect to bank accounts or verify your real balance. Figures depend on information you enter. Double-check your actual accounts before spending.
 
+The six-month overview excludes transfers; the three-month account charts show each account separately and include valid transfers on the appropriate side. Neither is a reconstructed balance history. Transaction mix follows the active filters and counts transfers once. Monthly category and budget graphs omit invalid dates or amounts and report excluded entries, so imported malformed records can differ from older budget-card calculations. The purchase price timeline shows manually logged checks, equally spaced, not a live feed or forecast. The Guide graph uses its saved profile, not transaction totals; review its existing default buffer before saving. An imported profile missing a buffer is not graphed as though that default had been saved. Settings shows record counts, not money. Graphs never change your records, and financial estimates are not advice.
+
 ## Passphrase protection and backups
 
 **Protection is off by default.** Existing browser and cloud data remains readable unless you explicitly enable it in Settings. Enabling protection currently requires a secure HTTPS page, a browser with Web Crypto and Web Locks, Google sign-in, and a successful cloud sync. It creates a protected device copy and replaces the current cloud document with ciphertext. The passphrase is not stored or deliberately sent to Firebase; PBKDF2-SHA-256 derives a non-extractable AES-256-GCM key, with a fresh random IV for each encryption. A new device needs the same Google account and passphrase to unlock the protected cloud copy.
@@ -42,21 +46,23 @@ Northstar does not connect to bank accounts or verify your real balance. Figures
 
 ## Optional developer checks
 
-Run `node --test tests/*.test.*` with Node.js 18 or later. These dependency-free tests cover Jarvis answers and drafts, welcome entry and replay, purchase projections, transaction/link integrity, encryption, and mocked sync/storage conflicts. They do not validate deployed Firestore rules. The website itself remains a static page and does not require Node.js or a build step.
+Run `node --test tests/*.test.*` with Node.js 18 or later. These dependency-free tests cover graph calculations and rendering, the Home shortcut, Jarvis answers and drafts, welcome entry and replay, purchase projections, transaction/link integrity, encryption, and mocked sync/storage conflicts. They do not validate deployed Firestore rules. The website itself remains a static page and does not require Node.js or a build step.
 
-For optional Chromium touch and interface checks, install `puppeteer-core` outside this repository and point the scripts to a Chromium executable (Node.js 22 recommended):
+For optional Chromium touch, graph, accessibility and interface checks, install `puppeteer-core` and `axe-core` outside this repository and point the scripts to a Chromium executable (Node.js 22 recommended):
 
 ```sh
-npm install --prefix /tmp/northstar-browser-qa --no-save puppeteer-core
+npm install --prefix /tmp/northstar-browser-qa --no-save puppeteer-core axe-core
+NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/finance-graphs-browser.cjs
 NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/interface-browser.cjs
+NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/home-shortcut-browser.cjs
 NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/welcome-browser.cjs
 ```
 
-The browser checks use synthetic records and block or mock external services; they are not a physical iPhone, Safari, live AI-provider, or live Firebase test. Some sandboxed Chromium builds need additional flags via `CHROMIUM_FLAGS`.
+The browser checks use synthetic records and block or mock external services; they are not a physical iPhone, Safari, live AI-provider, or live Firebase test. Axe reports some contrast checks as incomplete on translucent or gradient surfaces; the graph test also checks a conservative flat background but this is not a complete accessibility audit. Some sandboxed Chromium builds need additional flags via `CHROMIUM_FLAGS`.
 
 ## GitHub Pages publishing
 
-1. Keep `index.html` and `vault-crypto.mjs` together in the repository root, alongside `firestore.rules` and `README.md`.
+1. Keep `index.html`, `vault-crypto.mjs`, `finance-graphs.mjs`, `financial-graphs-view.mjs`, and `financial-graphs.css` together in the repository root, alongside `firestore.rules` and `README.md`.
 2. Open repository **Settings → Pages**.
 3. Choose **Deploy from a branch**, branch `main`, folder `/ (root)`, then save.
 4. In Firebase Console → Authentication → Settings → Authorized domains, add your GitHub Pages hostname (for example, `corbinplayz.github.io`, without a path).

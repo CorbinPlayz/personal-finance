@@ -31,8 +31,8 @@ const server = http.createServer((req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
   if (pathname === '/blank') return res.end('<!doctype html><title>Test setup</title>');
   const filename = pathname === '/personal-finance/' ? 'index.html' : pathname.replace('/personal-finance/', '');
-  if (pathname.startsWith('/personal-finance/') && ['index.html', 'vault-crypto.mjs'].includes(filename)) {
-    res.writeHead(200, { 'Content-Type': filename.endsWith('.mjs') ? 'application/javascript' : 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+  if (pathname.startsWith('/personal-finance/') && ['index.html', 'vault-crypto.mjs', 'finance-graphs.mjs', 'financial-graphs-view.mjs', 'financial-graphs.css'].includes(filename)) {
+    res.writeHead(200, { 'Content-Type': filename.endsWith('.mjs') ? 'application/javascript' : filename.endsWith('.css') ? 'text/css' : 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
     return res.end(fs.readFileSync(path.join(root, filename)));
   }
   res.writeHead(404); res.end('Not found');
