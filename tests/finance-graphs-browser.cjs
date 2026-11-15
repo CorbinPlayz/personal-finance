@@ -45,7 +45,7 @@ const ledger = {
 };
 const blank = { version: 1, accounts: [], transactions: [], budgets: [], goals: [], purchases: [], settings: { currency: 'USD', goalSounds: false } };
 
-const files = new Set(['index.html', 'vault-crypto.mjs', 'finance-graphs.mjs', 'financial-graphs-view.mjs', 'financial-graphs.css']);
+const files = new Set(['index.html', 'vault-crypto.mjs', 'finance-graphs.mjs', 'financial-graphs-view.mjs', 'financial-graphs.css', 'stock-watchlist.mjs', 'stock-watchlist-view.mjs', 'stock-watchlist.css']);
 const server = http.createServer((req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
   if (pathname === '/blank') return res.end('<!doctype html><title>Test setup</title>');
@@ -111,6 +111,13 @@ const firebase = {
     return page;
   }
   async function navigate(page, name) {
+    // Guide is preserved under Settings, not on the primary dock.
+    if (name === 'Guide') {
+      await navigate(page, 'Settings');
+      await page.$eval('#content [data-page="Guide"]', el => el.click());
+      await page.waitForFunction(() => document.getElementById('content').dataset.page === 'Guide');
+      return;
+    }
     await page.evaluate(name => {
       const button = document.querySelector(`#mobileDock [data-page="${name}"]`) || document.querySelector(`#dockMoreMenu [data-page="${name}"]`);
       if (!button) throw new Error(`Missing navigation for ${name}`);
@@ -289,6 +296,7 @@ const firebase = {
       await navigate(page, 'Budgets'); assert.match(await text(page, '#content'), /No budgets yet/);
       await navigate(page, 'Goals'); assert.match(await text(page, '#content'), /No savings goals yet/);
       await navigate(page, 'Purchases'); assert.match(await text(page, '#content'), /Nothing on the list yet/);
+      await navigate(page, 'Stocks'); assert.match(await text(page, '#content'), /100 stocks/);
       await navigate(page, 'Guide'); assert.match(await text(page, '#content'), /Build your monthly picture/);
       await navigate(page, 'Settings'); assert.match(await text(page, '[data-graph-key="settings-counts"]'), /No records to chart yet/);
       assert.equal(await page.evaluate(() => JSON.stringify(window.NorthstarLedger())), before);
@@ -298,7 +306,7 @@ const firebase = {
     await check('graphs and exact-value disclosures fit phone, tablet, and desktop widths', async () => {
       for (const [width, height, mobile] of [[320, 568, true], [390, 844, true], [768, 1024, true], [1440, 900, false]]) {
         const page = await newPage({ width, height, mobile });
-        for (const section of ['Overview', 'Transactions', 'Accounts', 'Budgets', 'Goals', 'Purchases', 'Guide', 'Settings']) {
+        for (const section of ['Overview', 'Transactions', 'Accounts', 'Budgets', 'Goals', 'Purchases', 'Stocks', 'Guide', 'Settings']) {
           if (section !== 'Overview') await navigate(page, section);
           await page.evaluate(() => document.querySelectorAll('.ns-graph-details').forEach(el => { el.open = true; }));
           await graphFits(page, `${width}px ${section}`);
@@ -338,6 +346,23 @@ const firebase = {
       await page.close();
     });
 
+    await check('a newly inserted nested graph is still observed once', async () => {
+      const page = await newPage({ width: 1440, height: 900, mobile: false, reduced: false });
+      const before = await page.evaluate(() => window.NorthstarLedger());
+      await page.evaluate(() => {
+        const wrapper = document.createElement('div'); wrapper.id = 'syntheticGraphWrapper';
+        wrapper.innerHTML = '<div class="ns-graph" data-graph-key="nested-regression">Synthetic graph</div>';
+        document.querySelector('#content .page-heading').append(wrapper);
+      });
+      await page.waitForFunction(() => window.__graphAnimations.includes('nested-regression'));
+      const events = await page.evaluate(() => window.__graphAnimations.filter(key => key === 'nested-regression').length);
+      await page.$eval('#syntheticGraphWrapper', el => { el.innerHTML = '<div class="ns-graph" data-graph-key="nested-regression">Replacement</div>'; });
+      await delay(800);
+      assert.equal(await page.evaluate(() => window.__graphAnimations.filter(key => key === 'nested-regression').length), events);
+      assert.deepEqual(await page.evaluate(() => window.NorthstarLedger()), before);
+      await page.close();
+    });
+
     await check('graph entry motion is one-shot and reduced-motion disables it', async () => {
       const page = await newPage({ width: 1440, height: 900, mobile: false, reduced: false });
       if (process.env.GRAPH_QA_DEBUG) {
@@ -351,7 +376,12 @@ const firebase = {
         }));
       }
       await page.waitForFunction(() => window.__graphAnimations.includes('overview-flow'));
-      await delay(800);
+      // Animation frames can lag wall-clock time on loaded CI machines. Wait
+      // for the actual settled state, rather than assuming 800 ms is enough.
+      await page.waitForFunction(() => {
+        const graph = document.querySelector('[data-graph-key="overview-flow"]');
+        return graph && !graph.classList.contains('ns-graph-enter') && getComputedStyle(graph).opacity === '1';
+      });
       assert.equal(await page.$eval('[data-graph-key="overview-flow"]', el => getComputedStyle(el).opacity), '1');
       await navigate(page, 'Transactions');
       await page.waitForFunction(() => window.__graphAnimations.includes('transaction-mix'));

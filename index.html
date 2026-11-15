@@ -5,6 +5,7 @@
 <!--
   NORTHSTAR CODE MAP
   This is a static, manual-entry finance app; it does not connect to banks.
+  Stock prices are optional and come from a visitor-supplied provider key.
   The style blocks define the base layout, monochrome/liquid visual layers,
   assistant styling, money colors, and completed-purchase controls.
   The HTML below them contains the welcome screen, navigation, and app shell.
@@ -1562,6 +1563,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 @media(prefers-reduced-motion:reduce){.vault-screen *{animation:none!important;transition:none!important}}
 </style>
 <link rel="stylesheet" href="./financial-graphs.css">
+<link rel="stylesheet" href="./stock-watchlist.css">
 </head>
 <body>
 <section class="welcome-screen" id="welcomeScreen" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
@@ -1582,7 +1584,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
     </div>
     <div class="welcome-benefits"><div><span class="welcome-benefit-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3.8 20.6 8.4 12 13 3.4 8.4z"/><path d="M4 12.9 12 17.2l8-4.3"/><path d="M4 16.9 12 21.2l8-4.3"/></svg></span><span><b>See the whole picture</b><small>Accounts, income, and spending together</small></span></div><div><span class="welcome-benefit-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8"/><path d="M15.4 8.6l-2 4.8-4.8 2 2-4.8z"/></svg></span><span><b>Move toward your goals</b><small>Budgets and savings with purpose</small></span></div><div><span class="welcome-benefit-icon"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11.6 3.6 13.4 9l5.4 1.8-5.4 1.8-1.8 5.4-1.8-5.4L4.4 10.8 9.8 9z"/><path d="M18.4 16.2l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/></svg></span><span><b>Stay in control</b><small>Your entries, organized your way</small></span></div></div>
     <div class="welcome-scroll-cue"><span class="welcome-scroll-cue-line"></span><span>SCROLL TO EXPLORE YOUR JOURNEY</span><span class="welcome-scroll-cue-arrow">↓</span></div>
-    <section class="welcome-journey" id="welcomeJourney" aria-label="Your Northstar journey"><div class="welcome-journey-heading" data-welcome-reveal><span class="welcome-kicker-dot"></span> A CLEARER PATH, ONE STEP AT A TIME</div><div class="welcome-journey-grid"><article class="welcome-step" data-welcome-reveal><div class="welcome-step-number">01</div><div class="welcome-step-symbol">⌖</div><h2>Find your starting point</h2><p>Bring your accounts and spending into one calm view. No judgement, and no bank connection needed.</p><div class="welcome-step-line"><span></span></div></article><article class="welcome-step" data-welcome-reveal><div class="welcome-step-number">02</div><div class="welcome-step-symbol">✦</div><h2>Choose your North Star</h2><p>Give a name and a number to what matters. See every little contribution move your goal closer.</p><div class="welcome-step-line"><span></span></div></article><article class="welcome-step" data-welcome-reveal><div class="welcome-step-number">03</div><div class="welcome-step-symbol">↗</div><h2>Make the next move wisely</h2><p>Plan purchases, reserve money, check prices, and avoid rushing into a buy that works against your bigger goal.</p><div class="welcome-step-line"><span></span></div></article></div><div class="welcome-guide-note" data-welcome-reveal><div class="welcome-guide-orbit" aria-hidden="true">✦</div><div><span class="welcome-guide-label">YOUR PERSONAL COMPASS</span><h2>Meet the Northstar Guide</h2><p>Save your preferences and monthly plan, get personalized saving suggestions, and keep price notes for things you want to buy. Price estimates are based on the checks you log, not a promise about future market prices.</p></div></div><div class="welcome-final" data-welcome-reveal><span class="welcome-final-star" aria-hidden="true">✦</span><p class="welcome-final-eyebrow">YOUR GOALS ARE WORTH THE JOURNEY</p><h2>Every small step <em>counts.</em></h2><p>You do not need to have everything figured out today. Start where you are, and let the compass help you choose your next step.</p><button class="welcome-continue" type="button" data-action="dismiss-welcome">Set my course <span aria-hidden="true">↗</span></button><div class="welcome-privacy"><span class="welcome-check">✓</span>Your profile belongs to you. You can edit or clear it any time.</div></div></section>
+    <section class="welcome-journey" id="welcomeJourney" aria-label="Your Northstar journey"><div class="welcome-journey-heading" data-welcome-reveal><span class="welcome-kicker-dot"></span> A CLEARER PATH, ONE STEP AT A TIME</div><div class="welcome-journey-grid"><article class="welcome-step" data-welcome-reveal><div class="welcome-step-number">01</div><div class="welcome-step-symbol">⌖</div><h2>Find your starting point</h2><p>Bring your accounts and spending into one calm view. No judgement, and no bank connection needed.</p><div class="welcome-step-line"><span></span></div></article><article class="welcome-step" data-welcome-reveal><div class="welcome-step-number">02</div><div class="welcome-step-symbol">✦</div><h2>Choose your North Star</h2><p>Give a name and a number to what matters. See every little contribution move your goal closer.</p><div class="welcome-step-line"><span></span></div></article><article class="welcome-step" data-welcome-reveal><div class="welcome-step-number">03</div><div class="welcome-step-symbol">↗</div><h2>Make the next move wisely</h2><p>Plan purchases, reserve money, check prices, and avoid rushing into a buy that works against your bigger goal.</p><div class="welcome-step-line"><span></span></div></article></div><div class="welcome-guide-note" data-welcome-reveal><div class="welcome-guide-orbit" aria-hidden="true">✦</div><div><span class="welcome-guide-label">A CLEARER VIEW</span><h2>Keep your watchlist in focus</h2><p>Follow a curated list of stocks or make it your own. Connect your own optional market-data key for prices, and always check quote times before making a decision.</p></div></div><div class="welcome-final" data-welcome-reveal><span class="welcome-final-star" aria-hidden="true">✦</span><p class="welcome-final-eyebrow">YOUR GOALS ARE WORTH THE JOURNEY</p><h2>Every small step <em>counts.</em></h2><p>You do not need to have everything figured out today. Start where you are, and let the compass help you choose your next step.</p><button class="welcome-continue" type="button" data-action="dismiss-welcome">Set my course <span aria-hidden="true">↗</span></button><div class="welcome-privacy"><span class="welcome-check">✓</span>Your entries belong to you. Review your settings any time.</div></div></section>
     <div class="welcome-bottomline"><span>BUILT FOR YOUR FINANCIAL JOURNEY</span><span><i></i> Start wherever you are</span></div>
   </div>
   </div>
@@ -1601,7 +1603,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
   <button type="button" class="dock-item dock-secondary" data-action="page" data-page="Budgets" aria-label="Budgets"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 19v-8"/><path d="M12 19V5"/><path d="M18 19v-5"/><path d="M3.6 19h16.8"/></svg></span><small>Budgets</small></button>
   <button type="button" class="dock-item" data-action="page" data-page="Goals" aria-label="Savings goals"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7.8"/><circle cx="12" cy="12" r="3.2"/></svg></span><small>Goals</small></button>
   <button type="button" class="dock-item" data-action="page" data-page="Purchases" aria-label="Plan · Purchase planner"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 8h12l1.1 11.4H4.9z"/><path d="M9.2 8V6.4a2.8 2.8 0 0 1 5.6 0V8"/></svg></span><small>Plan</small> <span class="dock-reminder hidden" id="reminderCount" aria-hidden="true">0</span></button>
-  <button type="button" class="dock-item" data-action="page" data-page="Guide" aria-label="Northstar Guide"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11.6 3.6 13.4 9l5.4 1.8-5.4 1.8-1.8 5.4-1.8-5.4L4.4 10.8 9.8 9z"/><path d="M18.4 16.2l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/></svg></span><small>Guide</small></button>
+  <button type="button" class="dock-item" data-action="page" data-page="Stocks" aria-label="Stocks · Watchlist"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 18.5V5.5M4 18.5h16"/><path d="m7 15 4-4 3 2.7L20 7"/><path d="M16.5 7H20v3.5"/></svg></span><small>Stocks</small></button>
   <button type="button" class="dock-item dock-secondary" data-action="page" data-page="Settings" aria-label="Settings"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7.5h9"/><path d="M17 7.5h3"/><circle cx="15" cy="7.5" r="2"/><path d="M4 16.5h3"/><path d="M11 16.5h9"/><circle cx="9" cy="16.5" r="2"/></svg></span><small>Settings</small></button>
   <button type="button" class="dock-item dock-more" id="dockMoreBtn" data-action="dock-more" aria-label="More sections" aria-expanded="false" aria-controls="dockMoreMenu"><span class="dock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg></span><small>More</small></button>
   <div class="dock-menu" id="dockMoreMenu" role="group" aria-label="More sections" hidden>
@@ -1611,18 +1613,22 @@ button:disabled{opacity:.55;cursor:not-allowed}
     <button type="button" class="dock-menu-item" data-action="page" data-page="Settings"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7.5h9"/><path d="M17 7.5h3"/><circle cx="15" cy="7.5" r="2"/><path d="M4 16.5h3"/><path d="M11 16.5h9"/><circle cx="9" cy="16.5" r="2"/></svg></span>Settings</button>
   </div>
 </nav><div id="goalCelebrationRoot" aria-live="polite"></div><div id="modalRoot"></div><div id="confirmRoot"></div><div id="toastRoot" aria-live="polite"></div>
-<div id="vaultRoot"><div class="vault-screen vault-loading" role="status"><div class="vault-card"><div class="vault-mark" aria-hidden="true">✦</div><h1>Opening your protected workspace</h1><p>If this screen does not change, make sure Northstar is loaded over HTTPS and <code>vault-crypto.mjs</code>, <code>finance-graphs.mjs</code>, and <code>financial-graphs-view.mjs</code> are deployed next to the page. Reload without clearing browser data; your protected copy has not been changed.</p></div></div></div>
+<div id="vaultRoot"><div class="vault-screen vault-loading" role="status"><div class="vault-card"><div class="vault-mark" aria-hidden="true">✦</div><h1>Opening your protected workspace</h1><p>If this screen does not change, make sure Northstar is loaded over HTTPS and <code>vault-crypto.mjs</code>, <code>finance-graphs.mjs</code>, <code>financial-graphs-view.mjs</code>, <code>stock-watchlist.mjs</code>, and <code>stock-watchlist-view.mjs</code> are deployed next to the page. Reload without clearing browser data; your protected copy has not been changed.</p></div></div></div>
 <input id="backupFile" type="file" accept="application/json,.json" class="hidden">
 <script type="module">
 import { looksEncrypted, validateEnvelope, newKdf, deriveVaultKey, encryptLedger, decryptLedger, sameKdf } from './vault-crypto.mjs';
 import { renderCashFlowGraph, renderCategoryGraph, renderTransactionGraph, renderAccountGraph, renderBudgetGraph, renderGoalGraph, renderPurchaseGraph, renderWorkspaceCountGraph, renderGuideProfileGraph, renderPriceChecksGraph, renderScenarioPanel, renderScenarioResult } from './financial-graphs-view.mjs';
+import { createStockFeed, watchlistSymbols, starterSymbols, normalizeSymbol, MAX_WATCHLIST } from './stock-watchlist.mjs';
+import { renderStockPage, renderStockQuote, stockStatusText, stockConnectionLabel, nextStockLabelChange } from './stock-watchlist-view.mjs';
 const FIREBASE_VERSION='13.1.0';
 const firebaseConfig={apiKey:'AIzaSyC8f5T4LzZRuhii3SwgFDrf8tpLZNEqnKw',authDomain:'northstar-personal-finan-ca543.firebaseapp.com',projectId:'northstar-personal-finan-ca543',storageBucket:'northstar-personal-finan-ca543.firebasestorage.app',messagingSenderId:'1009926915952',appId:'1:1009926915952:web:4c0027a0b1082c770971b5',measurementId:'G-S3DTKY24TP'};
 const CATEGORIES=['Housing','Food','Transport','Shopping','Entertainment','Bills','Health','Education','Income','Other'];
 const EXPENSE_CATEGORIES=CATEGORIES.filter(x=>x!=='Income');
 const ACCOUNT_TYPES=['Checking','Savings','Cash','Credit','Investment','Other'];
-const PAGES={Overview:'Your money, at a glance.',Transactions:'Every recorded inflow, outflow, and transfer.',Accounts:'Manage the accounts you track.',Budgets:'Give each spending category a limit.',Goals:'Give your savings a destination.',Purchases:'Plan ahead and know what is coming.',Guide:'Your personal compass for saving and smarter purchases.','Northstar Guide':'Your personal compass for saving and smarter purchases.',Settings:'Your data and application preferences.'};
-const blankData=()=>({version:1,accounts:[],transactions:[],budgets:[],goals:[],purchases:[],settings:{currency:'USD',goalSounds:true,profile:{monthlyIncome:'',essentialBills:'',cushion:'250',payFrequency:'monthly',payDay:'',goalFocus:'',notes:''},guideMemory:null}});
+const PAGES={Overview:'Your money, at a glance.',Transactions:'Every recorded inflow, outflow, and transfer.',Accounts:'Manage the accounts you track.',Budgets:'Give each spending category a limit.',Goals:'Give your savings a destination.',Purchases:'Plan ahead and know what is coming.',Stocks:'Your personal stock watchlist.',Guide:'Your saved planning profile and notes.','Northstar Guide':'Your saved planning profile and notes.',Settings:'Your data and application preferences.'};
+// Null means the display-only starter list. Including this field also lets a
+// default-list workspace replace an old custom list under Firestore merge.
+const blankData=()=>({version:1,accounts:[],transactions:[],budgets:[],goals:[],purchases:[],settings:{currency:'USD',goalSounds:true,stockWatchlist:null,profile:{monthlyIncome:'',essentialBills:'',cushion:'250',payFrequency:'monthly',payDay:'',goalFocus:'',notes:''},guideMemory:null}});
 const id=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1650,14 +1656,31 @@ const monthName=m=>{if(!m)return '';const [y,mo]=m.split('-').map(Number);return
 const money=(n,currency=data.settings.currency||'USD')=>{try{money.formatters??=new Map();if(!money.formatters.has(currency))money.formatters.set(currency,new Intl.NumberFormat('en-US',{style:'currency',currency,maximumFractionDigits:2}));return money.formatters.get(currency).format(Number.isFinite(Number(n))?Number(n):0)}catch{return '$'+(Number(n)||0).toFixed(2)}};
 const roundMoney=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
 const fmtDate=d=>{if(typeof d!=='string'||!d.trim())return 'No date';const p=d.split('-').map(Number);if(p.length!==3||!p.every(Number.isInteger))return d;const date=new Date(p[0],p[1]-1,p[2]);if(p[0]>=0&&p[0]<100)date.setFullYear(p[0]);return date.getFullYear()===p[0]&&date.getMonth()===p[1]-1&&date.getDate()===p[2]?date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):d};
-const hasRecords=d=>!!d&&(d.accounts?.length+d.transactions?.length+d.budgets?.length+d.goals?.length+d.purchases?.length)>0;
+// Saved watchlists (including an intentionally empty one) and legacy Guide
+// preferences are meaningful workspace data even without finance records.
+const hasRecords=d=>{
+ if(!d||typeof d!=='object')return false;
+ if(['accounts','transactions','budgets','goals','purchases'].some(key=>Array.isArray(d[key])&&d[key].length>0))return true;
+ if(Array.isArray(d.settings?.stockWatchlist)||d.settings?.guideMemory!=null)return true;
+ const profile=d.settings?.profile;if(!profile||typeof profile!=='object')return false;
+ return Object.entries(profile).some(([key,value])=>{
+  if(value===undefined||value===null)return false;
+  const text=typeof value==='string'?value.trim():String(value);
+  if(key==='cushion')return text!==''&&text!=='250';
+  if(key==='payFrequency')return text!==''&&text!=='monthly';
+  return text!=='';
+ });
+};
 const VAULT_MARKER='northstar-vault-active-v1';
 function readVaultMarker(){try{const raw=localStorage.getItem(VAULT_MARKER);if(!raw)return null;const value=JSON.parse(raw);return value&&typeof value.uid==='string'&&value.uid?value:{uid:''}}catch{return {uid:''}}}
 const initialVaultMarker=readVaultMarker();
 let vault={state:initialVaultMarker?'locked':'off',uid:initialVaultMarker?.uid||'',key:null,kdf:null,localRaw:null,session:0,editSeq:0,savedSeq:0,error:null,pendingCloud:null};
 window.NorthstarVaultLocked=vault.state==='locked';
 let data=vault.state==='locked'?blankData():loadLocal('local'),page='Overview',purchaseDetailId=null,completedPurchaseQuery='',query='',txTypeFilter='All',txMonthFilter='All',modalState=null,toastTimer=null,saveTimer=null,user=null,fb=null,cloudLoaded=false,authReady=false,signingIn=false,lastSyncError=null,confirmResolver=null,confirmChoices=[],confirmCleanup=null;
-let cloudEpoch=0,cloudFingerprint=undefined,cloudWriteTail=Promise.resolve(),vaultWriteTail=Promise.resolve(),syncLoading=false;
+let cloudEpoch=0,cloudFingerprint=undefined,cloudWriteTail=Promise.resolve(),vaultWriteTail=Promise.resolve(),syncLoading=false,deferredDeviceWorkspace=null;
+// Quotes and the visitor-supplied provider key never enter the finance ledger.
+let stockQuery='',stockPaintFrame=null,stockPaintAll=false,stockLabelTimer=null,stockLabelDeadline=null;const stockDirty=new Set();
+const stockFeed=createStockFeed({onQuote:symbol=>scheduleStockPaint(symbol),onStatus:()=>scheduleStockPaint()});
 function localKey(key){return `northstar-finance-v1:${key}`}
 function dataSignature(value){return cloudSignature(removeUndefinedValues(normalizeData(value)))}
 function normalizeData(input){
@@ -1816,8 +1839,13 @@ async function clearAllFinancialData(){
  let unlocked=false;
  try{unlocked=await verifyClearPassword()}catch(error){console.error('Clear data password verification failed.',error);showToast('Could not verify the password in this browser. Your data was not changed.');return}
  if(!unlocked)return;
- const result=await showNorthstarDialog({title:'Clear all financial data?',message:'This removes all accounts, transactions, budgets, savings goals, and planned purchases from the active dataset.',detail:'This can’t be undone. Export a backup first if you might need these records later.',icon:'⌫',confirmText:'Clear all data',cancelText:'Keep my data',danger:true,label:'PASSWORD VERIFIED · DESTRUCTIVE ACTION'});
- if(result===true){data=blankData();persist();showToast('Financial data cleared')}
+ const result=await showNorthstarDialog({title:'Clear all financial data?',message:'This removes accounts, transactions, budgets, savings goals, planned purchases, your saved Guide profile and notes, and your custom stock watchlist from the active dataset.',detail:'The stock list returns to the 100 starters and any connected stock key is cleared from this tab. This can’t be undone; export a backup first if you might need these records later.',icon:'⌫',confirmText:'Clear all data',cancelText:'Keep my data',danger:true,label:'PASSWORD VERIFIED · DESTRUCTIVE ACTION'});
+ if(result===true){
+  // An explicit clear must remain distinguishable from a never-edited blank
+  // workspace if sync is paused; otherwise retry could silently restore cloud
+  // data. The starter list is an intentional, meaningful reset marker.
+  stockFeed.disconnect();deferredDeviceWorkspace=null;data=blankData();data.settings.stockWatchlist=starterSymbols();persist();showToast('Financial data cleared');
+ }
 }
 function updateWelcomeProgress(){const scroll=$('welcomeScroll'),bar=$('welcomeProgressBar');if(!scroll||!bar)return;const distance=scroll.scrollHeight-scroll.clientHeight;bar.style.width=(distance>0?Math.min(100,Math.max(0,scroll.scrollTop)/distance*100):100).toFixed(1)+'%'}
 function initWelcomeJourney(){const scroll=$('welcomeScroll');if(!scroll)return;scroll.addEventListener('scroll',updateWelcomeProgress,{passive:true});window.addEventListener('resize',updateWelcomeProgress,{passive:true});updateWelcomeProgress();if(!('IntersectionObserver' in window))return;document.documentElement.classList.add('welcome-motion-ready');const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('is-visible');observer.unobserve(entry.target)}}),{root:scroll,threshold:.12});scroll.querySelectorAll('[data-welcome-reveal]').forEach(el=>observer.observe(el))}
@@ -1867,6 +1895,7 @@ function updateBackgroundAvailability(){
  const blocked=syncLoading||window.NorthstarVaultLocked||isWelcomeVisible();
  const shell=document.querySelector('.app-shell'),dock=$('mobileDock');if(shell)shell.inert=blocked;if(dock)dock.inert=blocked;
  try{window.NorthstarJarvis?.setWorkspaceBlocked?.(blocked,syncLoading||!!window.NorthstarVaultLocked)}catch(e){console.warn('Assistant workspace update was skipped.',e)}
+ syncStockFeed();
 }
 function setCloudLoading(loading){syncLoading=loading;updateBackgroundAvailability();const content=$('content');if(content)content.setAttribute('aria-busy',String(loading));const signOut=$('signOutBtn');if(signOut)signOut.disabled=loading;}
 function update(mutator,toastText){data=mutator(data);persist();if(toastText)showToast(toastText)}
@@ -1880,9 +1909,89 @@ function render(){
  $('breadcrumbTitle').textContent=page;const avatar=$('avatar'),identity=(user?.displayName||user?.email||'').trim();if(identity){avatar.textContent=identity.charAt(0).toUpperCase();avatar.classList.add('user-avatar');avatar.setAttribute('aria-label','Signed in as '+identity)}else{avatar.innerHTML=`<svg class="avatar-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgAvatarRender" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarAvatarRender" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgAvatarRender)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarAvatarRender)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg>`;avatar.classList.remove('user-avatar');avatar.setAttribute('aria-label','Northstar logo')}
  $('signInBtn').classList.toggle('hidden',!!user);$('signOutBtn').classList.toggle('hidden',!user);
  const reminderCount=getReminders().length;$('reminderCount').textContent=reminderCount;$('reminderCount').classList.toggle('hidden',!reminderCount);$('mobileDock')?.querySelector('.dock-item[data-page="Purchases"]')?.setAttribute('aria-label','Plan'+(reminderCount?' '+reminderCount+' reminder'+(reminderCount===1?'':'s'):'')+' · Purchase planner');
- const main=$('content');main.dataset.page=page;main.innerHTML=page==='Overview'?renderOverview():page==='Transactions'?renderTransactions():page==='Accounts'?renderAccounts():page==='Budgets'?renderBudgets():page==='Goals'?renderGoals():page==='Purchases'?renderPurchases():page==='Guide'?renderGuide():renderSettings();renderDock();
+ const main=$('content');main.dataset.page=page;main.innerHTML=page==='Overview'?renderOverview():page==='Transactions'?renderTransactions():page==='Accounts'?renderAccounts():page==='Budgets'?renderBudgets():page==='Goals'?renderGoals():page==='Purchases'?renderPurchases():page==='Stocks'?renderStockPage(watchlistSymbols(data.settings),stockFeed.getState(),stockFeed.quoteFor,stockFeed.issueFor,stockQuery):page==='Guide'?renderGuide():renderSettings();renderDock();
+ if(page==='Stocks')filterStocks(stockQuery);syncStockFeed();
  renderModal();
 }
+/* Stock symbols are workspace data. Provider prices and the key are transient;
+   showing or refreshing prices must never change balances or finance records. */
+function syncStockFeed(){
+ stockFeed.setSymbols(watchlistSymbols(data.settings));
+ const active=page==='Stocks'&&!document.hidden&&!syncLoading&&!window.NorthstarVaultLocked&&!isWelcomeVisible();
+ stockFeed.setActive(active);if(!active)clearStockLabelTimer();
+}
+function clearStockLabelTimer(){if(stockLabelTimer!==null)clearTimeout(stockLabelTimer);stockLabelTimer=null;stockLabelDeadline=null}
+function scheduleStockLabelTimer(state,now){
+ const next=nextStockLabelChange(state,stockFeed.quoteFor,now);
+ if(next===stockLabelDeadline)return;
+ clearStockLabelTimer();if(next===null)return;
+ stockLabelDeadline=next;stockLabelTimer=setTimeout(()=>{stockLabelTimer=null;stockLabelDeadline=null;scheduleStockPaint()},Math.max(0,next-now));
+}
+function scheduleStockPaint(symbol){
+ if(page!=='Stocks')return;
+ if(symbol)stockDirty.add(symbol);else stockPaintAll=true;
+ if(stockPaintFrame!==null)return;
+ stockPaintFrame=requestAnimationFrame(()=>{
+  stockPaintFrame=null;if(page!=='Stocks'){stockPaintAll=false;stockDirty.clear();return}
+  const state=stockFeed.getState(),label=$('stockConnectionLabel'),status=$('stockFeedStatus');
+  if(label){const text=stockConnectionLabel(state);if(label.textContent!==text)label.textContent=text;label.dataset.state=state.fatal?'error':state.stream}
+  if(status){const text=stockStatusText(state);if(status.textContent!==text)status.textContent=text}
+  const refresh=$('content')?.querySelector('[data-action="stock-refresh"]');if(refresh)refresh.disabled=!state.hasKey||!state.total||!!state.fatal;
+  const now=Date.now();$('stockRows')?.querySelectorAll('[data-stock-symbol]').forEach(row=>{
+   const ticker=row.dataset.stockSymbol;if(!stockPaintAll&&!stockDirty.has(ticker))return;
+   const target=row.querySelector('.stock-quote');if(target)target.innerHTML=renderStockQuote(ticker,stockFeed.quoteFor(ticker),stockFeed.issueFor(ticker),state,now);
+  });
+  scheduleStockLabelTimer(state,now);stockPaintAll=false;stockDirty.clear();
+ });
+}
+function filterStocks(value){
+ const query=String(value||'').trim().toLowerCase(),rows=$('stockRows')?.querySelectorAll('[data-stock-symbol]');if(!rows)return;
+ let visible=0;rows.forEach(row=>{const matches=!query||row.dataset.stockSearch.includes(query);row.hidden=!matches;if(matches)visible++});
+ const count=$('stockResultCount');if(count)count.textContent=visible+' '+(visible===1?'stock':'stocks')+(query?' matching':'');
+ const empty=$('stockEmpty');if(empty){empty.hidden=visible!==0;empty.querySelector('strong').textContent=rows.length?'No matching stocks':'Your watchlist is empty';}
+}
+function canEditStocks(){return page==='Stocks'&&!syncLoading&&!window.NorthstarVaultLocked&&!isWelcomeVisible()&&(vault.state==='off'||vault.state==='unlocked')}
+function focusStockControl(selector){requestAnimationFrame(()=>{const el=$('content')?.querySelector(selector);if(el){try{el.focus({preventScroll:true})}catch{el.focus()}}})}
+function saveStockSymbols(symbols,message,focusSelector){
+ if(!canEditStocks())return;
+ data={...data,settings:{...data.settings,stockWatchlist:symbols}};
+ const saved=persist();if(saved!==false)showToast(saved==='pending'?message+' · saving protected device copy…':message);
+ if(focusSelector)focusStockControl(focusSelector);
+}
+function connectStocks(e){
+ e.preventDefault();if(!canEditStocks())return;
+ const value=String(new FormData(e.target).get('stockApiKey')||'').trim();e.target.reset();
+ if(!stockFeed.setKey(value)){showToast('Enter a valid Finnhub API key without spaces.');return}
+ render();showToast('Connecting to Finnhub');
+}
+function disconnectStocks(){if(!canEditStocks())return;stockFeed.disconnect();render();focusStockControl('#stockApiKey');showToast('Finnhub disconnected; key and prices cleared from this tab.')}
+function addStock(e){
+ e.preventDefault();if(!canEditStocks())return;
+ const symbol=normalizeSymbol(String(new FormData(e.target).get('symbol')||'')),symbols=watchlistSymbols(data.settings);
+ if(!symbol){showToast('Enter a U.S.-listed ticker, for example AAPL or BRK.B.');return}
+ if(symbols.includes(symbol)){showToast(symbol+' is already on your watchlist.');return}
+ if(symbols.length>=MAX_WATCHLIST){showToast('Your watchlist can contain up to '+MAX_WATCHLIST+' tickers.');return}
+ saveStockSymbols([...symbols,symbol],symbol+' added to your watchlist','#stockTicker');
+}
+function removeStock(raw){
+ if(!canEditStocks())return;const symbol=normalizeSymbol(raw),symbols=watchlistSymbols(data.settings);
+ if(!symbol||!symbols.includes(symbol))return;
+ saveStockSymbols(symbols.filter(item=>item!==symbol),symbol+' removed from your watchlist','#stockSearch');
+}
+async function resetStocks(){
+ if(!canEditStocks())return;const workspace=data;
+ const result=await showNorthstarDialog({title:'Reset the stock watchlist?',message:'Replace your current list with the 100 starter stocks?',detail:'Your custom tickers will be removed from this list. Accounts, transactions, goals, purchases and saved Guide data will not change.',icon:'↺',confirmText:'Reset watchlist',cancelText:'Keep my list',danger:true,label:'STOCK WATCHLIST'});
+ if(result!==true||data!==workspace||!canEditStocks())return;
+ stockQuery='';saveStockSymbols(starterSymbols(),'Starter watchlist restored','#stockSearch');
+}
+function refreshStocks(){
+ if(!canEditStocks())return;
+ showToast(stockFeed.refresh()?'Snapshots queued; Finnhub limits still apply.':'Wait a minute between manual refreshes, or reconnect your key.');
+}
+document.addEventListener('visibilitychange',syncStockFeed);
+window.addEventListener('pagehide',()=>{stockFeed.setActive(false);clearStockLabelTimer()});
+window.addEventListener('pageshow',syncStockFeed);
+
 function renderFundsAllocation(){
  const total=roundMoney(totalBalance());
  const setAside=reservedFunds();
@@ -2037,7 +2146,8 @@ function renderGuide(){
  const memory=data.settings?.guideMemory||null;let focusOptions='<option value="">Choose a focus goal (optional)</option>';
  data.goals.forEach(g=>{focusOptions+='<option value="'+esc(g.name)+'"'+(g.name===p.goalFocus?' selected':'')+'>'+esc(g.name)+'</option>'});
  const field=(label,name,value,hint)=>'<label class="field-label">'+label+'<input name="'+name+'" type="number" min="0" step="0.01" inputmode="decimal" value="'+esc(value||'')+'" placeholder="0.00">'+(hint?'<small class="muted-small">'+hint+'</small>':'')+'</label>';
- let html=pageHeading('Northstar Guide','<button class="secondary-btn" data-action="page" data-page="Purchases">Open purchase planner ↗</button>');
+ let html=pageHeading('Northstar Guide','<button class="secondary-btn" data-action="page" data-page="Settings">← Back to Settings</button>');
+ html+='<p class="form-hint">Your saved Guide profile and notes remain here. The main dock now opens Stocks.</p>';
  html+='<section class="guide-hero"><div class="eyebrow">YOUR PERSONAL COMPASS</div><h2>A plan that remembers what matters to you.</h2><p>Save your monthly picture and priorities once. Northstar uses them to shape practical next steps, organize planned purchases, and review the price history you record.</p><div class="guide-hero-statrow"><div class="guide-hero-stat"><span>Monthly room after bills & buffer</span><strong>'+(income>0?esc(money(monthlyRoom)):'Add your profile')+'</strong></div><div class="guide-hero-stat"><span>Estimated spendable now</span><strong>'+esc(money(spendable))+'</strong></div><div class="guide-hero-stat"><span>Active purchase plans</span><strong>'+active.length+'</strong></div></div></section>';
  html+=renderGuideProfileGraph(data.settings?.profile,money,esc);
  html+='<div class="guide-grid"><section class="panel"><div class="panel-head"><div><h2>Your profile & memory</h2><p>Only details you choose are stored in Northstar.</p></div><span class="category-pill">Saved profile</span></div><form id="guideProfileForm"><div class="guide-profile-grid">';
@@ -2079,9 +2189,10 @@ function savePriceCheck(e){e.preventDefault();const form=e.target,id=form.datase
 
 function renderSettings(){const counts=[['Accounts',data.accounts.length],['Transactions',data.transactions.length],['Budgets',data.budgets.length],['Goals',data.goals.length],['Purchases',data.purchases.length]];return `${pageHeading('Settings')}<div class="settings-layout"><section class="panel"><div class="panel-head"><div><h2>Cloud sync & account</h2><p>Optional Google sign-in for this device and your other devices.</p></div><span class="category-pill">${user?(cloudLoaded&&!lastSyncError?'Cloud active':'Sync needs attention'):'Local only'}</span></div><div class="setting-action"><div><strong>${user?esc(user.displayName||user.email||'Google account'):'Connect Google'}</strong><p>${user?(cloudLoaded&&!lastSyncError?'Your finance data loaded from Firestore and cloud saves are enabled.':'Google sign-in succeeded, but Northstar has not confirmed a successful cloud sync. Your changes stay in this browser until the Firestore issue is fixed.'):'Your entries stay in this browser until you connect Google and sync them.'}</p></div>${user?`${(!cloudLoaded||lastSyncError)?'<button class="primary-btn" data-action="retry-sync">Retry cloud sync</button>':''}<button class="secondary-btn" data-action="signout">Sign out</button>`:'<button class="primary-btn" data-action="signin">Connect Google</button>'}</div><div class="privacy-note"><span>♧</span><span>Only sign in on a device you trust. Cloud access is intended to be restricted to your own user ID by Firestore security rules. Use fictional data until you confirm your rules are published and tested.</span></div></section>
 ${renderVaultPanel()}
+<section class="panel"><div class="panel-head"><div><h2>Saved Guide profile</h2><p>Your previous Guide profile and saved note are still available.</p></div></div><div class="setting-action"><div><strong>Northstar Guide</strong><p>Review or edit your saved planning preferences and graph. The Guide is a local rules-based planner.</p></div><button class="secondary-btn" data-action="page" data-page="Guide">Open saved Guide ↗</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Preferences</h2><p>Personalize how your numbers are displayed.</p></div></div><label class="field-label" style="max-width:360px">Display currency<select id="currencySelect">${options(['USD','CAD','GBP','EUR','AUD','NZD','JPY'],data.settings.currency||'USD')}</select></label><p class="form-hint">Changing currency changes display formatting only. Northstar does not perform exchange-rate conversion.</p></section>
 <section class="panel"><div class="panel-head"><div><h2>Backup & restore</h2><p>Keep a private backup before making major changes.</p></div></div><div class="setting-action"><div><strong>Export backup</strong><p>${vault.state==='unlocked'?'Download an encrypted JSON backup of this workspace. Keep your passphrase safe.':'Download a readable, unencrypted JSON backup. Store it privately.'}</p></div><button class="secondary-btn" data-action="export">↓ Export backup</button></div><div class="setting-action"><div><strong>Restore backup</strong><p>Replace the current data with a plaintext or encrypted Northstar JSON backup.</p></div><button class="secondary-btn" data-action="import">↑ Choose file</button></div>${renderWorkspaceCountGraph(counts,esc)}</section>
-<section class="panel"><div class="panel-head"><div><h2>Data management</h2><p>Clear this Northstar dataset if you need a fresh start.</p></div></div><div class="setting-action"><div><strong>Clear all financial data</strong><p>This deletes accounts, transactions, budgets, goals, and purchase plans from the active dataset. Export a backup first if you may need the information.</p></div><button class="danger-btn" data-action="clear-data">Clear data</button></div></section>
+<section class="panel"><div class="panel-head"><div><h2>Data management</h2><p>Clear this Northstar dataset if you need a fresh start.</p></div></div><div class="setting-action"><div><strong>Clear all financial data</strong><p>This deletes accounts, transactions, budgets, goals, purchase plans, saved Guide information, and your custom stock list from the active dataset. Export a backup first if you may need the information.</p></div><button class="danger-btn" data-action="clear-data">Clear data</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Your Northstar experience</h2><p>Revisit the welcome screen and compass animation any time.</p></div></div><div class="setting-action"><div><strong>Welcome screen</strong><p>See the Northstar introduction and animated compass again.</p></div><button class="secondary-btn" data-action="welcome-again">Replay welcome ↗</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Sound & celebrations</h2><p>Celebrate a savings milestone with a short chime and animation.</p></div></div><label class="checkbox-line"><input id="goalSoundsToggle" type="checkbox" ${data.settings.goalSounds!==false?"checked":""}> Play goal-completion sounds</label><p class="form-hint">Sound plays only when you reach a goal after using the app. You can turn it off here.</p></section>
 <section class="panel"><div class="panel-head"><div><h2>About Northstar</h2><p>What this app does — and does not do.</p></div><span class="category-pill">Major update</span></div><div class="setting-action"><div><strong>What's new</strong><p>Completed expense tiles, optional passphrase protection, and safer sync. Protection is off by default.</p></div><a class="secondary-btn small" href="https://github.com/CorbinPlayz/personal-finance/blob/main/MAJOR-UPDATE.md" target="_blank" rel="noopener noreferrer" aria-label="Read the major update on GitHub, opens in a new tab" style="text-decoration:none">Read update ↗</a></div><p class="muted" style="font-size:12px;line-height:1.7;margin:0">Northstar is a manual personal finance tracker. It does not connect to bank accounts, process payments, or provide financial advice. Data is readable unless passphrase protection is explicitly enabled. Protection covers the active workspace, not every older copy or an unlocked device. Do not commit financial records or private credentials to GitHub. Publish and test the Firestore rules for cloud access.</p></section></div>`}
@@ -2184,7 +2295,11 @@ async function importBackup(file){
   }
   const imported=validateImport(source),detail=vault.state==='unlocked'?'Export an encrypted backup of the current data first if you may need it later.':'The restored data will be stored without app encryption in this workspace. Export a backup of the current data first if needed.';
   if(await showNorthstarDialog({title:'Restore this backup?',message:'Restoring replaces the finance data currently open in Northstar.',detail,icon:'↻',confirmText:'Restore backup',cancelText:'Cancel',danger:true,label:'REPLACE CURRENT DATA'})!==true)return;
-  data=imported;persist();showToast('Backup restored');
+  // A confirmed restore of an older/default-list backup is an intentional
+  // workspace choice, even if the backup has no other records. Save the
+  // starters explicitly so a later cloud retry cannot silently undo it.
+  if(imported.settings.stockWatchlist==null)imported.settings.stockWatchlist=starterSymbols();
+  stockFeed.disconnect();deferredDeviceWorkspace=null;data=imported;persist();showToast('Backup restored');
  }catch(e){showToast(e.message||'Could not read that backup')}finally{$('backupFile').value=''}
 }
 
@@ -2216,15 +2331,17 @@ function setPurchaseStatus(purchaseId,status){
 }
 function positionDockIndicator(){
  const dock=$('mobileDock');if(!dock)return;
- let active=[...dock.querySelectorAll('.dock-item[data-page]')].find(el=>el.dataset.page===page&&el.getClientRects().length);
+ const dockPage=page==='Guide'?'Settings':page;
+ let active=[...dock.querySelectorAll('.dock-item[data-page]')].find(el=>el.dataset.page===dockPage&&el.getClientRects().length);
  if(!active)active=$('dockMoreBtn');if(!active||!active.getClientRects().length)return;
  const parent=dock.getBoundingClientRect(),rect=active.getBoundingClientRect();dock.style.setProperty('--dock-x',(rect.left-parent.left)+'px');dock.style.setProperty('--dock-width',rect.width+'px');
 }
 function renderDock(){
  const dock=$('mobileDock');if(!dock)return;
- dock.querySelectorAll('[data-page]').forEach(b=>{const active=b.dataset.page===page;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
- $('dockMoreBtn')?.classList.toggle('is-current',['Accounts','Budgets','Settings'].includes(page));
- if(['Accounts','Budgets','Settings'].includes(page))$('dockMoreBtn')?.setAttribute('aria-current','page');else $('dockMoreBtn')?.removeAttribute('aria-current');
+ const dockPage=page==='Guide'?'Settings':page;
+ dock.querySelectorAll('[data-page]').forEach(b=>{const active=b.dataset.page===dockPage;b.classList.toggle('active',active);if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+ $('dockMoreBtn')?.classList.toggle('is-current',['Accounts','Budgets','Settings','Guide'].includes(page));
+ if(['Accounts','Budgets','Settings','Guide'].includes(page))$('dockMoreBtn')?.setAttribute('aria-current','page');else $('dockMoreBtn')?.removeAttribute('aria-current');
  requestAnimationFrame(positionDockIndicator);
 }
 function setDockMore(open,restoreFocus=false){
@@ -2258,7 +2375,7 @@ function navigateHomeShortcut(){
 function resizeDock(){
  if(window.matchMedia('(min-width: 701px)').matches){
   const hadFocus=$('dockMoreMenu')?.contains(document.activeElement);setDockMore(false);
-  if(hadFocus){const target=[...$('mobileDock').querySelectorAll('.dock-item[data-page]')].find(el=>el.dataset.page===page);try{target?.focus({preventScroll:true})}catch{target?.focus()}}
+  if(hadFocus){const dockPage=page==='Guide'?'Settings':page;const target=[...$('mobileDock').querySelectorAll('.dock-item[data-page]')].find(el=>el.dataset.page===dockPage);try{target?.focus({preventScroll:true})}catch{target?.focus()}}
  }
  positionDockIndicator();
 }
@@ -2323,7 +2440,7 @@ function trapWelcomeTab(e){
  }
  return false;
 }
-function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
+function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
 document.addEventListener('keydown',e=>{if(trapWelcomeTab(e))return;const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&setDockMore(false,true)){e.preventDefault();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
 document.addEventListener('click',e=>{
  const option=e.target.closest('[data-confirm-index]');
@@ -2332,8 +2449,8 @@ document.addEventListener('click',e=>{
 });
 window.addEventListener('beforeunload',e=>{if(modalHasUnsavedChanges()||(vault.state==='unlocked'&&(vault.editSeq!==vault.savedSeq||(cloudLoaded&&$('syncStatus')?.textContent.startsWith('Saving'))))){e.preventDefault();e.returnValue=''}});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;const action=b.dataset.action;if(b.tagName==='SELECT'||b.tagName==='INPUT')return;if(action==='backdrop-close'&&e.target!==b)return;e.preventDefault();openByAction(action,b)});
-document.addEventListener('submit',e=>{if(e.target?.id==='modalForm')submitModal(e);else if(e.target?.id==='guideProfileForm')saveGuideProfile(e);else if(e.target?.id==='guideAskForm')answerGuide(e);else if(e.target?.classList?.contains('price-check-form'))savePriceCheck(e);else if(e.target?.classList?.contains('purchase-allocation-form'))savePurchaseAllocation(e)});
-document.addEventListener('input',e=>{if(e.target?.id==='txSearch'){query=e.target.value;const pos=e.target.selectionStart;render();const next=$('txSearch');next?.focus();next?.setSelectionRange(pos,pos)}else if(e.target?.id==='purchaseCompletedSearch')filterCompletedPurchases(e.target.value)});
+document.addEventListener('submit',e=>{if(e.target?.id==='modalForm')submitModal(e);else if(e.target?.id==='guideProfileForm')saveGuideProfile(e);else if(e.target?.id==='guideAskForm')answerGuide(e);else if(e.target?.id==='stockConnectForm')connectStocks(e);else if(e.target?.id==='stockAddForm')addStock(e);else if(e.target?.classList?.contains('price-check-form'))savePriceCheck(e);else if(e.target?.classList?.contains('purchase-allocation-form'))savePurchaseAllocation(e)});
+document.addEventListener('input',e=>{if(e.target?.id==='txSearch'){query=e.target.value;const pos=e.target.selectionStart;render();const next=$('txSearch');next?.focus();next?.setSelectionRange(pos,pos)}else if(e.target?.id==='purchaseCompletedSearch')filterCompletedPurchases(e.target.value);else if(e.target?.id==='stockSearch'){stockQuery=e.target.value;filterStocks(stockQuery)}});
 document.addEventListener('change',e=>{if(e.target?.id==='goalSoundsToggle'){data={...data,settings:{...data.settings,goalSounds:e.target.checked}};persist();showToast(e.target.checked?'Goal sounds enabled':'Goal sounds muted')}if(e.target?.id==='txTypeFilter'){txTypeFilter=e.target.value;render()}if(e.target?.id==='txMonthFilter'){txMonthFilter=e.target.value;render()}if(e.target?.id==='currencySelect'){data={...data,settings:{...data.settings,currency:e.target.value}};persist();showToast('Display currency updated')}if(e.target?.id==='backupFile'){importBackup(e.target.files?.[0])}if(e.target?.dataset?.action==='purchase-status'){setPurchaseStatus(e.target.dataset.id,e.target.value)}});
 /* Scenario inputs are transient. They never alter the ledger or persist data. */
 function updateGoalScenarioGraph(){
@@ -2665,7 +2782,11 @@ async function writeCloudNow(){
  return cloudWritePayload({data:safeData,updatedAt:Date.now(),schemaVersion:1},uid,epoch);
 }
 async function onAuthChanged(current){
- if((user?.uid||null)!==(current?.uid||null))try{window.NorthstarJarvis?.resetWorkspace?.()}catch(e){console.warn('Assistant workspace reset was skipped.',e)}
+ if((user?.uid||null)!==(current?.uid||null)){
+  // A provider key or deferred copy must not follow a different account.
+  deferredDeviceWorkspace=null;stockFeed.disconnect();
+  try{window.NorthstarJarvis?.resetWorkspace?.()}catch(e){console.warn('Assistant workspace reset was skipped.',e)}
+ }
  const epoch=++cloudEpoch;clearTimeout(saveTimer);cloudLoaded=false;cloudFingerprint=undefined;
  if(vault.state==='locked'){
   user=current;lastSyncError=null;setCloudLoading(false);setSync('Protected workspace locked');return;
@@ -2677,17 +2798,48 @@ async function onAuthChanged(current){
   await syncProtected(current,epoch);return;
  }
  if(!current){const wasSignedIn=!!user;user=null;lastSyncError=null;setCloudLoading(false);if(wasSignedIn)data=loadLocal('local');setSync('Local only','');render();return}
- const anonymousData=data,userLocal=loadLocal(current.uid),chosen=hasRecords(userLocal)?userLocal:anonymousData;
+ const pendingDevice=deferredDeviceWorkspace?.uid===current.uid?deferredDeviceWorkspace:null;
+ const sourceKey=pendingDevice?.sourceKey||localKey(user?.uid||'local');
+ const anonymousData=pendingDevice?pendingDevice.data:data,userLocal=loadLocal(current.uid);let chosen=hasRecords(userLocal)?userLocal:anonymousData,sourceRaw,sourceLegacyKey,sourceLegacyRaw;
  user=current;lastSyncError=null;setSync('Connecting…');setCloudLoading(true);render();
  try{
+  // Capture both source and account slots before a confirmation yields to
+  // another tab. A legacy local slot can be the source on older installations.
+  const originalLocal=localStorage.getItem(localKey(current.uid));
+  sourceRaw=localStorage.getItem(sourceKey);
+  sourceLegacyKey=sourceKey===localKey('local')&&!sourceRaw?'northstar-finance-v1':null;
+  sourceLegacyRaw=sourceLegacyKey?localStorage.getItem(sourceLegacyKey):null;
+  const sourceChanged=()=>{
+   const error=syncConflict('The local workspace changed in another tab. Reload before choosing a copy.');error.sourceCopyChanged=true;throw error;
+  };
+  const checkDeviceCopy=()=>{
+   if(localStorage.getItem(localKey(current.uid))!==originalLocal){const error=syncConflict('The device copy changed in another tab. No local copy was overwritten.');error.deviceCopyChanged=true;throw error}
+   if(localStorage.getItem(sourceKey)!==sourceRaw||(sourceLegacyKey&&localStorage.getItem(sourceLegacyKey)!==sourceLegacyRaw))sourceChanged();
+  };
+  if(pendingDevice&&(sourceRaw!==pendingDevice.sourceRaw||sourceLegacyKey!==pendingDevice.sourceLegacyKey||sourceLegacyRaw!==pendingDevice.sourceLegacyRaw))sourceChanged();
+  if((pendingDevice||(hasRecords(userLocal)&&hasRecords(anonymousData)))&&dataSignature(userLocal)!==dataSignature(anonymousData)){
+   const localChoice=await showNorthstarDialog({title:'Choose a device workspace',message:'This browser has different local and Google-account device copies.',detail:'The selected copy may replace the account’s device copy. Cloud conflicts are checked next. Decide later shows the account device copy with sync paused; other device copies are kept. Export backups if you might need both.',icon:'☁',label:'DEVICE COPIES DIFFER',choices:[{value:'account',label:'Use account device copy',style:'primary'},{value:'local',label:'Use local workspace',style:'secondary'},{value:'cancel',label:'Decide later',style:'quiet'}]});
+   if(epoch!==cloudEpoch||user?.uid!==current.uid)return;
+   checkDeviceCopy();
+   if(localChoice==='account'){chosen=userLocal;deferredDeviceWorkspace=null}
+   else if(localChoice==='local'){chosen=anonymousData;deferredDeviceWorkspace=null}
+   else{
+    // While signed in, future edits write to the account's device slot. Show
+    // that same copy if the visitor defers, so an edit cannot overwrite it
+    // with the different local workspace before the choice is made.
+    deferredDeviceWorkspace={uid:current.uid,data:anonymousData,sourceKey,sourceRaw,sourceLegacyKey,sourceLegacyRaw};data=userLocal;
+    lastSyncError=syncConflict('Choose a device workspace to resume cloud sync.');setSync('Sync conflict · action needed','err');
+    showToast('Choice deferred. Showing the account device copy; your other copy was kept.');return;
+   }
+  }else if(pendingDevice)deferredDeviceWorkspace=null;
   // A previously protected device copy is never silently overwritten by cloud data.
   const deviceVault=localStorage.getItem(vaultKey(current.uid));
   if(deviceVault){
    vault={state:'locked',uid:current.uid,key:null,kdf:null,localRaw:null,session:vault.session+1,editSeq:0,savedSeq:0,error:null,pendingCloud:{source:'device',uid:current.uid,previousData:chosen}};
    data=blankData();setCloudLoading(false);render();showVaultUnlock();return;
   }
-  const originalLocal=localStorage.getItem(localKey(current.uid));
   const snap=await fb.getDocFromServer(docRef(current.uid));if(epoch!==cloudEpoch||user?.uid!==current.uid)return;
+  checkDeviceCopy();
   const raw=cloudValue(snap);cloudFingerprint=cloudSignature(raw);
   if(looksEncrypted(raw)){
    vault={state:'locked',uid:current.uid,key:null,kdf:null,localRaw:null,session:vault.session+1,editSeq:0,savedSeq:0,error:null,pendingCloud:{source:'cloud',uid:current.uid,envelope:raw,previousData:chosen}};
@@ -2698,15 +2850,24 @@ async function onAuthChanged(current){
    if(hasRecords(chosen)&&dataSignature(chosen)!==dataSignature(cloud)){
     const choice=await showNorthstarDialog({title:'Choose which data to keep',message:'Northstar found different finance data in your Google account and this browser.',detail:'Using the cloud copy replaces what’s currently shown on this device. Keeping this device uploads the browser copy and replaces the cloud document.',icon:'☁',label:'SYNC CONFLICT',choices:[{value:'cloud',label:'Use cloud copy',style:'primary'},{value:'local',label:'Keep this device',style:'secondary'},{value:'cancel',label:'Decide later',style:'quiet'}]});
     if(epoch!==cloudEpoch||user?.uid!==current.uid)return;
+    checkDeviceCopy();
     if(choice==='cloud')data=cloud;else if(choice==='local'){data=chosen;await writeCloudNow()}else{data=chosen;lastSyncError=syncConflict('Choose which data to keep to resume cloud sync.');setSync('Sync conflict · action needed','err');return}
    }else data=cloud;
   }else{data=chosen;await writeCloudNow()}
-  if(localStorage.getItem(localKey(current.uid))!==originalLocal)throw syncConflict('The device copy changed in another tab. No local copy was overwritten.');
+  checkDeviceCopy();
   localStorage.setItem(localKey(current.uid),JSON.stringify(data));
   cloudLoaded=true;lastSyncError=null;setSync('Cloud sync on','ok');
  }catch(e){
   if(epoch!==cloudEpoch)return;
-  console.error('Northstar cloud load failed',e);data=chosen;cloudLoaded=false;lastSyncError=e;setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');showToast(firebaseErrorDetails(e,'Cloud load'));
+  // If another tab changed the account slot, keep that newer device copy as
+  // the editable workspace. Never let the next edit replace it with our stale
+  // pre-dialog snapshot while sync is paused.
+  console.error('Northstar cloud load failed',e);
+  if(e?.deviceCopyChanged){deferredDeviceWorkspace={uid:current.uid,data:anonymousData,sourceKey,sourceRaw,sourceLegacyKey,sourceLegacyRaw};data=loadLocal(current.uid)}
+  else if(e?.sourceCopyChanged){deferredDeviceWorkspace=pendingDevice||{uid:current.uid,data:anonymousData,sourceKey,sourceRaw,sourceLegacyKey,sourceLegacyRaw};data=userLocal}
+  else data=chosen;
+  cloudLoaded=false;lastSyncError=e;setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');
+  showToast(e?.deviceCopyChanged?'The account device copy changed in another tab. Showing its latest copy; cloud sync is paused.':e?.sourceCopyChanged?'The local workspace changed in another tab. Reload to review both copies; cloud sync is paused.':firebaseErrorDetails(e,'Cloud load'));
  }finally{if(epoch===cloudEpoch){setCloudLoading(false);render()}}
 }
 async function syncProtected(current,epoch=cloudEpoch){
@@ -2891,14 +3052,10 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setupPurchasedCrosses);
   else setupPurchasedCrosses();
 
-  new MutationObserver(() => {
-    if(!document.querySelector('.priority-group-purchased') && watchedGroup){
-      watchedGroup = null;
-      if(observer) observer.disconnect();
-      observer = null;
-    }
-    setupPurchasedCrosses();
-  }).observe(document.body, {childList:true, subtree:true});
+  // Purchase views are replaced at the content root. Ignore unrelated quote,
+  // toast, and search-result mutations elsewhere in the document.
+  const content = document.querySelector('#content');
+  if(content)new MutationObserver(setupPurchasedCrosses).observe(content,{childList:true});
 })();
 </script>
 <script id="liquid-runtime">
@@ -3199,7 +3356,7 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
   }
 
   /* ---------------- command palette ---------------- */
-  var PAGES = ['Overview', 'Transactions', 'Accounts', 'Budgets', 'Goals', 'Purchases', 'Guide', 'Settings'];
+  var PAGES = ['Overview', 'Transactions', 'Accounts', 'Budgets', 'Goals', 'Purchases', 'Stocks', 'Settings'];
   var ACTIONS = [
     { label: 'Add transaction', tag: 'New', icon: 'M12 5v14M5 12h14', run: function () { fire('add-transaction', 'Transactions'); } },
     { label: 'Add account', tag: 'New', icon: 'M12 5v14M5 12h14', run: function () { fire('add-account', 'Accounts'); } },
@@ -3492,7 +3649,16 @@ render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJ
     });
   }
   function schedule(){if(!scheduled){scheduled=true;requestAnimationFrame(scan)}}
-  new MutationObserver(schedule).observe(content,{childList:true,subtree:true});
+  function graphChanged(records){
+    return records.some(function(record){
+      if(record.target===content)return true;
+      return [].some.call(record.addedNodes,function(node){return node.nodeType===1&&(node.matches('[data-graph-key]')||node.querySelector('[data-graph-key]'))})||
+        [].some.call(record.removedNodes,function(node){return node.nodeType===1&&(node.matches('[data-graph-key]')||node.querySelector('[data-graph-key]'))});
+    });
+  }
+  // Streaming quotes and other nested text updates do not add or remove a
+  // graph. Avoid rescanning the whole page on every such update.
+  new MutationObserver(function(records){if(graphChanged(records))schedule()}).observe(content,{childList:true,subtree:true});
   new MutationObserver(schedule).observe(document.documentElement,{attributes:true,attributeFilter:['class']});
   if(shell)new MutationObserver(schedule).observe(shell,{attributes:true,attributeFilter:['inert']});
   document.addEventListener('visibilitychange',schedule);
