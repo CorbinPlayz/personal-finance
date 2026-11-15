@@ -145,7 +145,7 @@ test('the welcome dismissal is remembered and replay remains available', () => {
     document: { documentElement: root, activeElement: content, querySelector: () => shell },
     localStorage: { setItem: (name, value) => storage.set(name, value), removeItem: name => storage.delete(name) },
     window: { setTimeout: fn => { const id = ++nextTimer; timers.set(id, fn); return id; }, clearTimeout: id => timers.delete(id) },
-    syncLoading: false, confirmResolver: null, showToast: () => {},
+    syncLoading: false, confirmResolver: null, showToast: () => {}, syncStockFeed: () => {},
     updateWelcomeProgress: () => {},
   });
   vm.runInContext(section('function isWelcomeVisible(){', '\nfunction setCloudLoading('), context);

@@ -31,7 +31,7 @@ const server = http.createServer((req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
   if (pathname === '/blank') return res.end('<!doctype html><title>Test setup</title>');
   const filename = pathname === '/personal-finance/' ? 'index.html' : pathname.replace('/personal-finance/', '');
-  if (pathname.startsWith('/personal-finance/') && ['index.html', 'vault-crypto.mjs', 'finance-graphs.mjs', 'financial-graphs-view.mjs', 'financial-graphs.css'].includes(filename)) {
+  if (pathname.startsWith('/personal-finance/') && ['index.html', 'vault-crypto.mjs', 'finance-graphs.mjs', 'financial-graphs-view.mjs', 'financial-graphs.css', 'stock-watchlist.mjs', 'stock-watchlist-view.mjs', 'stock-watchlist.css'].includes(filename)) {
     res.writeHead(200, { 'Content-Type': filename.endsWith('.mjs') ? 'application/javascript' : filename.endsWith('.css') ? 'text/css' : 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
     return res.end(fs.readFileSync(path.join(root, filename)));
   }
@@ -149,7 +149,7 @@ const firebaseModules = {
         const before = await page.evaluate(key => localStorage.getItem(key), key);
         const visibleButtons = await page.$$eval('#mobileDock .dock-item', els => els.filter(el => el.getClientRects().length).map(el => el.textContent.trim()));
         assert.equal(visibleButtons.length, width <= 700 ? 6 : 8, `${width} visible controls`);
-        for (const name of ['Overview', 'Transactions', 'Accounts', 'Budgets', 'Goals', 'Purchases', 'Guide', 'Settings']) {
+        for (const name of ['Overview', 'Transactions', 'Accounts', 'Budgets', 'Goals', 'Purchases', 'Stocks', 'Settings']) {
           await navigate(page, name);
           const currentSelector = width <= 700 && ['Accounts', 'Budgets', 'Settings'].includes(name) ? '#dockMoreBtn' : `#mobileDock .dock-item[data-page="${name}"]`;
           const target = await hit(page, currentSelector);
@@ -242,6 +242,9 @@ const firebaseModules = {
       assert.match(cleared, /Conversation cleared/); assert.doesNotMatch(cleared, /Safeway/);
       await activate(page, '.nsj-head > .nsj-close');
       await page.click('[data-action="add-transaction"]'); await page.waitForSelector('#modalForm');
+      // Let the modal's scheduled initial focus settle before deliberately
+      // moving focus to the close button, including on busy CI machines.
+      await page.waitForFunction(() => document.activeElement?.matches('#modalForm [name="description"]'));
       await fill(page, 'description', 'Unsaved synthetic draft');
       await page.focus('#modalForm [data-action="close-modal"]'); await page.keyboard.press('j');
       assert.equal(await page.$eval('#nsjPanel', el => el.classList.contains('open')), false, 'shortcut cannot open over a finance dialog');
@@ -277,10 +280,24 @@ const firebaseModules = {
         await page.click('.purchase-tile[data-id="plan"]'); await page.waitForSelector('.purchase-detail-view');
         await page.click('[data-action="purchase-bought"][data-id="plan"]');
         assert.equal((await page.evaluate(() => window.NorthstarLedger())).accounts[0].balance, 890.99);
+        // Re-rendering the detail can leave its back button under the sticky
+        // header. Scroll it into the usable viewport before a real click.
+        await page.$eval('[data-action="back-to-purchases"]', el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
+        await page.waitForFunction(() => {
+          const el = document.querySelector('[data-action="back-to-purchases"]'), r = el.getBoundingClientRect();
+          const hit = document.elementFromPoint((r.left + r.right) / 2, (r.top + r.bottom) / 2);
+          return hit === el || el.contains(hit);
+        });
         await page.click('[data-action="back-to-purchases"]');
         await page.waitForSelector('.priority-group-purchased .purchase-tile[data-id="plan"]');
-        await page.$eval('.priority-group-purchased .purchase-tile[data-id="plan"]', el => el.scrollIntoView({ block: 'center' }));
-        await sleep(850); // allow the accepted compact badge press/echo to settle
+        await page.$eval('.priority-group-purchased .purchase-tile[data-id="plan"]', el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
+        // IntersectionObserver can start the accepted badge animation late on a
+        // busy browser. Wait for the actual animation, not an arbitrary sleep.
+        await page.waitForFunction(() => {
+          const tile = document.querySelector('.priority-group-purchased .purchase-tile[data-id="plan"]'), badge = tile?.querySelector('.purchase-tile-badge');
+          return tile?.classList.contains('purchase-x-visible') && badge && Number(getComputedStyle(badge).opacity) >= .99 &&
+            !badge.getAnimations().some(animation => animation.animationName === 'purchaseBadgePress' && animation.playState === 'running');
+        });
         const result = await page.evaluate(() => {
           const tile = document.querySelector('.priority-group-purchased .purchase-tile[data-id="plan"]');
           const badge = tile.querySelector('.purchase-tile-badge').getBoundingClientRect();

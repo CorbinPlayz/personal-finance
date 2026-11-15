@@ -11,12 +11,12 @@ Recorded expenses now appear as completed purchase tiles, with explicitly linked
 ## Included features
 
 - Overview, transactions, accounts, budgets, savings goals, and planned purchases.
-- Read-only graphs across the finance pages, Guide, and Settings: recorded income and spending, category mix, account activity, budget and goal progress, purchase funding and manually logged prices, a saved-profile picture, and workspace record counts. See the exact values in text or the expandable tables.
+- Read-only graphs across the finance pages, the saved Guide under Settings, and Settings: recorded income and spending, category mix, account activity, budget and goal progress, purchase funding and manually logged prices, a saved-profile picture, and workspace record counts. See the exact values in text or the expandable tables.
 - A goal what-if graph compares up to two **explicitly entered** monthly contributions. It assumes no interest or fees, does not check account balances or move money, and does not save the scenario inputs.
 - Goal and budget progress feedback, transaction and purchase animations, and an optional goal-completion chime. Graph entry animation is decorative and respects reduced-motion preferences.
 - A floating glass navigation dock on desktop and mobile. On narrow screens, **More** contains Accounts, Budgets, and Settings. The top-left compass icon also opens Home; when Home is already open, it keeps your scroll position. The adjacent Northstar word is not a button.
 - An optional, scrollable introduction. **Enter Northstar** opens a short garage-inspired reveal; you can replay it from Settings. Reduced-motion preferences skip the animation.
-- Northstar Guide with a saved planning profile, remembered preferences, and rule-based saving/purchase suggestions.
+- **Stocks** replaces Guide on the dock with a customizable watchlist starting with 100 curated U.S.-listed stocks. An optional visitor-supplied Finnhub key supplies market prices. Your existing Guide profile, saved note, and local planner remain accessible under **Settings → Saved Guide profile**.
 - Jarvis, a local assistant that can answer questions about your recorded finances and prepare reviewable drafts for common actions. Nothing is recorded until you save the form.
 - Purchase priority ordering, links to search current shopping listings, and manual price-history logging.
 - Recorded expenses appear as completed purchase tiles. Linked expense/plan pairs appear once; selecting an expense-only tile edits the original transaction. Income and transfers are excluded.
@@ -25,13 +25,25 @@ Recorded expenses now appear as completed purchase tiles, with explicitly linked
 
 The intro remembers dismissal when browser storage is available. If saving that preference is blocked, you can still enter but the intro may return on reload. If storage cannot be read at all, the protected-workspace check fails closed rather than bypassing a possible vault; restore browser storage access before proceeding.
 
-The Guide is a local rules-based helper, not an external generative AI service. Jarvis also works locally by default and offers an optional visitor-supplied cloud connection. **Save & test** sends the key and a finance summary to the selected provider, even if the cloud switch was previously off. Questions sent while cloud is on include a summary and recent conversation; the optional transaction setting adds up to eight recent entries, including dates, amounts, categories, and descriptions. Preview the payload before connecting if you wish.
+The saved Guide is a local rules-based helper, not an external generative AI service. Jarvis also works locally by default and offers an optional visitor-supplied cloud connection. **Save & test** sends the key and a finance summary to the selected provider, even if the cloud switch was previously off. Questions sent while cloud is on include a summary and recent conversation; the optional transaction setting adds up to eight recent entries, including dates, amounts, categories, and descriptions. Preview the payload before connecting if you wish.
 
 Jarvis's key is stored separately in browser storage (tab session by default, optionally remembered on the device), not encrypted by workspace protection or included in finance backups. If storage cannot be updated or has conflicting copies, Connections warns that a key may remain; back up finance data before clearing site data. The separate Cloudflare Worker is not wired into the site. Never put private API keys in the repository or page source.
 
 Northstar does not connect to bank accounts or verify your real balance. Figures depend on information you enter. Double-check your actual accounts before spending.
 
 The six-month overview excludes transfers; the three-month account charts show each account separately and include valid transfers on the appropriate side. Neither is a reconstructed balance history. Transaction mix follows the active filters and counts transfers once. Monthly category and budget graphs omit invalid dates or amounts and report excluded entries, so imported malformed records can differ from older budget-card calculations. The purchase price timeline shows manually logged checks, equally spaced, not a live feed or forecast. The Guide graph uses its saved profile, not transaction totals; review its existing default buffer before saving. An imported profile missing a buffer is not graphed as though that default had been saved. Settings shows record counts, not money. Graphs never change your records, and financial estimates are not advice.
+
+## Stock watchlist and optional market data
+
+The watchlist starts with 100 curated U.S.-listed stocks (including some U.S.-listed foreign companies); it is not an index or a portfolio of owned shares. Search the list, add a U.S.-listed symbol, remove symbols, or explicitly reset to the starter list. The app validates the symbol's format, not whether it exists or is covered. The list can contain up to 200 symbols. An intentionally empty list stays empty. Tickers can change; the starter names are static and may need updating.
+
+**Prices are unavailable until you connect your own Finnhub API key.** To get started, create a Finnhub account, copy its API key from the Finnhub dashboard, and enter it on the Stocks page. Finnhub's published free plan is currently for personal use, lists up to 50 streaming symbols and 60 API calls per minute, and has its own [pricing and terms](https://finnhub.io/pricing). Check provider and exchange terms before any commercial use or redistribution. We do not ship a shared key or redistribute prices. Provider plans, coverage, browser access, and limits can change.
+
+When Stocks is open and visible, Northstar requests up to 50 trade-stream subscriptions at once and rotates the groups every minute. Thus, 100 tickers do **not** all stream simultaneously. Individual trade events may never arrive for a symbol, particularly when markets are closed. Snapshots are requested one at a time at least 1.5 seconds apart (up to 40 requests/minute per tab), then about every 15 minutes per ticker. Loading 100 snapshots takes about 2½ minutes or longer. A manual refresh queues snapshots but is limited to once a minute per tab. Another tab or application using the same key shares the provider quota; Finnhub permits only one stream connection per key. The app backs off after a 429/network failure and stops on rejected credentials. Leaving Stocks, hiding the tab, or locking/loading the workspace pauses requests; reopening resumes them. Coverage, provider throttling, browser CORS/network failures, and market closures may leave prices stale or unavailable.
+
+Prices are shown in U.S. dollars regardless of your finance display currency, with a Finnhub source and provider timestamp in the device's local time. Only a recent trade for a currently subscribed symbol is labeled **Live trade**; older trades and snapshots are labeled separately. Trades may include extended-hours or special-condition transactions; they are not necessarily official closes or executable prices. Snapshot percentage change is compared with Finnhub's reported previous close, and is not mixed with newer stream trades. Zero/missing or invalid provider prices are not invented. Verify prices independently before making decisions. Northstar is not a broker and this is not investment advice.
+
+Your customized **ticker list** is part of the active finance workspace and follows its existing local, cloud, backup, and optional passphrase-protection behavior. The initial list is a display default represented by `null` in saved workspaces; the 100 symbols are saved when you edit or reset the list, clear the workspace, or restore an older backup with no list. Explicitly saving the starters after a clear or restore prevents a later cloud retry from silently bringing back the previous list. **Prices and the Finnhub key are held only in the current tab's memory:** they are not saved in browser storage, the ledger, backups, or Firebase. Reloading, disconnecting, changing Google accounts, or restoring/clearing the workspace clears them; navigating away pauses the feed but retains the key. Requests go directly to Finnhub over HTTPS; the key is included in request/WebSocket URLs and can be visible to browser developer tools, extensions, or provider logs. Workspace encryption does not protect the key in memory. Use a trusted device and never commit a private key to the repository. **The provider integration has only been tested with mocked responses, not with a live Finnhub account or a real exchange feed.**
 
 ## Passphrase protection and backups
 
@@ -52,6 +64,7 @@ For optional Chromium touch, graph, accessibility and interface checks, install 
 
 ```sh
 npm install --prefix /tmp/northstar-browser-qa --no-save puppeteer-core axe-core
+NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/stock-watchlist-browser.cjs
 NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/finance-graphs-browser.cjs
 NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/interface-browser.cjs
 NODE_PATH=/tmp/northstar-browser-qa/node_modules CHROMIUM_PATH=/path/to/chromium node tests/home-shortcut-browser.cjs
@@ -62,7 +75,7 @@ The browser checks use synthetic records and block or mock external services; th
 
 ## GitHub Pages publishing
 
-1. Keep `index.html`, `vault-crypto.mjs`, `finance-graphs.mjs`, `financial-graphs-view.mjs`, and `financial-graphs.css` together in the repository root, alongside `firestore.rules` and `README.md`.
+1. Keep `index.html`, `vault-crypto.mjs`, `finance-graphs.mjs`, `financial-graphs-view.mjs`, `financial-graphs.css`, `stock-watchlist.mjs`, `stock-watchlist-view.mjs`, and `stock-watchlist.css` together in the repository root, alongside `firestore.rules` and `README.md`.
 2. Open repository **Settings → Pages**.
 3. Choose **Deploy from a branch**, branch `main`, folder `/ (root)`, then save.
 4. In Firebase Console → Authentication → Settings → Authorized domains, add your GitHub Pages hostname (for example, `corbinplayz.github.io`, without a path).

@@ -46,7 +46,7 @@ function welcomeHarness({ storageFails = false, reduced = false } = {}) {
       setTimeout(fn, delay) { const id = ++timerId; timers.set(id, { fn, delay }); return id; },
       clearTimeout(id) { timers.delete(id); },
     },
-    syncLoading: false, confirmResolver: null,
+    syncLoading: false, confirmResolver: null, syncStockFeed() {},
     updateWelcomeProgress() {}, showToast: text => notices.push(text),
   });
   vm.runInContext(section('function isWelcomeVisible(){', '\nfunction setCloudLoading('), context);
