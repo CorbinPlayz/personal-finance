@@ -19,6 +19,7 @@ function section(start, end) {
 }
 const issueHelpers = section('const SYNC_ISSUE_KEY=', 'function showSyncDetailsDialog(');
 const errorHelpers = section('function firebaseErrorCode(', 'function isWelcomeVisible(');
+const accessHelpers = section('async function checkCloudAccess(', 'function queueCloudSave(');
 
 function harness({ signedIn = true, online = true, stored = null } = {}) {
   const store = new Map();
@@ -33,7 +34,9 @@ function harness({ signedIn = true, online = true, stored = null } = {}) {
     navigator: { onLine: online },
     vault: { state: 'off' },
     user: signedIn ? { uid: 'user-1', email: 'private@example.com' } : null,
-    cloudLoaded: false,
+    cloudLoaded: false, lastSyncError: null,
+    fb: {},
+    setSync: () => {},
     esc: value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character])),
     $: id => (id === 'syncIssueRoot' ? root : null),
     console
@@ -153,4 +156,87 @@ test('the page keeps the new surfaces and no longer pauses silently', () => {
   // iOS Safari cannot reliably use a popup, so sign-in falls back to a redirect.
   assert.match(moduleScript, /signInWithRedirect/);
   assert.match(moduleScript, /getRedirectResult/);
+});
+
+function cloudHarness({ result = { exists: () => false }, rejection = null, issueCode = null } = {}) {
+  const store = new Map(), toasts = [], statuses = [];
+  const context = vm.createContext({
+    window: { localStorage: {
+      getItem: key => (store.has(key) ? store.get(key) : null),
+      setItem: (key, value) => store.set(key, String(value)),
+      removeItem: key => store.delete(key)
+    } },
+    navigator: { onLine: true },
+    vault: { state: 'off' },
+    user: { uid: 'user-1' },
+    cloudLoaded: false, lastSyncError: null,
+    fb: { auth: { currentUser: { uid: 'user-1' } }, db: {}, getDocFromServer: async () => { if (rejection) throw rejection; return result; } },
+    docRef: () => 'users/user-1/northstar/financeData',
+    cloudValue: snapshot => (snapshot.exists() ? snapshot.data() : null),
+    looksEncrypted: value => value?.format === 'northstar-encrypted-v1',
+    setCloudLoading: () => {}, render: () => {},
+    setSync: (text, kind) => statuses.push({ text, kind }),
+    showToast: text => toasts.push(text),
+    esc: value => String(value),
+    $: () => null,
+    console
+  });
+  vm.runInContext(errorHelpers + '\n' + issueHelpers + '\n' + accessHelpers, context);
+  if (issueCode) context.reportSyncIssue(Object.assign(new Error('Previous failure.'), { code: issueCode }), 'Cloud load');
+  return { context, store, toasts, statuses, read: expression => vm.runInContext(expression, context) };
+}
+
+test('a load that ends unconfirmed is never left without a code', () => {
+  const h = harness();
+  assert.equal(h.context.confirmSyncOutcome('Cloud load'), true);
+  assert.equal(h.read('syncIssue.code'), 'northstar/app');
+  assert.equal(h.read('syncIssue.stage'), 'Cloud load');
+  assert.match(h.read('syncIssue.message'), /could not confirm the cloud copy/i);
+  assert.match(h.read('syncIssue.message'), /Nothing was uploaded or overwritten/i);
+  assert.match(h.context.syncFailureStatus('Cloud load', new Error('x')), /needs attention · northstar\/app/);
+
+  assert.equal(harness({ signedIn: false }).context.confirmSyncOutcome(), false, 'signed out: nothing to confirm');
+  const confirmed = harness();
+  confirmed.context.cloudLoaded = true;
+  assert.equal(confirmed.context.confirmSyncOutcome(), false, 'a confirmed copy is not an issue');
+  const failed = harness();
+  failed.context.lastSyncError = new Error('already reported');
+  assert.equal(failed.context.confirmSyncOutcome(), false, 'an existing error keeps its own code');
+  const locked = harness();
+  locked.context.vault = { state: 'locked' };
+  assert.equal(locked.context.confirmSyncOutcome(), false, 'a locked workspace is not a failure');
+});
+
+test('check cloud access names the Firestore failure on a phone', async () => {
+  const denied = cloudHarness({ rejection: Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' }) });
+  await denied.context.checkCloudAccess();
+  const check = denied.read('cloudCheck');
+  assert.equal(check.ok, false);
+  assert.equal(check.code, 'permission-denied');
+  assert.equal(denied.read('syncIssue.code'), 'permission-denied');
+  assert.equal(denied.read('syncIssue.stage'), 'Cloud access check');
+  assert.match(denied.toasts.at(-1), /Firestore denied access.*\[permission-denied\]/);
+  assert.match(denied.statuses.at(-1).text, /Cloud access check failed · permission-denied/);
+  assert.equal(denied.statuses.at(-1).kind, 'err');
+
+  const ok = cloudHarness({ result: { exists: () => false }, issueCode: 'permission-denied' });
+  await ok.context.checkCloudAccess();
+  assert.equal(ok.read('cloudCheck').ok, true);
+  assert.match(ok.read('cloudCheck').detail, /No cloud document exists yet/);
+  assert.equal(ok.read('syncIssue'), null, 'a working read clears a stale access code');
+  assert.equal(ok.store.has('northstar-sync-issue-v1'), false);
+  assert.equal(ok.statuses.at(-1).text, 'Cloud access confirmed');
+
+  const conflict = cloudHarness({ rejection: Object.assign(new Error('The cloud copy changed on another device.'), { code: 'northstar/conflict' }) });
+  await conflict.context.checkCloudAccess();
+  assert.equal(conflict.read('cloudCheck').code, 'northstar/conflict');
+  assert.match(conflict.toasts.at(-1), /\[northstar\/conflict\]/);
+});
+
+test('the diagnostics offer a direct Firestore check and name the project', () => {
+  assert.match(html, /data-action="check-cloud-access"/);
+  assert.match(moduleScript, /confirmSyncOutcome\('Cloud load'\)/);
+  assert.match(moduleScript, /confirmSyncOutcome\('Protected sync'\)/);
+  assert.match(moduleScript, /Sync diagnostics below shows the code, and Check cloud access tests Firestore directly\./);
+  assert.match(moduleScript, /firebaseConfig\.projectId/);
 });
