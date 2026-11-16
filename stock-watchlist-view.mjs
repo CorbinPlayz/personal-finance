@@ -69,7 +69,35 @@ export function renderStockQuote(symbol, quote, issue, state, now = Date.now()) 
   const when = quote.timestamp ? `<time datetime="${esc(new Date(quote.timestamp).toISOString())}">${esc(stamp(quote.timestamp))}</time>` : '';
   return `<div class="stock-value"><strong>${esc(usd(quote.price))}</strong>${change}</div><div class="stock-quote-meta"><strong class="${label === 'Live trade' ? 'stock-live' : ''}">${esc(label)} · Finnhub</strong>${when}${issue ? `<span class="stock-issue">${esc(issue)}; showing last price</span>` : ''}</div>`;
 }
-export function renderStockPage(symbols, state, quoteFor, issueFor, query = '') {
+// Where does a watchlist edit go right now? The page answers from the live sync
+// state rather than assuming, so it can say plainly when an edit is only on this
+// device and why. A recorded code is shown verbatim because the header status is
+// truncated on phones. This reports on the watchlist only: prices and the
+// Finnhub key are never saved anywhere (see the privacy note on the page).
+export function stockSaveStatus({
+  initializing = false, unavailable = false, signedIn = false, loading = false, saving = false,
+  synced = false, custom = true, code = '', protectedCloud = false, confirmedAt = 0,
+} = {}) {
+  const reason = typeof code === 'string' && code ? ` (${code})` : '';
+  if (unavailable) return { tone: 'warn', message: `Saved on this device only. Cloud sync is unavailable because Firebase did not load${reason}.`, action: 'Open sync diagnostics' };
+  if (initializing) return { tone: 'neutral', message: 'Checking whether you are signed in…' };
+  if (!signedIn) return { tone: 'neutral', message: 'Saved on this device only. Sign in with Google to save your list to your account too.' };
+  if (loading) return { tone: 'neutral', message: 'Checking your cloud copy…' };
+  if (saving) return { tone: 'neutral', message: 'Saving to your Google account…' };
+  if (!synced) return { tone: 'warn', message: `Saved on this device only. Cloud sync is paused${reason}.`, action: 'Open sync diagnostics' };
+  if (!custom) return { tone: 'neutral', message: 'Showing the starter list. Your first add or remove saves your own list to your Google account.' };
+  let when = '';
+  if (Number.isFinite(confirmedAt) && confirmedAt > 0) {
+    try { when = ' · confirmed ' + new Date(confirmedAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }).replace(/\s/g, '\u00a0'); } catch { when = ''; } // keep "9:46 PM" on one line
+  }
+  return { tone: 'ok', message: (protectedCloud ? 'Saved to your Google account, encrypted with your passphrase' : 'Saved to your Google account') + when + '.' };
+}
+export function renderStockSaveStatus(status) {
+  if (!status) return '';
+  const action = status.action ? `<button type="button" class="stock-save-link" data-action="page" data-page="Settings">${esc(status.action)}</button>` : '';
+  return `<span class="stock-save-dot" aria-hidden="true"></span><span class="stock-save-text">${esc(status.message)}</span>${action}`;
+}
+export function renderStockPage(symbols, state, quoteFor, issueFor, query = '', options = {}) {
   const connected = state.hasKey;
   const connection = connected
     ? `<div class="stock-connection-actions"><button type="button" class="stock-disconnect" data-action="stock-disconnect">Disconnect key</button></div>`
@@ -80,7 +108,7 @@ export function renderStockPage(symbols, state, quoteFor, issueFor, query = '') 
     <section class="stock-hero" aria-labelledby="stockIntroTitle"><div class="stock-intro"><div class="stock-kicker"><i aria-hidden="true"></i> A CLEARER VIEW OF THE MARKET</div><h2 id="stockIntroTitle">Keep an eye on what moves you.</h2><p>Start with a curated collection of popular stocks, then make the list your own. Connect an optional market-data key for real prices.</p><div class="stock-facts"><div class="stock-fact"><strong>${symbols.length}</strong><span>stocks watched</span></div><div class="stock-fact"><strong>50 max</strong><span>streaming at once</span></div><div class="stock-fact"><strong>~15 min</strong><span>snapshot refresh</span></div></div></div>
     <div class="stock-connect"><div class="stock-connect-head"><div><h3>Finnhub market data</h3><p>Use your own key; a free personal-use plan is available.</p></div><span class="stock-feed-dot" id="stockConnectionLabel" data-state="${state.fatal ? 'error' : esc(state.stream)}">${esc(stockConnectionLabel(state))}</span></div>${connection}<p class="stock-status" id="stockFeedStatus" role="status" aria-live="polite">${esc(stockStatusText(state))}</p><p class="stock-privacy"><a href="https://finnhub.io/register" target="_blank" rel="noopener noreferrer">Get a Finnhub key ↗</a> · The key stays in this tab's memory until disconnect, reload, account change, or workspace restore/clear. It is sent directly to Finnhub in request URLs and may be visible in browser tools, extensions, or provider logs. It is not in finance backups or cloud sync.</p></div></section>
     <div class="stock-disclosure"><span aria-hidden="true">i</span><div>Finnhub’s free plan is for personal use and currently allows 50 streaming symbols at once. Batches rotate every minute; snapshots refresh about every 15 minutes per ticker. Loading 100 snapshots takes about 2½ minutes or longer. Updates pause when Stocks is hidden or closed. One key supports one stream connection, so other tabs may interrupt it. Coverage, delays, rate limits and market closures affect prices. Trades can include extended-hours or special-condition transactions, not an official closing or executable price. Times are in your device’s local time. Verify before trading. <a href="https://finnhub.io/pricing" target="_blank" rel="noopener noreferrer">Pricing and terms ↗</a></div></div>
-    <section class="stock-list-panel" aria-labelledby="stockListTitle"><div class="stock-list-top"><div><h2 id="stockListTitle">Your watchlist</h2><p>Search, add or remove tickers. The list is saved with your Northstar workspace.</p></div><div class="stock-list-actions"><button type="button" data-action="stock-refresh" ${!connected || !symbols.length || state.fatal ? 'disabled' : ''}>Refresh snapshots</button><button type="button" data-action="stock-reset">Reset to starter 100</button></div></div>
+    <section class="stock-list-panel" aria-labelledby="stockListTitle"><div class="stock-list-top"><div><h2 id="stockListTitle">Your watchlist</h2><p>Search, add or remove tickers. The list is saved with your Northstar workspace.</p><p class="stock-save-status" id="stockSaveStatus" data-tone="${esc(options.save?.tone || 'neutral')}" role="status" aria-live="polite">${renderStockSaveStatus(options.save)}</p></div><div class="stock-list-actions"><button type="button" data-action="stock-refresh" ${!connected || !symbols.length || state.fatal ? 'disabled' : ''}>Refresh snapshots</button><button type="button" data-action="stock-reset">Reset to starter 100</button></div></div>
     <div class="stock-controls"><div><label for="stockSearch">Search this list</label><input class="stock-search-input" id="stockSearch" type="search" placeholder="Search company or symbol" value="${esc(query)}" autocomplete="off"></div><form class="stock-add-form" id="stockAddForm"><label for="stockTicker">Add a U.S.-listed ticker</label><div><input class="stock-add-input" id="stockTicker" name="symbol" placeholder="e.g. AAPL" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false" required><button type="submit">+ Add</button></div></form></div>
     <div class="stock-list-meta"><span id="stockResultCount" role="status" aria-live="polite">${symbols.length} ${symbols.length === 1 ? 'stock' : 'stocks'}</span><span>Last reported price · USD</span></div><ul class="stock-rows" id="stockRows">${rows}</ul><div class="stock-empty" id="stockEmpty" hidden><strong>No matching stocks</strong>Try another search or add a ticker above.</div></section>
     <p class="stock-footnote">Last prices are not guaranteed, may be delayed or unavailable, and do not represent your holdings or a quote you can trade at. Tickers you add are not validated against an exchange. This watchlist is not investment advice.</p>

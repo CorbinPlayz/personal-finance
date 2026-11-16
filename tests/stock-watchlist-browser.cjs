@@ -20,10 +20,10 @@ const fixture = {
 };
 const firebase = {
   'firebase-app.js': 'export function getApps(){return []} export function initializeApp(){return {}}',
-  'firebase-auth.js': 'export function getAuth(){return {currentUser:null}} export function onAuthStateChanged(auth,cb){window.__authCallback=cb;cb(null)} export class GoogleAuthProvider{}',
+  'firebase-auth.js': 'export function getAuth(){return {get currentUser(){return window.__mockCurrentUser??null}}} export function onAuthStateChanged(auth,cb){window.__authCallback=cb;cb(null)} export class GoogleAuthProvider{} export function getRedirectResult(){return Promise.resolve(null)}',
   'firebase-firestore.js': `export function getFirestore(){return {}} export function doc(){return {}}
-    export async function getDocFromServer(){const raw=window.__mockCloud??null;return {exists:()=>raw!==null,data:()=>raw}}
-    export async function runTransaction(db,callback){const raw=window.__mockCloud??null;let payload,options;
+    export async function getDocFromServer(){if(window.__mockReadError){const e=new Error('synthetic read failure');e.code=window.__mockReadError;throw e}const raw=window.__mockCloud??null;return {exists:()=>raw!==null,data:()=>raw}}
+    export async function runTransaction(db,callback){if(window.__mockWriteError){const e=new Error('synthetic write failure');e.code=window.__mockWriteError;throw e}const raw=window.__mockCloud??null;let payload,options;
       await callback({get:async()=>({exists:()=>raw!==null,data:()=>raw}),set:(_ref,value,opts)=>{payload=value;options=opts}});
       if(payload!==undefined){
         const map=value=>value&&typeof value==='object'&&!Array.isArray(value);
@@ -58,7 +58,7 @@ const server = http.createServer((req, res) => {
     if (process.env.STOCK_QA_ONLY && !name.toLowerCase().includes(process.env.STOCK_QA_ONLY.toLowerCase())) return;
     try { await fn(); console.log('PASS', name); passed++; } catch (error) { console.error('FAIL', name); throw error; }
   }
-  async function newPage({ width = 390, height = 844, mobile = true, data = fixture } = {}) {
+  async function newPage({ width = 390, height = 844, mobile = true, data = fixture, blockFirebase = false } = {}) {
     const page = await browser.newPage(); page.setDefaultTimeout(12000);
     await page.setViewport({ width, height, deviceScaleFactor: 1, isMobile: mobile, hasTouch: mobile });
     await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
@@ -68,7 +68,7 @@ const server = http.createServer((req, res) => {
       const url = request.url();
       if (url.startsWith(base + '/') || url.startsWith('data:')) return void request.continue();
       const name = Object.keys(firebase).find(item => url.endsWith('/' + item));
-      if (name) return void request.respond({ status: 200, contentType: 'text/javascript', headers: { 'Access-Control-Allow-Origin': '*' }, body: firebase[name] });
+      if (name && !blockFirebase) return void request.respond({ status: 200, contentType: 'text/javascript', headers: { 'Access-Control-Allow-Origin': '*' }, body: firebase[name] });
       request.abort();
     });
     await page.evaluateOnNewDocument(() => {
@@ -96,7 +96,7 @@ const server = http.createServer((req, res) => {
     await page.goto(base + '/blank');
     await page.evaluate(({ ledgerKey, data }) => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem('northstar-welcome-seen-v1', '1'); localStorage.setItem(ledgerKey, JSON.stringify(data)); }, { ledgerKey, data });
     await page.goto(base + '/personal-finance/', { waitUntil: 'domcontentloaded' });
-    await page.waitForFunction(() => typeof window.NorthstarLedger === 'function' && window.NorthstarLedger() && window.__authCallback);
+    await page.waitForFunction(blocked => typeof window.NorthstarLedger === 'function' && window.NorthstarLedger() && (blocked || window.__authCallback), {}, blockFirebase);
     return page;
   }
   async function nav(page, name) {
@@ -113,6 +113,14 @@ const server = http.createServer((req, res) => {
     await setInput(page, '#stockApiKey', 'browser-test-only-key'); await submit(page, '#stockConnectForm');
     await page.waitForFunction(() => document.querySelector('#stockConnectionLabel')?.innerText !== 'Not connected');
   }
+  // Mock sign-in through the page's own auth callback; `cloud` is the account's existing document (null = none).
+  async function signIn(page, { uid = 'alice', cloud = null } = {}) {
+    await page.evaluate(({ uid, cloud }) => { window.__mockCloud = cloud; window.__mockCurrentUser = { uid }; void window.__authCallback({ uid, displayName: 'Synthetic user' }); }, { uid, cloud });
+  }
+  const saveLine = page => page.$eval('#stockSaveStatus', el => ({ text: el.innerText.replace(/\s+/g, ' ').trim(), tone: el.dataset.tone, link: !!el.querySelector('.stock-save-link') }));
+  const waitForSaveTone = (page, tone) => page.waitForFunction(tone => document.querySelector('#stockSaveStatus')?.dataset.tone === tone && !document.querySelector('.app-shell').inert, {}, tone);
+  const toastText = page => page.$eval('#toastRoot .toast span:nth-of-type(2)', el => el.innerText.trim());
+  async function addTicker(page, symbol) { await setInput(page, '#stockTicker', symbol); await submit(page, '#stockAddForm'); }
   async function screenshot(page, name) {
     if (!process.env.STOCK_QA_SCREENSHOTS) return;
     fs.mkdirSync(process.env.STOCK_QA_SCREENSHOTS, { recursive: true });
@@ -571,6 +579,175 @@ const server = http.createServer((req, res) => {
       await page.close();
     });
 
+    await check('signed out, the Stocks page and toast say the list is only on this device', async () => {
+      const page = await newPage(); await nav(page, 'Stocks');
+      const line = await saveLine(page);
+      assert.equal(line.text, 'Saved on this device only. Sign in with Google to save your list to your account too.');
+      assert.equal(line.tone, 'neutral'); assert.equal(line.link, false);
+      await addTicker(page, 'synt');
+      assert.match(await toastText(page), /^SYNT added to your watchlist · saved on this device only$/);
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
+      await page.close();
+    });
+
+    await check('with confirmed cloud sync the line shows the account copy and every edit reaches the cloud document', async () => {
+      const page = await newPage(); await nav(page, 'Stocks');
+      await signIn(page); await waitForSaveTone(page, 'neutral');
+      // An untouched list is stored as null on purpose; the page says so instead of implying a saved custom list.
+      let line = await saveLine(page);
+      assert.match(line.text, /^Showing the starter list\. Your first add or remove saves your own list to your Google account\.$/);
+      assert.equal(await page.evaluate(() => window.__mockCloud.data.settings.stockWatchlist), null);
+      await addTicker(page, 'synt');
+      assert.match(await toastText(page), /^SYNT added to your watchlist · saving to your account…$/);
+      await page.waitForFunction(() => document.querySelector('#stockSaveStatus')?.dataset.tone === 'ok');
+      line = await saveLine(page);
+      assert.match(line.text, /^Saved to your Google account · confirmed \d{1,2}:\d{2}/); assert.equal(line.link, false);
+      await page.$eval('#stockSaveStatus', el => el.scrollIntoView({ block: 'center' })); await screenshot(page, 'stocks-save-ok-390');
+      let cloud = await page.evaluate(() => window.__mockCloud.data.settings.stockWatchlist);
+      assert.equal(cloud.length, 101); assert.equal(cloud.at(-1), 'SYNT');
+      await page.$eval('[data-action="stock-remove"][data-symbol="AAPL"]', el => el.click());
+      await page.waitForFunction(() => window.__mockCloud.data.settings.stockWatchlist.length === 100);
+      await page.waitForFunction(() => document.querySelector('#stockSaveStatus')?.dataset.tone === 'ok');
+      cloud = await page.evaluate(() => window.__mockCloud.data.settings.stockWatchlist);
+      assert.equal(cloud.includes('AAPL'), false); assert.equal(cloud.includes('SYNT'), true);
+      // A second device that signs in to the same account sees the edited list.
+      const blank = { version: 1, accounts: [], transactions: [], budgets: [], goals: [], purchases: [], settings: { currency: 'USD' } };
+      const other = await newPage({ data: blank }); await nav(other, 'Stocks'); // a fresh device has nothing of its own to protect
+      await signIn(other, { cloud: await page.evaluate(() => window.__mockCloud) }); await waitForSaveTone(other, 'ok');
+      assert.equal(await other.$$eval('#stockRows .stock-row', rows => rows.length), 100);
+      assert.equal(await other.$('[data-stock-symbol="SYNT"]') !== null, true); assert.equal(await other.$('[data-stock-symbol="AAPL"]'), null);
+      await page.close(); await other.close();
+    });
+
+    await check('a paused cloud sync is stated with its code, keeps edits on the device, and the link reaches diagnostics until a retry saves them', async () => {
+      const page = await newPage(); await nav(page, 'Stocks');
+      await page.evaluate(() => { window.__mockReadError = 'permission-denied'; });
+      await signIn(page); await waitForSaveTone(page, 'warn');
+      let line = await saveLine(page);
+      assert.equal(line.text, 'Saved on this device only. Cloud sync is paused (permission-denied). Open sync diagnostics');
+      assert.equal(line.link, true);
+      await addTicker(page, 'synt');
+      assert.match(await toastText(page), /^SYNT added to your watchlist · saved on this device only; cloud sync is paused$/);
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:alice')).settings.stockWatchlist.at(-1)), 'SYNT');
+      line = await saveLine(page); assert.equal(line.tone, 'warn');
+      // The link opens Settings → Sync diagnostics, which names the same code.
+      await page.$eval('.stock-save-link', el => el.click());
+      await page.waitForFunction(() => document.querySelector('#content')?.dataset.page === 'Settings');
+      assert.match(await text(page, '#syncDiagnosticsPanel'), /permission-denied/);
+      // Once the cause is fixed, Retry loads the cloud copy and uploads the edit that was waiting on the device.
+      await page.evaluate(() => { window.__mockReadError = null; });
+      await page.$eval('[data-action="retry-sync"]', el => el.click());
+      await page.waitForFunction(() => window.__cloudWrites?.length >= 1 && !document.querySelector('.app-shell').inert);
+      assert.equal(await page.evaluate(() => window.__mockCloud.data.settings.stockWatchlist.at(-1)), 'SYNT');
+      await nav(page, 'Stocks'); await waitForSaveTone(page, 'ok');
+      assert.match((await saveLine(page)).text, /^Saved to your Google account · confirmed/);
+      await page.close();
+    });
+
+    await check('a cloud write that fails after sync was confirmed flips the line to paused and never claims the edit was saved', async () => {
+      const page = await newPage(); await nav(page, 'Stocks');
+      await signIn(page); await waitForSaveTone(page, 'neutral');
+      const writesBefore = await page.evaluate(() => window.__cloudWrites?.length || 0); // the first sign-in uploads once
+      await page.evaluate(() => { window.__mockWriteError = 'unavailable'; });
+      await addTicker(page, 'synt');
+      await waitForSaveTone(page, 'warn');
+      const line = await saveLine(page);
+      assert.match(line.text, /^Saved on this device only\. Cloud sync is paused \(unavailable\)\./); assert.equal(line.link, true);
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), writesBefore, 'the failed write stored nothing');
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:alice')).settings.stockWatchlist.at(-1)), 'SYNT');
+      assert.equal(await page.evaluate(() => window.__mockCloud.data.settings.stockWatchlist), null, 'the cloud copy is untouched, not half-written');
+      await page.close();
+    });
+
+    await check('typing in the search box survives a cloud save, whether it succeeds or fails', async () => {
+      const page = await newPage(); await nav(page, 'Stocks');
+      await signIn(page); await waitForSaveTone(page, 'neutral');
+      const frame = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      for (const failure of [false, true]) {
+        await page.evaluate(failure => { window.__mockWriteError = failure ? 'unavailable' : null; }, failure);
+        await setInput(page, '#stockSearch', ''); await addTicker(page, failure ? 'fail' : 'good');
+        await frame(); // the add form returns focus to itself on the next frame; type after that
+        await page.focus('#stockSearch'); await page.keyboard.type('app');
+        assert.equal(await page.$eval('.stock-save-text', el => el.innerText), 'Saving to your Google account…', 'the save is still in flight while the visitor types');
+        await waitForSaveTone(page, failure ? 'warn' : 'ok');
+        assert.equal(await page.evaluate(() => document.activeElement.id), 'stockSearch', failure ? 'focus after a failed save' : 'focus after a confirmed save');
+        assert.equal(await page.$eval('#stockSearch', el => el.value), 'app');
+      }
+      await page.close();
+    });
+
+    await check('a pending save dropped by an outside sign-out (another tab) never leaves the line on Saving and uploads nothing', async () => {
+      const page = await newPage(); await nav(page, 'Stocks');
+      await signIn(page); await waitForSaveTone(page, 'neutral');
+      const writesBefore = await page.evaluate(() => window.__cloudWrites?.length || 0);
+      await addTicker(page, 'synt');
+      assert.equal(await page.$eval('.stock-save-text', el => el.innerText), 'Saving to your Google account…');
+      await page.evaluate(() => { window.__mockCurrentUser = null; void window.__authCallback(null); });
+      await page.waitForFunction(() => /Sign in with Google/.test(document.querySelector('#stockSaveStatus')?.innerText || ''));
+      await new Promise(resolve => setTimeout(resolve, 1000)); // longer than the 700 ms save delay
+      assert.doesNotMatch((await saveLine(page)).text, /Saving/);
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), writesBefore, 'the cancelled save wrote nothing');
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:alice')).settings.stockWatchlist.at(-1)), 'SYNT', 'the edit stays in the account\'s device copy');
+      await page.close();
+    });
+
+    await check('when the Firebase SDK cannot load, the Stocks page says cloud sync is unavailable and points to diagnostics', async () => {
+      const page = await newPage({ blockFirebase: true }); await nav(page, 'Stocks');
+      await waitForSaveTone(page, 'warn');
+      const line = await saveLine(page);
+      assert.match(line.text, /^Saved on this device only\. Cloud sync is unavailable because Firebase did not load( \(\S+\))?\. Open sync diagnostics$/);
+      assert.equal(line.link, true);
+      await addTicker(page, 'synt');
+      assert.match(await toastText(page), /^SYNT added to your watchlist · saved on this device only$/);
+      assert.equal(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist.at(-1)), 'SYNT');
+      await page.close();
+    });
+
+    async function openProtectedWorkspace() {
+      const page = await newPage({ width: 1000, height: 800, mobile: false });
+      const uid = 'stock-test-user', password = 'stock-test-passphrase';
+      const raw = await page.evaluate(async ({ uid, password, fixture }) => {
+        const { newKdf, deriveVaultKey, encryptLedger } = await import('/personal-finance/vault-crypto.mjs');
+        const kdf = newKdf(), key = await deriveVaultKey(password, kdf), raw = JSON.stringify(await encryptLedger(fixture, key, kdf));
+        localStorage.setItem('northstar-vault-v1:' + uid, raw); localStorage.setItem('northstar-vault-active-v1', JSON.stringify({ uid, phase: 'active' }));
+        return raw;
+      }, { uid, password, fixture });
+      await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForSelector('#vaultUnlockPass');
+      await page.type('#vaultUnlockPass', password); await page.click('#vaultUnlockSubmit');
+      await page.waitForFunction(() => !window.NorthstarVaultLocked && window.NorthstarLedger?.()); await nav(page, 'Stocks');
+      return { page, uid, raw };
+    }
+
+    await check('a protected workspace with no protected cloud copy is reported as paused, never as saved to the account', async () => {
+      const { page, uid } = await openProtectedWorkspace();
+      await signIn(page, { uid }); await waitForSaveTone(page, 'warn');
+      const line = await saveLine(page);
+      assert.match(line.text, /^Saved on this device only\. Cloud sync is paused \(northstar\/conflict\)\. Open sync diagnostics$/); assert.equal(line.link, true);
+      await addTicker(page, 'synt');
+      assert.match(await toastText(page), /^SYNT added to your watchlist · saving protected device copy…$/); // the encrypted path keeps its own wording
+      await waitForSaveTone(page, 'warn'); assert.match((await saveLine(page)).text, /\(northstar\/conflict\)/);
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'a protected workspace is never uploaded without an explicit choice');
+      await page.close();
+    });
+
+    await check('a signed-in protected workspace saves the edit encrypted to the cloud and the line says so only after the write', async () => {
+      const { page, uid, raw } = await openProtectedWorkspace();
+      await signIn(page, { uid, cloud: JSON.parse(raw) }); await waitForSaveTone(page, 'neutral');
+      assert.match((await saveLine(page)).text, /^Showing the starter list\./);
+      await addTicker(page, 'synt');
+      assert.equal(await page.$eval('.stock-save-text', el => el.innerText), 'Saving to your Google account…', 'not claimed before the encrypted write');
+      await page.waitForFunction(() => /^Saved to your Google account, encrypted with your passphrase · confirmed/.test(document.querySelector('#stockSaveStatus')?.innerText || ''));
+      const cloud = await page.evaluate(() => JSON.stringify(window.__mockCloud));
+      assert.match(cloud, /"format"/); assert.doesNotMatch(cloud, /SYNT|Synthetic checking|browser-test-only-key/);
+      // A protected save that cannot reach the cloud is reported as paused, never as saved.
+      await page.evaluate(() => { window.__mockWriteError = 'unavailable'; });
+      await page.$eval('[data-action="stock-remove"][data-symbol="SYNT"]', el => el.click());
+      await waitForSaveTone(page, 'warn');
+      assert.match((await saveLine(page)).text, /^Saved on this device only\. Cloud sync is paused \(unavailable\)\./);
+      await page.close();
+    });
+
     await check('watchlist controls and rows fit narrow phones, tablet, and desktop with accessible targets', async () => {
       for (const [width, height, mobile] of [[320, 568, true], [390, 844, true], [768, 1024, true], [1440, 900, false]]) {
         const page = await newPage({ width, height, mobile }); await nav(page, 'Stocks');
@@ -584,6 +761,46 @@ const server = http.createServer((req, res) => {
         for (const r of layout.rects.filter(r => r.selector.includes('data-action'))) assert.ok(r.width >= 44 && r.height >= 44, `${width}: small target ${JSON.stringify(r)}`);
         await screenshot(page, `stocks-${width}`); await page.close();
       }
+    });
+
+    await check('the paused save line and its link fit narrow phones, tablet, and desktop with accessible targets', async () => {
+      for (const [width, height, mobile] of [[320, 568, true], [390, 844, true], [768, 1024, true], [1440, 900, false]]) {
+        const page = await newPage({ width, height, mobile }); await nav(page, 'Stocks');
+        await page.evaluate(() => { window.__mockReadError = 'permission-denied'; });
+        await signIn(page); await waitForSaveTone(page, 'warn');
+        const layout = await page.evaluate(() => {
+          const box = el => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, width: r.width, height: r.height }; };
+          const status = document.querySelector('#stockSaveStatus'), top = document.querySelector('.stock-list-top');
+          return { documentWidth: document.documentElement.scrollWidth, status: box(status), top: box(top),
+            link: box(document.querySelector('.stock-save-link[data-action="page"]')), text: box(document.querySelector('.stock-save-text')),
+            clipped: status.scrollWidth > status.clientWidth + 1 };
+        });
+        assert.ok(layout.documentWidth <= width + 1, `${width}: horizontal overflow ${JSON.stringify(layout)}`);
+        for (const [name, r] of Object.entries({ status: layout.status, link: layout.link, text: layout.text })) assert.ok(r.left >= -1 && r.right <= width + 1, `${width}: ${name} outside viewport ${JSON.stringify(r)}`);
+        assert.ok(layout.status.right <= layout.top.right + 1, `${width}: status wider than its panel ${JSON.stringify(layout)}`);
+        assert.equal(layout.clipped, false, `${width}: status text is clipped`);
+        assert.ok(layout.link.width >= 44 && layout.link.height >= 44, `${width}: small target ${JSON.stringify(layout.link)}`);
+        await page.evaluate(() => { document.querySelector('#toastRoot').innerHTML = ''; }); // the failure toast would cover the link in a screenshot
+        await page.$eval('#stockSaveStatus', el => el.scrollIntoView({ block: 'center' }));
+        await screenshot(page, `stocks-save-paused-${width}`); await page.close();
+      }
+    });
+
+    await check('the save line passes scoped automated WCAG checks in its neutral, confirmed, and paused states', async () => {
+      const page = await newPage({ width: 1000, height: 800, mobile: false }); await nav(page, 'Stocks');
+      await page.addScriptTag({ path: axePath });
+      const audit = () => page.evaluate(async () => {
+        const result = await window.axe.run(document.querySelector('.stock-list-top'), { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } });
+        return { tone: document.querySelector('#stockSaveStatus').dataset.tone, violations: result.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => ({ target: n.target, summary: n.failureSummary })) })) };
+      });
+      const seen = [await audit()];
+      await signIn(page); await waitForSaveTone(page, 'neutral'); await addTicker(page, 'synt');
+      await page.waitForFunction(() => document.querySelector('#stockSaveStatus')?.dataset.tone === 'ok'); seen.push(await audit());
+      await page.evaluate(() => { window.__mockWriteError = 'unavailable'; });
+      await page.$eval('[data-action="stock-remove"][data-symbol="SYNT"]', el => el.click()); await waitForSaveTone(page, 'warn'); seen.push(await audit());
+      assert.deepEqual(seen.map(item => item.tone), ['neutral', 'ok', 'warn']);
+      for (const item of seen) assert.deepEqual(item.violations, [], `${item.tone}: ${JSON.stringify(item.violations, null, 2)}`);
+      await page.close();
     });
 
     await check('the watchlist passes scoped automated WCAG checks', async () => {

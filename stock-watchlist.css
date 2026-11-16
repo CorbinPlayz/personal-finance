@@ -42,6 +42,14 @@
 .stock-list-top{display:flex;align-items:start;justify-content:space-between;gap:15px;padding:21px 22px 14px}
 .stock-list-top h2{margin:0;color:#191b20;font-family:Manrope,sans-serif;font-size:17px;letter-spacing:-.025em}
 .stock-list-top p{margin:5px 0 0;color:#686d75;font-size:11px;line-height:1.45}
+.stock-list-top .stock-save-status{display:flex;flex-wrap:wrap;align-items:center;gap:4px 9px;margin:10px 0 0;padding:7px 11px;border:1px solid #e1e3e6;border-radius:9px;background:#f6f7f8;color:#4b5059;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.stock-save-text{flex:1 1 200px;min-width:0}
+.stock-save-dot{flex:none;width:8px;height:8px;border-radius:50%;background:#8b919b}
+.stock-save-status[data-tone="ok"]{border-color:#cfe6d8;background:#f0f8f3;color:#1f5d3d}
+.stock-save-status[data-tone="ok"] .stock-save-dot{background:#2f9e68}
+.stock-save-status[data-tone="warn"]{border-color:#f1d3bf;background:#fff5ee;color:#80350f}
+.stock-save-status[data-tone="warn"] .stock-save-dot{background:#d4682a}
+.stock-save-link{flex:none;min-height:44px;padding:0 6px;border:0;background:none;color:inherit;font:inherit;font-weight:800;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .stock-list-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
 .stock-list-actions button{min-height:44px;padding:8px 11px;border:1px solid #d6d9dd;border-radius:8px;background:#fff;color:#31363e;font-size:11px;font-weight:700}
 .stock-list-actions button:hover{background:#f3f4f5}

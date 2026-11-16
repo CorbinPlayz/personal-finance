@@ -197,7 +197,7 @@ test('locking flushes pending protected changes before reload and clears the sav
   let flushed = false, wrote = false, reloaded = false, status = 'Saving…';
   const context = vm.createContext({
     vault: { state: 'unlocked' }, user: { uid: 'alice' }, cloudLoaded: true, lastSyncError: null, saveTimer: 1,
-    setCloudLoading: () => {}, flushProtectedLocal: async () => { flushed = true; }, clearTimeout: () => {},
+    setCloudLoading: () => {}, flushProtectedLocal: async () => { flushed = true; }, clearTimeout: () => {}, cancelCloudSave: () => {},
     writeCloudNow: async () => { assert.equal(flushed, true); wrote = true; },
     setSync: value => { status = value; }, showToast: () => {}, showNorthstarDialog: async () => false,
     firebaseErrorCode: () => 'northstar/app', syncFailureStatus: () => 'sync needs attention', reportSyncIssue: () => 'northstar/app', clearSyncIssue: () => {},

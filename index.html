@@ -1643,7 +1643,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 import { looksEncrypted, validateEnvelope, newKdf, deriveVaultKey, encryptLedger, decryptLedger, sameKdf } from './vault-crypto.mjs';
 import { renderCashFlowGraph, renderCategoryGraph, renderTransactionGraph, renderAccountGraph, renderBudgetGraph, renderGoalGraph, renderPurchaseGraph, renderWorkspaceCountGraph, renderGuideProfileGraph, renderPriceChecksGraph, renderScenarioPanel, renderScenarioResult } from './financial-graphs-view.mjs';
 import { createStockFeed, watchlistSymbols, starterSymbols, normalizeSymbol, MAX_WATCHLIST } from './stock-watchlist.mjs';
-import { renderStockPage, renderStockQuote, stockStatusText, stockConnectionLabel, nextStockLabelChange } from './stock-watchlist-view.mjs';
+import { renderStockPage, renderStockQuote, renderStockSaveStatus, stockSaveStatus, stockStatusText, stockConnectionLabel, nextStockLabelChange } from './stock-watchlist-view.mjs';
 const FIREBASE_VERSION='13.1.0';
 const firebaseConfig={apiKey:'AIzaSyC8f5T4LzZRuhii3SwgFDrf8tpLZNEqnKw',authDomain:'northstar-personal-finan-ca543.firebaseapp.com',projectId:'northstar-personal-finan-ca543',storageBucket:'northstar-personal-finan-ca543.firebasestorage.app',messagingSenderId:'1009926915952',appId:'1:1009926915952:web:4c0027a0b1082c770971b5',measurementId:'G-S3DTKY24TP'};
 const CATEGORIES=['Housing','Food','Transport','Shopping','Entertainment','Bills','Health','Education','Income','Other'];
@@ -1702,6 +1702,9 @@ let vault={state:initialVaultMarker?'locked':'off',uid:initialVaultMarker?.uid||
 window.NorthstarVaultLocked=vault.state==='locked';
 let data=vault.state==='locked'?blankData():loadLocal('local'),page='Overview',purchaseDetailId=null,completedPurchaseQuery='',query='',txTypeFilter='All',txMonthFilter='All',modalState=null,toastTimer=null,saveTimer=null,user=null,fb=null,cloudLoaded=false,authReady=false,signingIn=false,lastSyncError=null,confirmResolver=null,confirmChoices=[],confirmCleanup=null;
 let cloudEpoch=0,cloudFingerprint=undefined,cloudWriteTail=Promise.resolve(),vaultWriteTail=Promise.resolve(),syncLoading=false,deferredDeviceWorkspace=null;
+// Display only (Stocks save line): when the cloud last confirmed this device's copy, whether a save is in flight,
+// and whether Firebase has reported the sign-in state at least once.
+let cloudSavedAt=0,cloudSaving=false,cloudSaveTicket=0,authResolved=false;
 // Quotes and the visitor-supplied provider key never enter the finance ledger.
 let stockQuery='',stockPaintFrame=null,stockPaintAll=false,stockLabelTimer=null,stockLabelDeadline=null;const stockDirty=new Set();
 const stockFeed=createStockFeed({onQuote:symbol=>scheduleStockPaint(symbol),onStatus:()=>scheduleStockPaint()});
@@ -1893,7 +1896,7 @@ function celebrateSavedGoal(goal,status){
  }).catch(e=>console.warn('Goal celebration was skipped.',e));
 }
 function showToast(text){const root=$('toastRoot');root.innerHTML=`<div class="toast"><span>✓</span><span>${esc(text)}</span><button data-action="dismiss-toast" aria-label="Dismiss">×</button></div>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>root.replaceChildren(),3500)}
-function setSync(text,kind=''){const el=$('syncStatus');el.textContent=text;el.title=text;el.className='sync-state'+(kind?' '+kind:'')}
+function setSync(text,kind=''){const el=$('syncStatus');el.textContent=text;el.title=text;el.className='sync-state'+(kind?' '+kind:'');updateStockSaveStatus()}
 /* Every paused sync keeps a code, a short reason, and a timestamp on this device.
    The header status text is width-limited on a phone, so the same record also
    feeds a banner and the Settings diagnostics panel; nothing depends on a
@@ -2049,12 +2052,28 @@ function render(){
  $('breadcrumbTitle').textContent=page;const avatar=$('avatar'),identity=(user?.displayName||user?.email||'').trim();if(identity){avatar.textContent=identity.charAt(0).toUpperCase();avatar.classList.add('user-avatar');avatar.setAttribute('aria-label','Signed in as '+identity)}else{avatar.innerHTML=`<svg class="avatar-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgAvatarRender" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarAvatarRender" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgAvatarRender)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarAvatarRender)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg>`;avatar.classList.remove('user-avatar');avatar.setAttribute('aria-label','Northstar logo')}
  $('signInBtn').classList.toggle('hidden',!!user);$('signOutBtn').classList.toggle('hidden',!user);
  const reminderCount=getReminders().length;$('reminderCount').textContent=reminderCount;$('reminderCount').classList.toggle('hidden',!reminderCount);$('mobileDock')?.querySelector('.dock-item[data-page="Purchases"]')?.setAttribute('aria-label','Plan'+(reminderCount?' '+reminderCount+' reminder'+(reminderCount===1?'':'s'):'')+' · Purchase planner');
- const main=$('content');main.dataset.page=page;main.innerHTML=page==='Overview'?renderOverview():page==='Transactions'?renderTransactions():page==='Accounts'?renderAccounts():page==='Budgets'?renderBudgets():page==='Goals'?renderGoals():page==='Purchases'?renderPurchases():page==='Stocks'?renderStockPage(watchlistSymbols(data.settings),stockFeed.getState(),stockFeed.quoteFor,stockFeed.issueFor,stockQuery):page==='Guide'?renderGuide():renderSettings();renderDock();
+ const main=$('content');main.dataset.page=page;main.innerHTML=page==='Overview'?renderOverview():page==='Transactions'?renderTransactions():page==='Accounts'?renderAccounts():page==='Budgets'?renderBudgets():page==='Goals'?renderGoals():page==='Purchases'?renderPurchases():page==='Stocks'?renderStockPage(watchlistSymbols(data.settings),stockFeed.getState(),stockFeed.quoteFor,stockFeed.issueFor,stockQuery,{save:stockSaveState()}):page==='Guide'?renderGuide():renderSettings();renderDock();
  if(page==='Stocks')filterStocks(stockQuery);syncStockFeed();
  renderModal();
 }
 /* Stock symbols are workspace data. Provider prices and the key are transient;
    showing or refreshing prices must never change balances or finance records. */
+/* Where does a watchlist edit go right now? Derived from the live sync state, never assumed. */
+function stockSaveState(){
+ const code=syncIssue?.code||(lastSyncError?firebaseErrorCode(lastSyncError):'');
+ return stockSaveStatus({unavailable:authReady&&!fb,initializing:!authResolved,signedIn:!!user,loading:syncLoading,saving:cloudSaving,
+  synced:!!user&&cloudLoaded&&!lastSyncError,custom:Array.isArray(data.settings?.stockWatchlist),code,protectedCloud:vault.state==='unlocked',confirmedAt:cloudSavedAt});
+}
+/* setSync runs on every sync change; update the line in place so typing in the search or add box is never interrupted. */
+function updateStockSaveStatus(){
+ const el=$('stockSaveStatus');if(!el)return;
+ const status=stockSaveState(),html=renderStockSaveStatus(status);
+ el.dataset.tone=status.tone;if(el.dataset.signature!==html){el.dataset.signature=html;el.innerHTML=html}
+}
+function stockSaveSuffix(){
+ if(!user)return' · saved on this device only';
+ return cloudLoaded&&!lastSyncError?' · saving to your account…':' · saved on this device only; cloud sync is paused';
+}
 function syncStockFeed(){
  stockFeed.setSymbols(watchlistSymbols(data.settings));
  const active=page==='Stocks'&&!document.hidden&&!syncLoading&&!window.NorthstarVaultLocked&&!isWelcomeVisible();
@@ -2095,7 +2114,7 @@ function focusStockControl(selector){requestAnimationFrame(()=>{const el=$('cont
 function saveStockSymbols(symbols,message,focusSelector){
  if(!canEditStocks())return;
  data={...data,settings:{...data.settings,stockWatchlist:symbols}};
- const saved=persist();if(saved!==false)showToast(saved==='pending'?message+' · saving protected device copy…':message);
+ const saved=persist();if(saved!==false)showToast(saved==='pending'?message+' · saving protected device copy…':message+stockSaveSuffix());
  if(focusSelector)focusStockControl(focusSelector);
 }
 function connectStocks(e){
@@ -2626,7 +2645,7 @@ function setVaultLocked(locked){
  updateBackgroundAvailability();
 }
 function protectedSaveError(error){
- vault.error=error;cloudLoaded=false;lastSyncError=error;
+ vault.error=error;cloudLoaded=false;lastSyncError=error;cloudSaving=false;
  const code=reportSyncIssue(error,'Device save');
  setSync(syncFailureStatus('Device save',error),'err');
  showToast(`Protected data was not saved [${code}]. Export an encrypted backup before leaving, then resolve the device storage conflict.`);
@@ -2635,7 +2654,7 @@ function protectedSaveError(error){
 function queueProtectedLocalSave(){
  const session=vault.session,uid=vault.uid,key=vault.key,kdf={...vault.kdf},seq=++vault.editSeq;
  const snapshot=JSON.parse(JSON.stringify(data));
- setSync('Saving protected copy…');
+ cloudSaving=true;setSync('Saving protected copy…');
  const task=vaultWriteTail.catch(()=>{}).then(()=>withVaultDeviceLock(uid,async()=>{
   if(vault.state!=='unlocked'||vault.session!==session)throw new Error('Protected workspace changed while saving.');
   if(readVaultMarker()?.uid!==uid||localStorage.getItem(vaultKey(uid))!==vault.localRaw)throw new Error('The protected device copy changed in another tab.');
@@ -2647,8 +2666,7 @@ function queueProtectedLocalSave(){
   if(seq===vault.editSeq){
    vault.error=null;
    if(user?.uid===uid&&cloudLoaded)queueCloudSave();
-   else if(user)setSync(user.uid!==uid?'Account mismatch · sync paused':'Protected device · cloud sync paused','err');
-   else setSync('Protected device · local only','ok');
+   else{cloudSaving=false;if(user)setSync(user.uid!==uid?'Account mismatch · sync paused':'Protected device · cloud sync paused','err');else setSync('Protected device · local only','ok')}
    if(page==='Settings')render();
   }
  }));
@@ -2695,7 +2713,7 @@ async function enableVault(){
  try{if(localStorage.getItem(vaultKey(uid))){showToast('A protected copy already exists for this account. Reconnect to that workspace instead of overwriting it.');return}}catch{showToast('Browser storage is unavailable. Protection was not enabled.');return}
  const setup=await askVaultSetup();if(!setup)return;
  if(!user||user.uid!==uid||epoch!==cloudEpoch||!cloudLoaded){showToast('The account changed. Protection was not enabled.');return}
- setCloudLoading(true);setSync('Protecting workspace…');clearTimeout(saveTimer);
+ setCloudLoading(true);setSync('Protecting workspace…');cancelCloudSave();
  let stageRaw=null,markerWritten=false,protectedState=null;
  try{
   // Flush prior plaintext edits before taking the exact snapshot we protect.
@@ -2783,7 +2801,7 @@ async function lockProtectedWorkspace(){
  if(vault.state!=='unlocked')return;
  setCloudLoading(true);
  try{
-  await flushProtectedLocal();clearTimeout(saveTimer);
+  await flushProtectedLocal();cancelCloudSave();
   if(user&&cloudLoaded){try{await writeCloudNow();lastSyncError=null;clearSyncIssue();setSync('Protected cloud sync on','ok')}catch(error){cloudLoaded=false;lastSyncError=error;reportSyncIssue(error,'Protected sync');setSync(syncFailureStatus('Protected sync',error),'err')}}
  }catch(error){setCloudLoading(false);showToast('Protected changes are not safely saved. Export an encrypted backup before leaving.');return}
  setCloudLoading(false);
@@ -2913,7 +2931,7 @@ function cloudWritePayload(payload,uid=user?.uid,epoch=cloudEpoch){
    else{written=mergePlainCloudValue(remote,payload);transaction.set(ref,payload,{merge:true})}
   });
   if(user?.uid!==uid||epoch!==cloudEpoch)throw syncConflict('The signed-in account changed during the cloud save.');
-  cloudFingerprint=cloudSignature(written);
+  cloudFingerprint=cloudSignature(written);cloudSavedAt=Date.now();
  });
  cloudWriteTail=job.catch(()=>{});return job;
 }
@@ -2929,12 +2947,13 @@ async function writeCloudNow(){
  return cloudWritePayload({data:safeData,updatedAt:Date.now(),schemaVersion:1},uid,epoch);
 }
 async function onAuthChanged(current){
+ authResolved=true;
  if((user?.uid||null)!==(current?.uid||null)){
   // A provider key or deferred copy must not follow a different account.
   deferredDeviceWorkspace=null;stockFeed.disconnect();
   try{window.NorthstarJarvis?.resetWorkspace?.()}catch(e){console.warn('Assistant workspace reset was skipped.',e)}
  }
- const epoch=++cloudEpoch;clearTimeout(saveTimer);cloudLoaded=false;cloudFingerprint=undefined;
+ const epoch=++cloudEpoch;cancelCloudSave();cloudLoaded=false;cloudFingerprint=undefined;
  if(vault.state==='locked'){
   user=current;lastSyncError=null;setCloudLoading(false);setSync('Protected workspace locked');return;
  }
@@ -3003,7 +3022,7 @@ async function onAuthChanged(current){
   }else{data=chosen;await writeCloudNow()}
   checkDeviceCopy();
   localStorage.setItem(localKey(current.uid),JSON.stringify(data));
-  cloudLoaded=true;lastSyncError=null;clearSyncIssue();setSync('Cloud sync on','ok');
+  cloudLoaded=true;lastSyncError=null;cloudSavedAt=Date.now();clearSyncIssue();setSync('Cloud sync on','ok');
  }catch(e){
   if(epoch!==cloudEpoch)return;
   // If another tab changed the account slot, keep that newer device copy as
@@ -3052,7 +3071,7 @@ async function syncProtected(current,epoch=cloudEpoch){
     });
    }else{lastSyncError=syncConflict('Choose which protected copy to keep to resume cloud sync.');reportSyncIssue(lastSyncError,'Protected sync');setSync(`Protected sync conflict · ${firebaseErrorCode(lastSyncError)}`,'err');return}
   }
-  vaultMarkerWrite(uid,'active');cloudLoaded=true;lastSyncError=null;clearSyncIssue();setSync('Protected cloud sync on','ok');
+  vaultMarkerWrite(uid,'active');cloudLoaded=true;lastSyncError=null;cloudSavedAt=Date.now();clearSyncIssue();setSync('Protected cloud sync on','ok');
  }catch(error){
   if(epoch!==cloudEpoch)return;
   console.error('Northstar protected sync stopped safely.',error);cloudLoaded=false;lastSyncError=error;const code=reportSyncIssue(error,'Protected sync');setSync(syncFailureStatus('Protected sync',error),'err');showToast(`${error?.message||'Protected sync failed'} [${code}] Your device copy was kept.`);
@@ -3123,12 +3142,18 @@ async function checkCloudAccess(){
  }
  finally{setCloudLoading(false);render()}
 }
+// Every place that drops a pending save goes through here, so the Stocks line never claims a cancelled save is running.
+function cancelCloudSave(){clearTimeout(saveTimer);cloudSaving=false}
+// The Stocks page shows its own save line, updated in place by setSync, so a full render there would only wipe
+// whatever the visitor is typing in the search or add box a second after an edit.
+function renderAfterCloudSave(){if(page!=='Stocks')render()}
 function queueCloudSave(){
- clearTimeout(saveTimer);setSync('Saving…');
+ clearTimeout(saveTimer);const ticket=++cloudSaveTicket;cloudSaving=true;setSync('Saving…');
  saveTimer=setTimeout(async()=>{
   const uid=user?.uid,epoch=cloudEpoch;
-  try{await writeCloudNow();if(epoch!==cloudEpoch||user?.uid!==uid)return;lastSyncError=null;clearSyncIssue();setSync(vault.state==='unlocked'?'Protected cloud sync on':'Cloud sync on','ok');render()}
-  catch(e){if(epoch!==cloudEpoch)return;cloudLoaded=false;lastSyncError=e;console.error('Northstar cloud save failed',e);reportSyncIssue(e,'Cloud save');setSync(syncFailureStatus('Cloud sync',e),'err');render();showToast(`${firebaseErrorDetails(e,'Cloud save')} Your device copy is still available.`)}
+  try{await writeCloudNow();if(epoch!==cloudEpoch||user?.uid!==uid)return;lastSyncError=null;clearSyncIssue();if(ticket===cloudSaveTicket)cloudSaving=false;setSync(vault.state==='unlocked'?'Protected cloud sync on':'Cloud sync on','ok');renderAfterCloudSave()}
+  catch(e){if(epoch!==cloudEpoch)return;cloudLoaded=false;lastSyncError=e;console.error('Northstar cloud save failed',e);reportSyncIssue(e,'Cloud save');if(ticket===cloudSaveTicket)cloudSaving=false;setSync(syncFailureStatus('Cloud sync',e),'err');renderAfterCloudSave();showToast(`${firebaseErrorDetails(e,'Cloud save')} Your device copy is still available.`)}
+  finally{if(ticket===cloudSaveTicket&&cloudSaving){cloudSaving=false;updateStockSaveStatus()}}
  },700);
 }
 /* iOS Safari and an installed home-screen app cannot reliably show an OAuth
@@ -3175,7 +3200,7 @@ async function handleGoogleSignOut(){
  if(!fb)return;setCloudLoading(true);
  try{
   if(vault.state==='unlocked')await flushProtectedLocal();
-  clearTimeout(saveTimer);
+  cancelCloudSave();
   if(user&&cloudLoaded){try{await writeCloudNow()}catch(error){cloudLoaded=false;lastSyncError=error;reportSyncIssue(error,'Cloud save');setSync(syncFailureStatus('Cloud sync',error),'err')}}
   setCloudLoading(false);
   if(user&&!cloudLoaded){const ok=await showNorthstarDialog({title:'Sign out with sync paused?',message:'The latest changes may only be available on this device.',detail:'Keep a backup and reconnect later to review the cloud copy.',icon:'☁',confirmText:'Sign out',cancelText:'Stay signed in'});if(ok!==true)return}

@@ -56,7 +56,7 @@ const server = http.createServer((req, res) => {
 });
 const firebase = {
   'firebase-app.js': 'export function getApps(){return []} export function initializeApp(){return {}}',
-  'firebase-auth.js': 'export function getAuth(){return {currentUser:null}} export function onAuthStateChanged(auth,cb){window.__authCallback=cb;cb(null)} export class GoogleAuthProvider{}',
+  'firebase-auth.js': 'export function getAuth(){return {currentUser:null}} export function onAuthStateChanged(auth,cb){window.__authCallback=cb;cb(null)} export class GoogleAuthProvider{} export function getRedirectResult(){return Promise.resolve(null)}',
   'firebase-firestore.js': "export function getFirestore(){return {}} export function doc(){return {}} export function getDocFromServer(){return new Promise(()=>{})} export function runTransaction(){throw new Error('Unexpected cloud write')}"
 };
 
