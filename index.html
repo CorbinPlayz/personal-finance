@@ -1562,6 +1562,29 @@ button:disabled{opacity:.55;cursor:not-allowed}
 @media(max-width:600px){.vault-screen{padding:18px}.vault-card{padding:22px}.vault-card h1{font-size:22px}.vault-foot{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){.vault-screen *{animation:none!important;transition:none!important}}
 </style>
+<style id="sync-issue">
+/* A paused sync must stay readable on phones, where the header status text is
+   width-limited and can ellipsize the error code. The banner and the Settings
+   diagnostics panel always show the full text and the code. */
+.sync-issue{padding:0 38px}
+.sync-issue[hidden]{display:none}
+.sync-issue-bar{display:flex;align-items:flex-start;gap:10px;margin:10px 0 0;padding:11px 13px;border:1px solid #e1d2c8;border-radius:10px;background:#fbf6f2;color:#65483a;font-size:11px;line-height:1.5}
+.sync-issue-mark{display:grid;place-items:center;flex:none;width:18px;height:18px;border-radius:50%;background:#8f2f26;color:#fff;font-size:11px;font-weight:800}
+.sync-issue-copy{min-width:0;flex:1}
+.sync-issue-copy strong{display:block;font-size:11px;color:#5a3d31}
+.sync-issue-copy span{display:block;overflow-wrap:anywhere;margin-top:2px}
+.sync-issue-copy code,.sync-detail-row code,.sync-issue-line code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;background:#f0e3d9;border-radius:4px;padding:1px 4px;overflow-wrap:anywhere}
+.sync-issue-actions{display:flex;align-items:center;gap:6px;flex:none}
+.sync-issue-actions .text-btn{color:#65483a}
+.sync-issue-line{margin:10px 0 0;font-size:11px;line-height:1.6;color:#5a3d31}
+.sync-detail-grid{display:grid;gap:8px;margin-top:16px}
+.sync-detail-row{display:grid;grid-template-columns:104px minmax(0,1fr);gap:10px;font-size:11px;line-height:1.55;color:#4d4d4d}
+.sync-detail-row>span:first-child{color:#8a8a8a;font-weight:600}
+.sync-detail-row>span:last-child{overflow-wrap:anywhere}
+.sync-detail-row code{background:#f2f2f2}
+.sync-detail-text{width:100%;min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;line-height:1.55;border:1px solid #d9d9d9;border-radius:9px;padding:10px;background:#fafafa;color:#3f3f3f}
+@media(max-width:600px){.sync-issue{padding:0 12px}.sync-issue-bar{margin-top:8px;flex-wrap:wrap}.sync-issue-actions{width:100%;justify-content:flex-end}.sync-detail-row{grid-template-columns:minmax(0,1fr);gap:1px}}
+</style>
 <link rel="stylesheet" href="./financial-graphs.css">
 <link rel="stylesheet" href="./stock-watchlist.css">
 </head>
@@ -1592,6 +1615,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <div class="app-shell">
 <div class="main-area">
 <header class="topbar"><div style="display:flex;align-items:center;min-width:0"><div class="breadcrumb"><span class="breadcrumb-brand"><button type="button" class="breadcrumb-home" id="homeShortcut" data-action="home-shortcut" aria-label="Go to Home, Overview"><svg class="breadcrumb-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgCrumb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarCrumb" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgCrumb)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarCrumb)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg></button><b>NORTHSTAR</b></span><span>/</span> <strong id="breadcrumbTitle">Overview</strong></div></div><div class="top-actions"><span class="sync-state" id="syncStatus" aria-live="polite">Local only</span><button id="signInBtn" class="secondary-btn small" data-action="signin">Connect Google</button><button id="signOutBtn" class="secondary-btn small hidden" data-action="signout">Sign out</button><div class="avatar" id="avatar" aria-label="Northstar"><svg class="avatar-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgAvatar" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarAvatar" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgAvatar)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarAvatar)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg></div></div></header>
+<div class="sync-issue" id="syncIssueRoot" hidden></div>
 <main class="content" id="content" tabindex="-1"></main>
 <footer class="page-footer"><span>Northstar Personal Finance</span><span>Manual tracking <b>·</b> Optional cloud sync; protection off by default</span></footer>
 </div></div>
@@ -1869,11 +1893,126 @@ function celebrateSavedGoal(goal,status){
  }).catch(e=>console.warn('Goal celebration was skipped.',e));
 }
 function showToast(text){const root=$('toastRoot');root.innerHTML=`<div class="toast"><span>✓</span><span>${esc(text)}</span><button data-action="dismiss-toast" aria-label="Dismiss">×</button></div>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>root.replaceChildren(),3500)}
-function setSync(text,kind=''){const el=$('syncStatus');el.textContent=text;el.className='sync-state'+(kind?' '+kind:'')}
-function firebaseErrorCode(error){return String(error?.code||'unknown-error')}
+function setSync(text,kind=''){const el=$('syncStatus');el.textContent=text;el.title=text;el.className='sync-state'+(kind?' '+kind:'')}
+/* Every paused sync keeps a code, a short reason, and a timestamp on this device.
+   The header status text is width-limited on a phone, so the same record also
+   feeds a banner and the Settings diagnostics panel; nothing depends on a
+   toast that disappears after a few seconds. */
+const SYNC_ISSUE_KEY='northstar-sync-issue-v1';
+let syncIssue=null,syncIssueDismissed=false,syncAutoRetryAt=0,cloudCheck=null;
+function syncIssueStorage(){try{return window.localStorage}catch(e){return null}}
+function readStoredSyncIssue(){try{const raw=JSON.parse(syncIssueStorage()?.getItem(SYNC_ISSUE_KEY)||'null');return raw&&typeof raw.code==='string'&&typeof raw.at==='number'?raw:null}catch(e){return null}}
+function syncWorkspaceMode(){return vault.state==='unlocked'?'Protected workspace (unlocked)':vault.state==='locked'?'Protected workspace (locked)':user?'Signed-in workspace (plaintext)':'Local-only workspace'}
+function syncFailureStatus(stage,error){return `${stage} needs attention · ${firebaseErrorCode(error)}`}
+function reportSyncIssue(error,stage='Cloud sync'){
+ const issue={
+  code:firebaseErrorCode(error),stage,
+  message:String(error?.message||'').trim()||`${stage} did not finish.`,
+  at:Date.now(),mode:syncWorkspaceMode(),
+  online:typeof navigator==='undefined'||navigator.onLine!==false
+ };
+ syncIssue=issue;syncIssueDismissed=false;
+ try{syncIssueStorage()?.setItem(SYNC_ISSUE_KEY,JSON.stringify(issue))}catch(e){}
+ // A display problem must never hide the sync failure that was just handled.
+ try{renderSyncIssueBanner()}catch(e){}
+ return issue.code;
+}
+function clearSyncIssue(){
+ if(!syncIssue&&!readStoredSyncIssue()){renderSyncIssueBanner();return}
+ syncIssue=null;syncIssueDismissed=false;
+ try{syncIssueStorage()?.removeItem(SYNC_ISSUE_KEY)}catch(e){}
+ try{renderSyncIssueBanner()}catch(e){}
+}
+function restoreSyncIssue(){
+ const stored=readStoredSyncIssue();
+ syncIssue=stored?{...stored,stage:stored.stage||'Cloud sync',message:stored.message||'Cloud sync was paused.'}:null;
+ try{renderSyncIssueBanner()}catch(e){}
+}
+function syncIssueWhen(issue=syncIssue,{zone=true}={}){
+ if(!issue?.at)return 'not recorded';
+ try{
+  const stamp=new Date(issue.at).toLocaleString();
+  return zone?`${stamp} (${Intl.DateTimeFormat().resolvedOptions().timeZone||'device time'})`:stamp;
+ }catch(e){return new Date(issue.at).toISOString()}
+}
+
+function syncIssueShortWhen(issue=syncIssue){return syncIssueWhen(issue,{zone:false})}
+function syncDiagnosticsText(){
+ if(!syncIssue)return 'Northstar has no recorded sync problem on this device.';
+ return [
+  'Northstar sync issue',
+  `Code: ${syncIssue.code}`,
+  `Stage: ${syncIssue.stage}`,
+  `Reason: ${syncIssue.message}`,
+  `When: ${syncIssueWhen(syncIssue)}`,
+  `Workspace: ${syncIssue.mode||syncWorkspaceMode()}`,
+  `Connection: ${syncIssue.online===false?'offline':'online'}`,
+  `Cloud copy loaded: ${cloudLoaded?'yes':'no'}`,
+  `Protection: ${vault.state==='off'?'off':vault.state}`,
+  'Open Settings → Sync diagnostics, then Retry cloud sync to review both copies.'
+ ].join('\n');
+}
+/* Sign-in can finish without an error and without a confirmed copy: another
+   auth event can abort a load, which used to leave Settings saying only that
+   sync had not been confirmed. Never let that state have no code. */
+function confirmSyncOutcome(stage='Cloud load'){
+ if(!user||!fb||cloudLoaded||lastSyncError||vault.state==='locked')return false;
+ const error=new Error('Google sign-in completed, but Northstar could not confirm the cloud copy. Nothing was uploaded or overwritten.');
+ setSync(syncFailureStatus(stage,error),'err');
+ reportSyncIssue(error,stage);
+ return true;
+}
+function renderSyncIssueBanner(){
+ const root=$('syncIssueRoot');if(!root)return;
+ if(!syncIssue||syncIssueDismissed){root.hidden=true;root.replaceChildren();return}
+ const issue=syncIssue;root.hidden=false;
+ root.innerHTML=`<div class="sync-issue-bar"><span class="sync-issue-mark" aria-hidden="true">!</span><div class="sync-issue-copy" role="status" aria-live="polite"><strong>${esc(issue.stage)} needs attention</strong><span>${esc(issue.message)} <code>${esc(issue.code)}</code> · ${esc(syncIssueShortWhen(issue))}</span></div><div class="sync-issue-actions"><button type="button" class="secondary-btn small" data-action="sync-details">Details</button><button type="button" class="text-btn" data-action="dismiss-sync-issue" aria-label="Dismiss this sync notice">Dismiss</button></div></div>`;
+}
+function showSyncDetailsDialog(){
+ const root=$('confirmRoot');if(!root)return;
+ const previous=document.activeElement,issue=syncIssue;
+ const rows=issue?[
+  ['Code',`<code>${esc(issue.code)}</code>`],
+  ['Stage',esc(issue.stage)],
+  ['Reason',esc(issue.message)],
+  ['Recorded',esc(syncIssueWhen(issue))],
+  ['Workspace',esc(issue.mode||syncWorkspaceMode())],
+  ['Connection',issue.online===false?'offline':'online'],
+  ['Cloud copy',cloudLoaded?'loaded from Firestore':'not loaded'],
+  ['Project',esc(firebaseConfig.projectId)],
+  ['Database',esc(fb?.db?._databaseId?.database||'(default)')],
+  ...(cloudCheck?[['Last check',`${cloudCheck.ok?'read access confirmed':'failed'} · ${esc(syncIssueShortWhen(cloudCheck))}${cloudCheck.code?` · <code>${esc(cloudCheck.code)}</code>`:''}`]]:[])
+ ]:[
+  ['Code','<code>none</code>'],
+  ['Stage','No cloud sync problem is recorded on this device.']
+ ];
+ root.innerHTML=`<div class="confirm-backdrop" role="presentation"><section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="syncDetailsTitle"><div class="confirm-dialog-head"><div class="confirm-dialog-icon" aria-hidden="true">!</div><div><div class="eyebrow">SYNC DIAGNOSTICS</div><h2 id="syncDetailsTitle">What paused cloud sync</h2></div></div><p class="confirm-dialog-message">${esc(issue?.message||'Cloud sync has no recorded problem on this device.')}</p><div class="sync-detail-grid">${rows.map(([label,value])=>`<div class="sync-detail-row"><span>${label}</span><span>${value}</span></div>`).join('')}</div><p class="form-hint" style="margin:14px 0 6px">Share this text if the problem continues. It contains no email address or finance records.</p><textarea id="syncDetailsText" class="sync-detail-text" rows="7" readonly aria-label="Sync details to share">${esc(syncDiagnosticsText())}</textarea><div class="confirm-dialog-actions"><button type="button" class="secondary-btn" id="syncDetailsClose">Close</button><button type="button" class="secondary-btn" id="syncDetailsCopy">Copy details</button>${user?'<button type="button" class="primary-btn" id="syncDetailsRetry">Retry cloud sync</button>':''}</div></section></div>`;
+ const close=()=>{untrap();root.replaceChildren();if(previous?.isConnected)previous.focus()};
+ const untrap=trapDialogFocus(root,close);
+ const copyDetails=async()=>{
+  const area=$('syncDetailsText');
+  try{await navigator.clipboard.writeText(syncDiagnosticsText());showToast('Sync details copied.')}
+  catch(e){area?.focus();area?.select?.();showToast('Press and hold the selected text to copy it.')}
+ };
+ root.querySelector('#syncDetailsClose').addEventListener('click',close);
+ root.querySelector('#syncDetailsCopy').addEventListener('click',copyDetails);
+ root.querySelector('#syncDetailsRetry')?.addEventListener('click',()=>{close();retryCloudSync()});
+ setTimeout(()=>root.querySelector('#syncDetailsCopy')?.focus(),10);
+}
+function firebaseErrorCode(error){
+ const raw=String(error?.code??error?.name??'').trim();
+ if(raw&&raw!=='Error')return raw;
+ if(typeof navigator!=='undefined'&&navigator.onLine===false)return 'northstar/offline';
+ return 'northstar/app';
+}
 function firebaseErrorDetails(error,stage='Cloud sync'){
  const code=firebaseErrorCode(error);
  const hints={
+  'northstar/conflict':'Another copy of this workspace changed in the cloud after this device loaded it, so nothing was overwritten. Use Retry cloud sync to review both copies.',
+  'northstar/offline':'This device is offline, so the cloud copy could not be reached. Your changes stay on this device and sync is retried when the connection returns.',
+  'northstar/app':'Northstar paused the operation because it could not verify the copy it would have replaced. Your device copy was kept.',
+  'auth/popup-blocked':'Safari blocked the Google sign-in window. Allow pop-ups for this site, or retry sign-in so Northstar can use the redirect method.',
+  'auth/operation-not-supported-in-this-environment':'This browser cannot show the Google sign-in window. Northstar switches to the redirect method instead.',
   'auth/unauthorized-domain':'Google sign-in is blocked for this site. In Firebase Console → Authentication → Settings → Authorized domains, add corbinplayz.github.io.',
   'auth/operation-not-allowed':'Google sign-in is disabled. In Firebase Console → Authentication → Sign-in method, enable Google.',
   'auth/network-request-failed':'The browser could not reach Firebase Authentication. Check your connection, VPN, or browser extensions.',
@@ -1886,8 +2025,9 @@ function firebaseErrorDetails(error,stage='Cloud sync'){
   'failed-precondition':'Firestore is not ready or has a project configuration issue. Check the Firestore database in Firebase Console.',
   'resource-exhausted':'Firebase rejected the request due to a quota or rate limit. Check Firebase usage and quotas.'
  };
- const hint=hints[code]||`${stage} failed. Check Firebase project setup and the browser console for details.`;
- const detail=error?.message&& !hints[code]?` Details: ${error.message}`:'';
+ const hint=hints[code]||`${stage} failed. Check the connection and the browser console for details.`;
+ const message=String(error?.message||'').trim();
+ const detail=message&&hint.includes(message)?'':message?` Details: ${message}`:'';
  return `${hint} [${code}]${detail}`
 }
 function isWelcomeVisible(){const screen=$('welcomeScreen');return !!screen&&!screen.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen')}
@@ -2187,7 +2327,13 @@ function savePurchaseAllocation(e){
 }
 function savePriceCheck(e){e.preventDefault();const form=e.target,id=form.dataset.purchaseId,raw=String(new FormData(form).get('observedPrice')||'').trim(),price=Number(raw);if(!Number.isFinite(price)||price<=0){showToast('Enter a price greater than zero.');return}const item=data.purchases.find(p=>p.id===id);if(!item){showToast('This planned purchase could not be found.');return}const history=safePriceHistory(item);if(history.length&&history[history.length-1].date===today()){history[history.length-1]={price:roundMoney(price),date:today()} }else{history.push({price:roundMoney(price),date:today()})}data={...data,purchases:data.purchases.map(p=>p.id===id?{...p,priceHistory:history.slice(-24)}:p)};persist();showToast('Price check saved')}
 
-function renderSettings(){const counts=[['Accounts',data.accounts.length],['Transactions',data.transactions.length],['Budgets',data.budgets.length],['Goals',data.goals.length],['Purchases',data.purchases.length]];return `${pageHeading('Settings')}<div class="settings-layout"><section class="panel"><div class="panel-head"><div><h2>Cloud sync & account</h2><p>Optional Google sign-in for this device and your other devices.</p></div><span class="category-pill">${user?(cloudLoaded&&!lastSyncError?'Cloud active':'Sync needs attention'):'Local only'}</span></div><div class="setting-action"><div><strong>${user?esc(user.displayName||user.email||'Google account'):'Connect Google'}</strong><p>${user?(cloudLoaded&&!lastSyncError?'Your finance data loaded from Firestore and cloud saves are enabled.':'Google sign-in succeeded, but Northstar has not confirmed a successful cloud sync. Your changes stay in this browser until the Firestore issue is fixed.'):'Your entries stay in this browser until you connect Google and sync them.'}</p></div>${user?`${(!cloudLoaded||lastSyncError)?'<button class="primary-btn" data-action="retry-sync">Retry cloud sync</button>':''}<button class="secondary-btn" data-action="signout">Sign out</button>`:'<button class="primary-btn" data-action="signin">Connect Google</button>'}</div><div class="privacy-note"><span>♧</span><span>Only sign in on a device you trust. Cloud access is intended to be restricted to your own user ID by Firestore security rules. Use fictional data until you confirm your rules are published and tested.</span></div></section>
+function renderSyncIssuePanel(){
+ const issue=syncIssue;
+ if(!user&&!issue)return '';
+ return `<section class="panel" id="syncDiagnosticsPanel"><div class="panel-head"><div><h2>Sync diagnostics</h2><p>Every paused sync keeps a code, a reason, and a time on this device.</p></div><span class="category-pill">${issue?esc(issue.code):'No issue recorded'}</span></div>${issue?`<div class="sync-detail-grid"><div class="sync-detail-row"><span>Code</span><span><code>${esc(issue.code)}</code></span></div><div class="sync-detail-row"><span>Stage</span><span>${esc(issue.stage)}</span></div><div class="sync-detail-row"><span>Reason</span><span>${esc(issue.message)}</span></div><div class="sync-detail-row"><span>Recorded</span><span>${esc(syncIssueWhen(issue))}</span></div><div class="sync-detail-row"><span>Workspace</span><span>${esc(issue.mode||syncWorkspaceMode())}</span></div><div class="sync-detail-row"><span>Connection</span><span>${issue.online===false?'Offline when recorded':'Online'}</span></div><div class="sync-detail-row"><span>Cloud copy</span><span>${cloudLoaded?'Loaded from Firestore':'Not loaded'}</span></div><div class="sync-detail-row"><span>Project</span><span>${esc(firebaseConfig.projectId)}</span></div><div class="sync-detail-row"><span>Database</span><span>${esc(fb?.db?._databaseId?.database||'(default)')}</span></div>${cloudCheck?`<div class="sync-detail-row"><span>Last check</span><span>${cloudCheck.ok?'Read access confirmed':'Failed'} · ${esc(syncIssueShortWhen(cloudCheck))}${cloudCheck.code?` · <code>${esc(cloudCheck.code)}</code>`:''}</span></div>`:''}</div>`:`<p class="form-hint" style="margin:0">No cloud sync problem is recorded on this device. ${user?'Use Check cloud access to test Firestore directly; a failed load or save records its code here and in the notice under the header.':'Sign in with Google to enable cloud sync.'}</p>`}<div class="form-actions-top" style="margin-top:14px">${issue?'<button type="button" class="secondary-btn small" data-action="sync-details">Sync details</button>':''}${user?'<button type="button" class="secondary-btn small" data-action="check-cloud-access">Check cloud access</button>':''}${user?'<button type="button" class="primary-btn small" data-action="retry-sync">Retry cloud sync</button>':''}</div><p class="form-hint" style="margin-top:10px">Codes come from Firestore or Google sign-in. northstar/conflict means another copy changed the cloud document after this device loaded it, so nothing was overwritten. northstar/offline means this device could not reach Firestore; your changes stay here and sync retries when the connection returns.</p></section>`;
+}
+function renderSettings(){const counts=[['Accounts',data.accounts.length],['Transactions',data.transactions.length],['Budgets',data.budgets.length],['Goals',data.goals.length],['Purchases',data.purchases.length]];return `${pageHeading('Settings')}<div class="settings-layout"><section class="panel"><div class="panel-head"><div><h2>Cloud sync & account</h2><p>Optional Google sign-in for this device and your other devices.</p></div><span class="category-pill">${user?(cloudLoaded&&!lastSyncError?'Cloud active':'Sync needs attention'):'Local only'}</span></div><div class="setting-action"><div><strong>${user?esc(user.displayName||user.email||'Google account'):'Connect Google'}</strong><p>${user?(cloudLoaded&&!lastSyncError?'Your finance data loaded from Firestore and cloud saves are enabled.':'Google sign-in succeeded, but Northstar has not confirmed a successful cloud sync. Your changes stay in this browser until the cloud copy is confirmed. Sync diagnostics below shows the code, and Check cloud access tests Firestore directly.'):'Your entries stay in this browser until you connect Google and sync them.'}</p></div>${user?`${(!cloudLoaded||lastSyncError)?'<button class="primary-btn" data-action="retry-sync">Retry cloud sync</button>':''}<button class="secondary-btn" data-action="signout">Sign out</button>`:'<button class="primary-btn" data-action="signin">Connect Google</button>'}</div>${lastSyncError?`<p class="sync-issue-line">Cloud sync is paused with <code>${esc(firebaseErrorCode(lastSyncError))}</code>. <button type="button" class="text-btn" data-action="sync-details">See sync details</button></p>`:''}<div class="privacy-note"><span>♧</span><span>Only sign in on a device you trust. Cloud access is intended to be restricted to your own user ID by Firestore security rules. Use fictional data until you confirm your rules are published and tested.</span></div></section>
+${renderSyncIssuePanel()}
 ${renderVaultPanel()}
 <section class="panel"><div class="panel-head"><div><h2>Saved Guide profile</h2><p>Your previous Guide profile and saved note are still available.</p></div></div><div class="setting-action"><div><strong>Northstar Guide</strong><p>Review or edit your saved planning preferences and graph. The Guide is a local rules-based planner.</p></div><button class="secondary-btn" data-action="page" data-page="Guide">Open saved Guide ↗</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Preferences</h2><p>Personalize how your numbers are displayed.</p></div></div><label class="field-label" style="max-width:360px">Display currency<select id="currencySelect">${options(['USD','CAD','GBP','EUR','AUD','NZD','JPY'],data.settings.currency||'USD')}</select></label><p class="form-hint">Changing currency changes display formatting only. Northstar does not perform exchange-rate conversion.</p></section>
@@ -2440,7 +2586,7 @@ function trapWelcomeTab(e){
  }
  return false;
 }
-function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
+function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'check-cloud-access':checkCloudAccess();break;case'sync-details':showSyncDetailsDialog();break;case'dismiss-sync-issue':syncIssueDismissed=true;renderSyncIssueBanner();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
 document.addEventListener('keydown',e=>{if(trapWelcomeTab(e))return;const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&setDockMore(false,true)){e.preventDefault();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
 document.addEventListener('click',e=>{
  const option=e.target.closest('[data-confirm-index]');
@@ -2481,8 +2627,9 @@ function setVaultLocked(locked){
 }
 function protectedSaveError(error){
  vault.error=error;cloudLoaded=false;lastSyncError=error;
- setSync('Device save needs attention','err');
- showToast('Protected data was not saved. Export an encrypted backup before leaving, then resolve the device storage conflict.');
+ const code=reportSyncIssue(error,'Device save');
+ setSync(syncFailureStatus('Device save',error),'err');
+ showToast(`Protected data was not saved [${code}]. Export an encrypted backup before leaving, then resolve the device storage conflict.`);
  if(page==='Settings')render();
 }
 function queueProtectedLocalSave(){
@@ -2570,11 +2717,11 @@ async function enableVault(){
   await cloudWritePayload(envelope,uid,epoch);
   vault=protectedState;vaultMarkerWrite(uid,'active');
   if(setup.cleanup)removeMatchingPlainCopies(candidates);
-  cloudLoaded=true;lastSyncError=null;setSync('Protected cloud sync on','ok');
+  cloudLoaded=true;lastSyncError=null;clearSyncIssue();setSync('Protected cloud sync on','ok');
   showToast('Protection enabled. Older backups and other devices may still contain plaintext.');
  }catch(error){
   console.error('Northstar protection setup stopped safely.',error);
-  if(markerWritten&&protectedState){vault=protectedState;cloudLoaded=false;lastSyncError=error;setSync('Device protected · cloud unconfirmed','err');showToast('Device copy is protected, but cloud protection was not confirmed. Older copies were kept. Retry sync.');}
+  if(markerWritten&&protectedState){vault=protectedState;cloudLoaded=false;lastSyncError=error;const code=reportSyncIssue(error,'Protection setup');setSync(`Device protected · cloud unconfirmed · ${code}`,'err');showToast(`Device copy is protected [${code}], but cloud protection was not confirmed. Older copies were kept. Retry sync.`);}
   else{if(stageRaw){try{if(localStorage.getItem(vaultKey(uid))===stageRaw)localStorage.removeItem(vaultKey(uid))}catch{}}lastSyncError=error;setSync('Protection not enabled','err');showToast('Protection was not enabled. Existing data was kept. Check cloud and browser storage.');}
  }finally{setCloudLoading(false);render()}
 }
@@ -2637,7 +2784,7 @@ async function lockProtectedWorkspace(){
  setCloudLoading(true);
  try{
   await flushProtectedLocal();clearTimeout(saveTimer);
-  if(user&&cloudLoaded){try{await writeCloudNow();lastSyncError=null;setSync('Protected cloud sync on','ok')}catch(error){cloudLoaded=false;lastSyncError=error;setSync('Protected sync needs attention','err')}}
+  if(user&&cloudLoaded){try{await writeCloudNow();lastSyncError=null;clearSyncIssue();setSync('Protected cloud sync on','ok')}catch(error){cloudLoaded=false;lastSyncError=error;reportSyncIssue(error,'Protected sync');setSync(syncFailureStatus('Protected sync',error),'err')}}
  }catch(error){setCloudLoading(false);showToast('Protected changes are not safely saved. Export an encrypted backup before leaving.');return}
  setCloudLoading(false);
  if(!cloudLoaded&&user){const ok=await showNorthstarDialog({title:'Lock with cloud sync paused?',message:'Your latest protected copy is on this device, but cloud sync has not been confirmed.',detail:'You can unlock this device later and retry sync. Export an encrypted backup if you need another copy.',icon:'⌑',confirmText:'Lock workspace',cancelText:'Keep open'});if(ok!==true)return}
@@ -2671,7 +2818,7 @@ window.addEventListener('storage',e=>{
  }
 });
 
-async function initFirebase(){try{const [appSdk,authSdk,storeSdk]=await Promise.all([import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`)]);const app=(appSdk.getApps().length?appSdk.getApps()[0]:appSdk.initializeApp(firebaseConfig));const auth=authSdk.getAuth(app),db=storeSdk.getFirestore(app);fb={...appSdk,...authSdk,...storeSdk,app,auth,db};authSdk.onAuthStateChanged(auth,async current=>{await onAuthChanged(current)});authReady=true}catch(e){console.warn('Firebase SDK could not initialize; local mode remains available.',e);lastSyncError=e;authReady=true;setSync(vault.state==='locked'?'Protected workspace locked':vault.state==='unlocked'?'Protected device · cloud unavailable':`Firebase unavailable · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Firebase SDK initialization'))}}
+async function initFirebase(){try{const [appSdk,authSdk,storeSdk]=await Promise.all([import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`)]);const app=(appSdk.getApps().length?appSdk.getApps()[0]:appSdk.initializeApp(firebaseConfig));const auth=authSdk.getAuth(app),db=storeSdk.getFirestore(app);fb={...appSdk,...authSdk,...storeSdk,app,auth,db};authSdk.onAuthStateChanged(auth,async current=>{await onAuthChanged(current)});authSdk.getRedirectResult(auth).catch(redirectError=>{if(firebaseErrorCode(redirectError)==='auth/no-auth-event')return;console.warn('Northstar redirect sign-in failed.',redirectError);reportSyncIssue(redirectError,'Google sign-in');showToast(firebaseErrorDetails(redirectError,'Google sign-in'))});authReady=true}catch(e){console.warn('Firebase SDK could not initialize; local mode remains available.',e);lastSyncError=e;authReady=true;setSync(vault.state==='locked'?'Protected workspace locked':vault.state==='unlocked'?'Protected device · cloud unavailable':`Firebase unavailable · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Firebase SDK initialization'))}}
 function docRef(uid=user?.uid){return fb.doc(fb.db,'users',uid,'northstar','financeData')}
 function cloudValue(snap){return snap.exists()?snap.data():null}
 /* Firestore maps can come from a different JS realm. Do not mistake SDK values
@@ -2794,7 +2941,7 @@ async function onAuthChanged(current){
  if(vault.state==='unlocked'){
   user=current;lastSyncError=null;
   if(!current){setCloudLoading(false);setSync('Protected device · local only','ok');render();return}
-  if(current.uid!==vault.uid){lastSyncError=syncConflict('This protected workspace belongs to a different Google account.');setCloudLoading(false);setSync('Account mismatch · sync paused','err');render();showToast('This protected workspace belongs to a different Google account. No data was uploaded.');return}
+  if(current.uid!==vault.uid){lastSyncError=syncConflict('This protected workspace belongs to a different Google account.');reportSyncIssue(lastSyncError,'Cloud sync');setCloudLoading(false);setSync(`Account mismatch · sync paused · ${firebaseErrorCode(lastSyncError)}`,'err');render();showToast('This protected workspace belongs to a different Google account. No data was uploaded.');return}
   await syncProtected(current,epoch);return;
  }
  if(!current){const wasSignedIn=!!user;user=null;lastSyncError=null;setCloudLoading(false);if(wasSignedIn)data=loadLocal('local');setSync('Local only','');render();return}
@@ -2828,7 +2975,7 @@ async function onAuthChanged(current){
     // that same copy if the visitor defers, so an edit cannot overwrite it
     // with the different local workspace before the choice is made.
     deferredDeviceWorkspace={uid:current.uid,data:anonymousData,sourceKey,sourceRaw,sourceLegacyKey,sourceLegacyRaw};data=userLocal;
-    lastSyncError=syncConflict('Choose a device workspace to resume cloud sync.');setSync('Sync conflict · action needed','err');
+    lastSyncError=syncConflict('Choose a device workspace to resume cloud sync.');reportSyncIssue(lastSyncError,'Cloud sync');setSync(`Sync conflict · action needed · ${firebaseErrorCode(lastSyncError)}`,'err');
     showToast('Choice deferred. Showing the account device copy; your other copy was kept.');return;
    }
   }else if(pendingDevice)deferredDeviceWorkspace=null;
@@ -2851,12 +2998,12 @@ async function onAuthChanged(current){
     const choice=await showNorthstarDialog({title:'Choose which data to keep',message:'Northstar found different finance data in your Google account and this browser.',detail:'Using the cloud copy replaces what’s currently shown on this device. Keeping this device uploads the browser copy and replaces the cloud document.',icon:'☁',label:'SYNC CONFLICT',choices:[{value:'cloud',label:'Use cloud copy',style:'primary'},{value:'local',label:'Keep this device',style:'secondary'},{value:'cancel',label:'Decide later',style:'quiet'}]});
     if(epoch!==cloudEpoch||user?.uid!==current.uid)return;
     checkDeviceCopy();
-    if(choice==='cloud')data=cloud;else if(choice==='local'){data=chosen;await writeCloudNow()}else{data=chosen;lastSyncError=syncConflict('Choose which data to keep to resume cloud sync.');setSync('Sync conflict · action needed','err');return}
+    if(choice==='cloud')data=cloud;else if(choice==='local'){data=chosen;await writeCloudNow()}else{data=chosen;lastSyncError=syncConflict('Choose which data to keep to resume cloud sync.');reportSyncIssue(lastSyncError,'Cloud sync');setSync(`Sync conflict · action needed · ${firebaseErrorCode(lastSyncError)}`,'err');return}
    }else data=cloud;
   }else{data=chosen;await writeCloudNow()}
   checkDeviceCopy();
   localStorage.setItem(localKey(current.uid),JSON.stringify(data));
-  cloudLoaded=true;lastSyncError=null;setSync('Cloud sync on','ok');
+  cloudLoaded=true;lastSyncError=null;clearSyncIssue();setSync('Cloud sync on','ok');
  }catch(e){
   if(epoch!==cloudEpoch)return;
   // If another tab changed the account slot, keep that newer device copy as
@@ -2866,9 +3013,9 @@ async function onAuthChanged(current){
   if(e?.deviceCopyChanged){deferredDeviceWorkspace={uid:current.uid,data:anonymousData,sourceKey,sourceRaw,sourceLegacyKey,sourceLegacyRaw};data=loadLocal(current.uid)}
   else if(e?.sourceCopyChanged){deferredDeviceWorkspace=pendingDevice||{uid:current.uid,data:anonymousData,sourceKey,sourceRaw,sourceLegacyKey,sourceLegacyRaw};data=userLocal}
   else data=chosen;
-  cloudLoaded=false;lastSyncError=e;setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');
+  cloudLoaded=false;lastSyncError=e;const code=reportSyncIssue(e,'Cloud load');setSync(`Sync error · ${code}`,'err');
   showToast(e?.deviceCopyChanged?'The account device copy changed in another tab. Showing its latest copy; cloud sync is paused.':e?.sourceCopyChanged?'The local workspace changed in another tab. Reload to review both copies; cloud sync is paused.':firebaseErrorDetails(e,'Cloud load'));
- }finally{if(epoch===cloudEpoch){setCloudLoading(false);render()}}
+ }finally{if(epoch===cloudEpoch){setCloudLoading(false);confirmSyncOutcome('Cloud load');render()}}
 }
 async function syncProtected(current,epoch=cloudEpoch){
  const uid=current?.uid;if(!uid||uid!==vault.uid||vault.state!=='unlocked')return;
@@ -2880,7 +3027,8 @@ async function syncProtected(current,epoch=cloudEpoch){
   if(!looksEncrypted(raw)){
    if(raw!==null)plainCloudData(raw); // Unknown document formats are not safe to replace.
    lastSyncError=syncConflict(raw===null?'No protected cloud copy exists. Review before uploading.':'The cloud copy is not encrypted. Review it before changing anything.');
-   setSync(raw===null?'Protected device · cloud missing':'Protected device · cloud unprotected','err');return;
+   reportSyncIssue(lastSyncError,'Protected sync');
+   setSync(`${raw===null?'Protected device · cloud missing':'Protected device · cloud unprotected'} · ${firebaseErrorCode(lastSyncError)}`,'err');return;
   }
   validateEnvelope(raw);
   if(!sameKdf(raw.kdf,vault.kdf))throw syncConflict('The cloud copy uses a different passphrase key. No copy was overwritten.');
@@ -2902,13 +3050,13 @@ async function syncProtected(current,epoch=cloudEpoch){
      if(localStorage.getItem(vaultKey(uid))!==remoteRaw)throw new Error('Could not save the protected cloud copy on this device.');
      vault.localRaw=remoteRaw;vault.editSeq=vault.savedSeq=0;vault.error=null;data=cloud;
     });
-   }else{lastSyncError=syncConflict('Choose which protected copy to keep to resume cloud sync.');setSync('Protected sync conflict','err');return}
+   }else{lastSyncError=syncConflict('Choose which protected copy to keep to resume cloud sync.');reportSyncIssue(lastSyncError,'Protected sync');setSync(`Protected sync conflict · ${firebaseErrorCode(lastSyncError)}`,'err');return}
   }
-  vaultMarkerWrite(uid,'active');cloudLoaded=true;lastSyncError=null;setSync('Protected cloud sync on','ok');
+  vaultMarkerWrite(uid,'active');cloudLoaded=true;lastSyncError=null;clearSyncIssue();setSync('Protected cloud sync on','ok');
  }catch(error){
   if(epoch!==cloudEpoch)return;
-  console.error('Northstar protected sync stopped safely.',error);cloudLoaded=false;lastSyncError=error;setSync('Protected sync needs attention','err');showToast(error.message||'Protected sync failed. Your device copy was kept.');
- }finally{if(epoch===cloudEpoch){setCloudLoading(false);render()}}
+  console.error('Northstar protected sync stopped safely.',error);cloudLoaded=false;lastSyncError=error;const code=reportSyncIssue(error,'Protected sync');setSync(syncFailureStatus('Protected sync',error),'err');showToast(`${error?.message||'Protected sync failed'} [${code}] Your device copy was kept.`);
+ }finally{if(epoch===cloudEpoch){setCloudLoading(false);confirmSyncOutcome('Protected sync');render()}}
 }
 async function protectCloudCopy(){
  if(vault.state!=='unlocked'||!user||!fb||user.uid!==vault.uid){showToast('Connect the Google account for this protected workspace first.');return}
@@ -2937,8 +3085,8 @@ async function protectCloudCopy(){
     vault.localRaw=stored;vault.editSeq=vault.savedSeq=0;vault.error=null;data=cloud;
    });
   }else await cloudWritePayload(JSON.parse(vault.localRaw),uid,epoch);
-  vaultMarkerWrite(uid,'active');cloudLoaded=true;lastSyncError=null;setSync('Protected cloud sync on','ok');showToast('Cloud copy protected. Older backups and other devices may remain unencrypted.');
- }catch(error){if(epoch===cloudEpoch){cloudLoaded=false;lastSyncError=error;setSync('Protected sync needs attention','err');showToast(error.message||'Cloud protection was not confirmed. Your device copy was kept.')}}
+  vaultMarkerWrite(uid,'active');cloudLoaded=true;lastSyncError=null;clearSyncIssue();setSync('Protected cloud sync on','ok');showToast('Cloud copy protected. Older backups and other devices may remain unencrypted.');
+ }catch(error){if(epoch===cloudEpoch){cloudLoaded=false;lastSyncError=error;const code=reportSyncIssue(error,'Protected sync');setSync(syncFailureStatus('Protected sync',error),'err');showToast(`${error?.message||'Cloud protection was not confirmed'} [${code}] Your device copy was kept.`)}}
  finally{if(epoch===cloudEpoch){setCloudLoading(false);render()}}
 }
 async function retryCloudSync(){
@@ -2946,27 +3094,93 @@ async function retryCloudSync(){
  const current=fb.auth.currentUser;if(!current){showToast('Connect Google before retrying cloud sync.');return}
  if(vault.state==='unlocked'){if(current.uid!==vault.uid){showToast('Sign in to the Google account for this protected workspace.');return}await syncProtected(current);return}
  if(!cloudLoaded){await onAuthChanged(current);return}
- setSync('Retrying save…');try{await writeCloudNow();lastSyncError=null;setSync('Cloud sync on','ok');render();showToast('Cloud save succeeded.')}catch(e){cloudLoaded=false;lastSyncError=e;setSync(`Sync error · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Cloud save')+' Your browser copy is still available.')}
+ setSync('Retrying save…');try{await writeCloudNow();lastSyncError=null;clearSyncIssue();setSync('Cloud sync on','ok');render();showToast('Cloud save succeeded.')}catch(e){cloudLoaded=false;lastSyncError=e;const code=reportSyncIssue(e,'Cloud save');setSync(`Sync error · ${code}`,'err');render();showToast(`${firebaseErrorDetails(e,'Cloud save')} Your browser copy is still available.`)}
+}
+/* An iPhone has no developer console, so the app checks Firestore itself and
+   names the exact code. This only proves read access; a save still pauses if a
+   write is denied, and the first save after this stays conditional. */
+async function checkCloudAccess(){
+ if(!fb){showToast('Firebase has not initialized. Reload the page and retry.');return}
+ const current=fb.auth?.currentUser;
+ if(!current){showToast('Connect Google before checking cloud access.');return}
+ setCloudLoading(true);setSync('Checking cloud access…');render();
+ try{
+  const snap=await fb.getDocFromServer(docRef(current.uid));
+  const raw=cloudValue(snap);
+  cloudCheck={at:Date.now(),ok:true,code:null,
+   detail:raw===null?'Read access confirmed. No cloud document exists yet; Northstar creates it on the first confirmed save.'
+    :looksEncrypted(raw)?'Read access confirmed. The cloud document is encrypted; unlock this device to compare copies.'
+    :'Read access confirmed. A cloud document exists.'};
+  const accessCode=syncIssue?.code||'';
+  if(/^(permission-denied|firestore\/permission-denied|not-found|failed-precondition|unavailable|deadline-exceeded|northstar\/offline|northstar\/app|auth\/network-request-failed)$/.test(accessCode))clearSyncIssue();
+  setSync('Cloud access confirmed','ok');
+  showToast(`${cloudCheck.detail} Use Retry cloud sync to reconcile both copies.`);
+ }catch(error){
+  const code=reportSyncIssue(error,'Cloud access check');
+  cloudCheck={at:Date.now(),ok:false,code,detail:firebaseErrorDetails(error,'Cloud access check')};
+  setSync(`Cloud access check failed · ${code}`,'err');
+  showToast(cloudCheck.detail);
+ }
+ finally{setCloudLoading(false);render()}
 }
 function queueCloudSave(){
  clearTimeout(saveTimer);setSync('Saving…');
  saveTimer=setTimeout(async()=>{
   const uid=user?.uid,epoch=cloudEpoch;
-  try{await writeCloudNow();if(epoch!==cloudEpoch||user?.uid!==uid)return;lastSyncError=null;setSync(vault.state==='unlocked'?'Protected cloud sync on':'Cloud sync on','ok');render()}
-  catch(e){if(epoch!==cloudEpoch)return;cloudLoaded=false;lastSyncError=e;console.error('Northstar cloud save failed',e);setSync('Cloud sync needs attention','err');render();showToast((e.message||firebaseErrorDetails(e,'Cloud save'))+' Your device copy is still available.')}
+  try{await writeCloudNow();if(epoch!==cloudEpoch||user?.uid!==uid)return;lastSyncError=null;clearSyncIssue();setSync(vault.state==='unlocked'?'Protected cloud sync on':'Cloud sync on','ok');render()}
+  catch(e){if(epoch!==cloudEpoch)return;cloudLoaded=false;lastSyncError=e;console.error('Northstar cloud save failed',e);reportSyncIssue(e,'Cloud save');setSync(syncFailureStatus('Cloud sync',e),'err');render();showToast(`${firebaseErrorDetails(e,'Cloud save')} Your device copy is still available.`)}
  },700);
 }
-async function handleGoogleSignIn(){if(!fb){showToast('Firebase has not initialized. Check the Firebase unavailable status and reload the page.');return}if(signingIn)return;signingIn=true;try{await fb.signInWithPopup(fb.auth,new fb.GoogleAuthProvider())}catch(e){console.error('Northstar Google sign-in failed',e);showToast(firebaseErrorDetails(e,'Google sign-in'))}finally{signingIn=false}}
+/* iOS Safari and an installed home-screen app cannot reliably show an OAuth
+   popup, and a blocked popup used to leave the header saying only that sync
+   needed attention. Prefer a redirect there, and fall back to one elsewhere. */
+function prefersRedirectSignIn(){
+ const nav=window.navigator||{};if(nav.standalone===true)return true;
+ try{if(window.matchMedia?.('(display-mode: standalone)')?.matches)return true}catch(e){}
+ const agent=String(nav.userAgent||'');
+ const ios=/iPad|iPhone|iPod/.test(agent)||(nav.platform==='MacIntel'&&nav.maxTouchPoints>1);
+ return ios&&!/CriOS|FxiOS|EdgiOS|OPiOS/.test(agent);
+}
+async function handleGoogleSignIn(){
+ if(!fb){showToast('Firebase has not initialized. Check the Firebase unavailable status and reload the page.');return}
+ if(signingIn)return;signingIn=true;
+ const provider=new fb.GoogleAuthProvider();
+ try{
+  if(prefersRedirectSignIn()){await fb.signInWithRedirect(fb.auth,provider);return}
+  await fb.signInWithPopup(fb.auth,provider);
+ }catch(e){
+  const code=firebaseErrorCode(e);
+  if(/^(auth\/popup-blocked|auth\/operation-not-supported-in-this-environment|cancelled-popup-request)$/.test(code)){
+   try{await fb.signInWithRedirect(fb.auth,provider);return}catch(redirectError){e=redirectError}
+  }
+  console.error('Northstar Google sign-in failed',e);
+  reportSyncIssue(e,'Google sign-in');
+  showToast(firebaseErrorDetails(e,'Google sign-in'));
+ }finally{signingIn=false}
+}
+/* A phone that was backgrounded, offline, or woken from the back/forward cache
+   often keeps a stale "needs attention" state. Retry only transient codes; a
+   real conflict still pauses, because every write is a conditional transaction. */
+function maybeAutoRetrySync(){
+ if(!user||!fb||cloudLoaded||syncLoading||signingIn||vault.state==='locked')return;
+ const code=syncIssue?.code||'';
+ if(!/^(unavailable|deadline-exceeded|cancelled|northstar\/offline|auth\/network-request-failed|auth\/timeout|auth\/web-storage-unsupported)$/.test(code))return;
+ const now=Date.now();if(now-syncAutoRetryAt<20000)return;syncAutoRetryAt=now;
+ retryCloudSync();
+}
+window.addEventListener('online',()=>maybeAutoRetrySync());
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')maybeAutoRetrySync()});
+window.addEventListener('pageshow',event=>{if(event.persisted)maybeAutoRetrySync()});
 async function handleGoogleSignOut(){
  if(!fb)return;setCloudLoading(true);
  try{
   if(vault.state==='unlocked')await flushProtectedLocal();
   clearTimeout(saveTimer);
-  if(user&&cloudLoaded){try{await writeCloudNow()}catch(error){cloudLoaded=false;lastSyncError=error;setSync('Cloud sync needs attention','err')}}
+  if(user&&cloudLoaded){try{await writeCloudNow()}catch(error){cloudLoaded=false;lastSyncError=error;reportSyncIssue(error,'Cloud save');setSync(syncFailureStatus('Cloud sync',error),'err')}}
   setCloudLoading(false);
   if(user&&!cloudLoaded){const ok=await showNorthstarDialog({title:'Sign out with sync paused?',message:'The latest changes may only be available on this device.',detail:'Keep a backup and reconnect later to review the cloud copy.',icon:'☁',confirmText:'Sign out',cancelText:'Stay signed in'});if(ok!==true)return}
   await fb.signOut(fb.auth);showToast('Signed out. This browser copy remains available.');
- }catch(e){setCloudLoading(false);showToast('Could not sign out safely. Check that your device copy is saved.')}
+ }catch(e){setCloudLoading(false);const code=reportSyncIssue(e,'Sign out');showToast(`Could not sign out safely [${code}]. Check that your device copy is saved.`)}
 }
 
 /* Read-only bridge for the local assistant: gives it the live in-memory ledger
@@ -2981,7 +3195,7 @@ try{
   });
 }catch(e){}
 if(document.documentElement.classList.contains('northstar-seen')){const screen=$('welcomeScreen');screen?.classList.add('hidden');screen?.setAttribute('aria-hidden','true')}
-render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJourney();updateBackgroundAvailability();if(vault.state!=='locked'&&isWelcomeVisible())window.setTimeout(focusWelcomeEntry,140);
+restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJourney();updateBackgroundAvailability();if(vault.state!=='locked'&&isWelcomeVisible())window.setTimeout(focusWelcomeEntry,140);
 </script>
 <script>
 /* Each purchased tile animates once when it first enters view. Returning to it does not replay the mark. */

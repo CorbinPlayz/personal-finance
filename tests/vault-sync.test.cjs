@@ -168,7 +168,8 @@ function localHarness() {
     data: { label: 'first' }, user: { uid: 'alice' }, cloudLoaded: true, lastSyncError: null, page: 'Overview', vaultWriteTail: Promise.resolve(),
     readVaultMarker: () => JSON.parse(store.get('northstar-vault-active-v1') || 'null'),
     encryptLedger: async snapshot => ({ revision: String(++counter), ciphertext: `sealed-${snapshot.label}` }),
-    queueCloudSave: () => cloudQueued++, setSync: () => {}, showToast: () => {}, render: () => {}, validateEnvelope: () => true
+    queueCloudSave: () => cloudQueued++, setSync: () => {}, showToast: () => {}, render: () => {}, validateEnvelope: () => true,
+    firebaseErrorCode: () => 'northstar/device-save', syncFailureStatus: stage => `${stage} needs attention`, reportSyncIssue: () => 'northstar/device-save'
   });
   vm.runInContext(localHelpers, context);
   return { context, store, initial, set failWrites(v) { failWrites = v; }, get cloudQueued() { return cloudQueued; } };
@@ -199,6 +200,7 @@ test('locking flushes pending protected changes before reload and clears the sav
     setCloudLoading: () => {}, flushProtectedLocal: async () => { flushed = true; }, clearTimeout: () => {},
     writeCloudNow: async () => { assert.equal(flushed, true); wrote = true; },
     setSync: value => { status = value; }, showToast: () => {}, showNorthstarDialog: async () => false,
+    firebaseErrorCode: () => 'northstar/app', syncFailureStatus: () => 'sync needs attention', reportSyncIssue: () => 'northstar/app', clearSyncIssue: () => {},
     location: { reload: () => { assert.equal(wrote, true); assert.equal(status, 'Protected cloud sync on'); reloaded = true; } }
   });
   vm.runInContext(section('async function lockProtectedWorkspace(', '\nfunction renderVaultPanel('), context);
