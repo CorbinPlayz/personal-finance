@@ -43,6 +43,7 @@ test('Settings renders the major-update link with safe external-link attributes'
     user: null, cloudLoaded: false, lastSyncError: null, vault: { state: 'off' },
     pageHeading: title => `<h1>${title}</h1>`,
     renderVaultPanel: () => '',
+    renderSyncIssuePanel: () => '',
     renderWorkspaceCountGraph,
     options: () => '',
     esc: value => String(value),

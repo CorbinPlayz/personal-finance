@@ -22,6 +22,7 @@ Recorded expenses now appear as completed purchase tiles, with explicitly linked
 - Recorded expenses appear as completed purchase tiles. Linked expense/plan pairs appear once; selecting an expense-only tile edits the original transaction. Income and transfers are excluded.
 - A simple 30-day price trend estimate after at least three price checks on different dates. This estimate uses only prices you enter; it is not a live retailer feed or guaranteed prediction.
 - JSON backup and restore, browser storage, optional Google sign-in and Firestore sync, and optional passphrase protection for the active device/cloud workspace.
+- A paused cloud sync always shows an error code, a short reason and a time: in a notice under the header, in **Settings → Sync diagnostics**, and in a copyable details dialog. No email address or finance record is included in that text.
 
 The intro remembers dismissal when browser storage is available. If saving that preference is blocked, you can still enter but the intro may return on reload. If storage cannot be read at all, the protected-workspace check fails closed rather than bypassing a possible vault; restore browser storage access before proceeding.
 
@@ -55,6 +56,17 @@ Your customized **ticker list** is part of the active finance workspace and foll
 - While unlocked, financial data is in browser memory and can be read by the app and scripts running on the page. Protection cannot defend against a compromised device, malicious site code, browser extensions, or data intentionally sent to an external service. It also cannot prevent someone from restoring an older valid encrypted copy. This implementation has not received an independent security audit.
 - Protected-workspace exports are encrypted JSON backups. Unprotected exports are readable JSON, and the app warns before downloading them. Restoring an encrypted backup into an unprotected workspace creates a readable browser copy after confirmation.
 - Changes are saved to the protected device first. Cloud writes use conditional Firestore transactions; errors and conflicts pause cloud sync instead of silently overwriting another copy. If setup is interrupted, the original plaintext copies are kept and cloud protection may need an explicit retry. On a different Google account, protected data is not uploaded. Protection cannot currently be enabled for a local-only workspace or removed through an automatic decrypt/disable button.
+
+## Sync error codes, paused sync and phone sign-in
+
+Northstar never saves over a cloud copy it has not verified, so a failed or conflicting save pauses cloud sync and keeps your changes on the device. When that happens, the header shows the reason and the code (for example `Cloud sync needs attention · northstar/conflict`), a notice appears under the header with **Details**, and Settings shows **Sync diagnostics** with the code, stage, reason, time, workspace mode, connection state and whether the cloud copy loaded. **Copy details** produces shareable text with no email address or finance records. The record stays on the device until a later sync succeeds, so a code is still readable after a reload or after the toast disappears.
+
+- `northstar/conflict` — another copy changed the cloud document after this device loaded it. Nothing was overwritten; use **Retry cloud sync** to review both copies and choose one.
+- `northstar/offline` / `unavailable` — the device could not reach Firestore. Changes stay local and a transient code is retried when the connection returns, the tab becomes visible again, or the page is restored from the back/forward cache (at most once every 20 seconds). A real conflict still pauses.
+- `permission-denied`, `not-found`, `failed-precondition`, `auth/unauthorized-domain`, `auth/operation-not-allowed` and similar codes keep their original Firebase meaning with a setup hint; see the messages in the diagnostics panel.
+- On iOS Safari and in an installed home-screen app, Google sign-in uses the redirect method because the popup is unreliable there; a blocked popup also falls back to a redirect afterwards.
+
+The pause behaviour, conditional writes and protected-workspace rules are unchanged. These surfaces are not a substitute for a physical iPhone, Safari or live Firebase test: the new code display exists so the next failure can be identified precisely.
 
 ## Optional developer checks
 
