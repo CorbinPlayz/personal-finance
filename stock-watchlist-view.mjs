@@ -85,7 +85,7 @@ export function stockSaveStatus({
   if (loading) return { tone: 'neutral', message: 'Checking your cloud copy…' };
   if (saving) return { tone: 'neutral', message: 'Saving to your Google account…' };
   // Two copies differ and nobody has chosen one: the fix is one tap, so the line offers that tap instead of a trip to Settings.
-  if (!synced && needsChoice) return { tone: 'warn', message: `Saved on this device only. Cloud sync is waiting for you to choose which data to keep${reason}.`, action: 'Choose which data to keep', command: 'retry-sync' };
+  if (!synced && needsChoice) return { tone: 'warn', message: `Saved on this device only. Cloud sync is waiting for you to choose which data to keep${reason}.`, action: 'Choose which data to keep', command: 'choose-sync-data' };
   if (!synced) return { tone: 'warn', message: `Saved on this device only. Cloud sync is paused${reason}.`, action: 'Open sync diagnostics' };
   if (!custom) return { tone: 'neutral', message: 'Showing the starter list. Your first add or remove saves your own list to your Google account.' };
   let when = '';

@@ -255,11 +255,11 @@ test('only a conflict that is waiting for the visitor to choose is treated as a 
 test('the notice and the copied details point at the choice, and only when there is one', () => {
   const choice = harness();
   choice.context.reportSyncIssue(pendingChoice(), 'Cloud sync');
-  assert.match(choice.root.innerHTML, /<button type="button" class="primary-btn small" data-action="retry-sync">Choose which data to keep<\/button>/);
+  assert.match(choice.root.innerHTML, /<button type="button" class="primary-btn small" data-action="choose-sync-data">Choose which data to keep<\/button>/);
   assert.match(choice.context.syncDiagnosticsText(), /tap Choose which data to keep\. Nothing has been overwritten\.$/);
   const other = harness();
   other.context.reportSyncIssue(conflict(), 'Cloud save');
-  assert.doesNotMatch(other.root.innerHTML, /retry-sync/);
+  assert.doesNotMatch(other.root.innerHTML, /choose-sync-data|retry-sync/);
   assert.match(other.context.syncDiagnosticsText(), /then Retry cloud sync to review both copies\.$/);
 });
 
@@ -296,21 +296,21 @@ test('both copies are described in plain counts, with no amounts, names or notes
   for (const bad of [null, {}, { updatedAt: 0 }, { updatedAt: 'soon' }, { updatedAt: 1e30 }, { updatedAt: { seconds: 5 } }]) assert.equal(context.cloudSavedLabel(bad), '', JSON.stringify(bad));
 });
 
-test('the three "which copy to keep" dialogs ignore a stray tap outside them, and the two plaintext ones show both copies', () => {
-  const dialogs = [...moduleScript.matchAll(/showNorthstarDialog\(\{title:'(Choose a device workspace|Choose which data to keep|Protected copies are different)'[\s\S]*?choices:\[/g)];
+test('the three "which copy to keep" questions go through askSyncChoice, are guarded against an early tap, and can never hold the page', () => {
+  const dialogs = [...moduleScript.matchAll(/askSyncChoice\(\{title:'(Choose a device workspace|Choose which data to keep|Protected copies are different)'[\s\S]*?choices:\[/g)];
   assert.equal(dialogs.length, 3);
-  for (const [text, title] of dialogs) assert.match(text, /sticky:true,choices:\[$/, title);
-  assert.match(moduleScript, /contains\('confirm-backdrop'\)&&!confirmSticky\)\{settleNorthstarDialog\(null\)\}/);
-  assert.match(moduleScript, /confirmSticky=config\.sticky===true/);
-  assert.match(moduleScript, /function settleNorthstarDialog\(value\)\{[^}]*confirmSticky=false/);
-  // A double tap on the button that opened the dialog cannot land on a choice in its first half second, and the window always closes.
-  assert.match(moduleScript, /confirmArmedAt=confirmSticky\?Date\.now\(\)\+500:0/);
+  for (const [text, title] of dialogs) assert.match(text, /guarded:true,cardNote:'[^']+',choices:\[$/, title);
+  assert.equal((moduleScript.match(/guarded:true/g) || []).length, 3, 'every other dialog is unchanged');
+  assert.doesNotMatch(moduleScript, /showNorthstarDialog\(\{title:'(Choose a device workspace|Choose which data to keep|Protected copies are different)'/, 'no chooser skips askSyncChoice');
+  assert.doesNotMatch(moduleScript, /confirmSticky|config\.sticky|sticky:true/, 'a tap outside no longer traps an overlay that cannot be seen');
+  // A tap outside leaves the dialog once its first half second is over; a choice button ignores taps for that half second too.
+  assert.match(moduleScript, /contains\('confirm-backdrop'\)&&Date\.now\(\)>=confirmArmedAt\)\{settleNorthstarDialog\(null\)\}/);
+  assert.match(moduleScript, /confirmGuarded=config\.guarded===true;confirmArmedAt=confirmGuarded\?Date\.now\(\)\+500:0/);
   assert.match(moduleScript, /if\(Date\.now\(\)<confirmArmedAt\)return;const index=Number\(option\.dataset\.confirmIndex\)/);
-  assert.match(moduleScript, /function settleNorthstarDialog\(value\)\{[^}]*confirmArmedAt=0/);
+  assert.match(moduleScript, /function settleNorthstarDialog\(value\)\{[^}]*confirmGuarded=false;confirmArmedAt=0/);
+  // The two plaintext questions say what each side holds.
   assert.match(moduleScript, /This browser has \$\{here\}\. Your Google account has \$\{there\}\$\{cloudSavedLabel\(raw\)\}/);
   assert.match(moduleScript, /The Google-account copy has \$\{accountCopy\}\. The local workspace has \$\{localCopy\}/);
-  // Every other dialog keeps its tap-outside-to-cancel behaviour.
-  assert.equal((moduleScript.match(/sticky:true/g) || []).length, 3);
   // Initial focus is on the choice that changes and uploads nothing, in these three dialogs only.
   for (const [text, title] of dialogs) {
     const choices = moduleScript.slice(moduleScript.indexOf(text), moduleScript.indexOf('})', moduleScript.indexOf(text) + text.length));
@@ -319,6 +319,134 @@ test('the three "which copy to keep" dialogs ignore a stray tap outside them, an
   }
   assert.equal((moduleScript.match(/focus:true\}/g) || []).length, 3);
   assert.match(moduleScript, /choices\.findIndex\(choice=>choice\.focus===true\)/);
+});
+
+test('no dialog combines a blur of its own with an entry animation, and the three questions use a flat overlay', () => {
+  // iPhone Safari painted the dimmed page but not the dialog. The dialog had a backdrop-filter of its own nested in the backdrop's, plus an entry animation starting at opacity 0.
+  assert.match(html, /\.confirm-backdrop \.confirm-dialog,\.modal-backdrop \.modal\{-webkit-backdrop-filter:none;backdrop-filter:none;animation:none\}/);
+  assert.match(html, /\.confirm-backdrop\.confirm-backdrop-plain\{background:rgba\(8,8,8,\.62\)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;animation:none!important\}/);
+  assert.match(html, /\.confirm-backdrop-plain \.confirm-dialog\{background:#fff!important;/);
+  assert.match(moduleScript, /'<div class="confirm-backdrop'\+\(config\.guarded\?' confirm-backdrop-plain':''\)\+'" role="presentation">/);
+  // The override has to come after the layers that set the blur and the animation, or it would lose.
+  const override = html.indexOf('.confirm-backdrop .confirm-dialog,.modal-backdrop .modal{-webkit-backdrop-filter:none');
+  for (const earlier of ['animation:confirmRise', 'backdrop-filter:blur(30px) saturate(180%)']) assert.ok(html.indexOf(earlier) > 0 && html.lastIndexOf(earlier, override) > 0 && html.lastIndexOf(earlier) < override, `${earlier} comes before the override`);
+});
+
+function choiceHarness({ user = { uid: 'alice' }, issueMessage = 'Choose which data to keep to resume cloud sync.', loading = false } = {}) {
+  const log = { dialogs: [], toasts: [], retries: [], navigated: [] };
+  const h = { log, answer: 'cancel', next: null, asked: [] };
+  const context = vm.createContext({
+    user, syncLoading: loading, pendingChoice: null, scriptedChoice: null, syncChoiceGuardUntil: 0,
+    syncIssue: issueMessage === null ? null : { code: 'northstar/conflict', stage: 'Cloud sync', message: issueMessage },
+    esc: value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character])),
+    showToast: text => log.toasts.push(text),
+    showNorthstarDialog: config => { log.dialogs.push(config); return Promise.resolve(h.answer); },
+    // Stands in for onAuthChanged: it asks the question it finds when it runs again.
+    retryCloudSync: async () => { log.retries.push(true); if (h.failRetry) throw new Error('retry failed'); for (const asked of [].concat(h.next || [])) h.asked.push(await context.askSyncChoice(asked)); },
+    navigate: page => log.navigated.push(page), requestAnimationFrame: callback => callback(), $: () => null,
+  });
+  vm.runInContext([section('function syncNeedsChoice(', 'function syncIssueStatus('), section('function syncChoiceReady(', 'function syncDiagnosticsText(')].join('\n'), context);
+  h.context = context;
+  h.read = expression => vm.runInContext(expression, context);
+  h.run = code => vm.runInContext(code, context);
+  return h;
+}
+const question = (overrides = {}) => ({
+  title: 'Choose which data to keep',
+  message: 'Northstar found different finance data. This browser has 1 transaction. Your Google account has 3 transactions (last saved Nov 15, 9:12 PM).',
+  cardNote: 'Use cloud copy replaces what this device shows.',
+  choices: [{ value: 'cloud', label: 'Use cloud copy' }, { value: 'local', label: 'Keep this device' }, { value: 'cancel', label: 'Decide later', focus: true }],
+  ...overrides,
+});
+
+test('askSyncChoice remembers the question, forgets it after a real choice, and keeps it after a deferral', async () => {
+  const h = choiceHarness();
+  for (const deferred of ['cancel', null]) {
+    h.answer = deferred;
+    assert.equal(await h.context.askSyncChoice(question()), deferred);
+    assert.deepEqual(JSON.parse(JSON.stringify(h.read('pendingChoice'))), {
+      uid: 'alice', title: 'Choose which data to keep', message: question().message, cardNote: 'Use cloud copy replaces what this device shows.',
+      choices: [{ value: 'cloud', label: 'Use cloud copy' }, { value: 'local', label: 'Keep this device' }]
+    });
+    assert.ok(h.read('syncChoiceGuardUntil') > Date.now(), 'the card ignores an immediate tap after a deferral');
+    assert.equal(h.context.syncChoiceReady(), true);
+  }
+  h.answer = 'local';
+  assert.equal(await h.context.askSyncChoice(question()), 'local');
+  assert.equal(h.read('pendingChoice'), null);
+  assert.equal(h.log.dialogs.length, 3, 'each ask without a scripted answer opens the dialog');
+});
+
+test('an answer given from the page applies to an identical question once, and never to a different one', async () => {
+  const h = choiceHarness();
+  await h.context.askSyncChoice(question());
+  h.run('syncChoiceGuardUntil = 0'); h.next = question();
+  await h.context.answerSyncChoice('cloud');
+  assert.deepEqual(h.asked, ['cloud'], 'the identical question is answered with the visitor\'s choice');
+  assert.equal(h.log.dialogs.length, 1, 'no dialog was needed');
+  assert.equal(h.read('pendingChoice'), null);
+  assert.equal(h.read('scriptedChoice'), null);
+  // One shot: the next question opens the dialog.
+  h.answer = 'cancel'; assert.equal(await h.context.askSyncChoice(question()), 'cancel'); assert.equal(h.log.dialogs.length, 2);
+  // One shot within a single run too: a retry can ask two questions in a row, and only an identical first one is answered for the visitor.
+  const twice = choiceHarness(); await twice.context.askSyncChoice(question());
+  twice.run('syncChoiceGuardUntil = 0'); twice.next = [question(), question()]; twice.answer = 'cancel';
+  await twice.context.answerSyncChoice('local');
+  assert.deepEqual(twice.asked, ['local', 'cancel'], 'the stored answer was used up by the first question');
+  assert.equal(twice.log.dialogs.length, 2, 'the second question opened the dialog');
+  assert.equal(twice.log.toasts.length, 0, 'it was not treated as a changed question');
+
+  for (const [name, changed] of [['the counts changed', { message: question().message.replace('3 transactions', '40 transactions') }], ['another question came first', { title: 'Choose a device workspace' }]]) {
+    const g = choiceHarness(); await g.context.askSyncChoice(question());
+    g.run('syncChoiceGuardUntil = 0'); g.next = question(changed); g.answer = 'cancel';
+    await g.context.answerSyncChoice('local');
+    assert.deepEqual(g.asked, ['cancel'], `${name}: the visitor's choice was not applied`);
+    assert.equal(g.log.dialogs.length, 2, `${name}: the new question was shown`);
+    assert.match(g.log.toasts.at(-1), /^That question changed since you looked, so nothing was applied\./, name);
+    assert.equal(g.read('scriptedChoice'), null, name);
+    assert.equal(g.read('pendingChoice.message'), changed.message || question().message, `${name}: the card now shows the new question`);
+  }
+});
+
+test('the page answer is ignored unless a deferred question is really waiting, and it never outlives a failure', async () => {
+  const waiting = async overrides => { const h = choiceHarness(overrides); await h.context.askSyncChoice(question()); h.run('syncChoiceGuardUntil = 0'); h.next = question(); return h; };
+  const refused = [
+    ['an unoffered value', await waiting(), 'cancel'], ['a made-up value', await waiting(), 'delete-everything'],
+    ['while syncing', await waiting({ loading: true }), 'cloud'], ['for a different issue', await waiting({ issueMessage: 'Missing or insufficient permissions.' }), 'cloud'], ['with no issue recorded', await waiting({ issueMessage: null }), 'cloud'],
+  ];
+  for (const [name, h, value] of refused) { await h.context.answerSyncChoice(value); assert.equal(h.log.retries.length, 0, name); assert.equal(h.read('scriptedChoice'), null, name); }
+  const other = await waiting(); other.run("user = { uid: 'mallory' }"); await other.context.answerSyncChoice('cloud');
+  assert.equal(other.log.retries.length, 0, 'another account cannot answer it'); assert.equal(other.context.syncChoiceReady(), false);
+  const early = choiceHarness(); await early.context.askSyncChoice(question()); early.next = question();
+  await early.context.answerSyncChoice('cloud'); assert.equal(early.log.retries.length, 0, 'a tap in the first moments after the card appears is ignored');
+  const failing = await waiting(); failing.failRetry = true;
+  await assert.rejects(failing.context.answerSyncChoice('cloud'), /retry failed/);
+  assert.equal(failing.read('scriptedChoice'), null, 'a failed attempt leaves no stored answer behind');
+});
+
+test('the in-page question shows the remembered one, escapes it and offers no Decide later', async () => {
+  const h = choiceHarness();
+  assert.equal(h.context.renderSyncChoiceCard(), '', 'nothing before a question has been deferred');
+  h.answer = 'cancel'; await h.context.askSyncChoice(question({ message: 'This browser has <b>1</b> transaction & "more".' }));
+  const card = h.context.renderSyncChoiceCard();
+  assert.match(card, /id="syncChoiceCard"[^>]*role="group"/);
+  assert.match(card, /This browser has &lt;b&gt;1&lt;\/b&gt; transaction &amp; &quot;more&quot;\./);
+  assert.match(card, /data-action="answer-sync-choice" data-value="cloud">Use cloud copy<\/button>/);
+  assert.match(card, /data-action="answer-sync-choice" data-value="local">Keep this device<\/button>/);
+  assert.doesNotMatch(card, /cancel|Decide later/);
+  assert.match(card, /Nothing changes until you tap a button\./);
+  h.run('syncLoading = true'); assert.equal(h.context.renderSyncChoiceCard(), '', 'hidden while a sync is running');
+});
+
+test('the one-tap button opens the in-page question when there is one, and asks again when there is not', async () => {
+  const h = choiceHarness(); h.context.chooseSyncData();
+  assert.deepEqual([h.log.retries.length, h.log.navigated.length], [1, 0], 'no remembered question yet: ask again');
+  h.answer = 'cancel'; await h.context.askSyncChoice(question()); h.run('syncChoiceGuardUntil = 0');
+  h.context.chooseSyncData();
+  assert.deepEqual(h.log.navigated, ['Settings']); assert.equal(h.log.retries.length, 1);
+  assert.ok(h.read('syncChoiceGuardUntil') > Date.now(), 'a double tap on the button cannot land on the card');
+  h.run('syncLoading = true'); h.context.chooseSyncData();
+  assert.equal(h.log.navigated.length, 1); assert.equal(h.log.retries.length, 1, 'ignored while a sync runs');
 });
 
 test('the diagnostics offer a direct Firestore check and name the project', () => {
