@@ -296,57 +296,78 @@ test('both copies are described in plain counts, with no amounts, names or notes
   for (const bad of [null, {}, { updatedAt: 0 }, { updatedAt: 'soon' }, { updatedAt: 1e30 }, { updatedAt: { seconds: 5 } }]) assert.equal(context.cloudSavedLabel(bad), '', JSON.stringify(bad));
 });
 
-test('the three "which copy to keep" questions go through askSyncChoice, are guarded against an early tap, and can never hold the page', () => {
-  const dialogs = [...moduleScript.matchAll(/askSyncChoice\(\{title:'(Choose a device workspace|Choose which data to keep|Protected copies are different)'[\s\S]*?choices:\[/g)];
-  assert.equal(dialogs.length, 3);
-  for (const [text, title] of dialogs) assert.match(text, /guarded:true,cardNote:'[^']+',choices:\[$/, title);
-  assert.equal((moduleScript.match(/guarded:true/g) || []).length, 3, 'every other dialog is unchanged');
+test('the three "which copy to keep" questions go through askSyncChoice, which never opens a dialog, and each carries both copies in its signature', () => {
+  const titles = ['Choose a device workspace', 'Choose which data to keep', 'Protected copies are different'];
+  assert.equal((moduleScript.match(/askSyncChoice\(\{title:/g) || []).length, 3);
+  for (const title of titles) {
+    const from = moduleScript.indexOf(`askSyncChoice({title:'${title}'`);
+    assert.ok(from > 0, title);
+    const call = moduleScript.slice(from, moduleScript.indexOf('})', moduleScript.indexOf('choices:[', from)) + 2);
+    assert.match(call, /,signature:dataSignature\([A-Za-z]+\)\+'\\n'\+dataSignature\([A-Za-z]+\),cardNote:'[^']+',choices:\[\{value:'[a-z]+',label:'[^']+'\},\{value:'[a-z]+',label:'[^']+'\}\]\}\)$/, title);
+    assert.doesNotMatch(call, /cancel|Decide later|guarded|focus:true|detail:|icon:|label:'[A-Z ]+'/, `${title}: nothing is left of the pop-up`);
+  }
   assert.doesNotMatch(moduleScript, /showNorthstarDialog\(\{title:'(Choose a device workspace|Choose which data to keep|Protected copies are different)'/, 'no chooser skips askSyncChoice');
-  assert.doesNotMatch(moduleScript, /confirmSticky|config\.sticky|sticky:true/, 'a tap outside no longer traps an overlay that cannot be seen');
-  // A tap outside leaves the dialog once its first half second is over; a choice button ignores taps for that half second too.
-  assert.match(moduleScript, /contains\('confirm-backdrop'\)&&Date\.now\(\)>=confirmArmedAt\)\{settleNorthstarDialog\(null\)\}/);
-  assert.match(moduleScript, /confirmGuarded=config\.guarded===true;confirmArmedAt=confirmGuarded\?Date\.now\(\)\+500:0/);
-  assert.match(moduleScript, /if\(Date\.now\(\)<confirmArmedAt\)return;const index=Number\(option\.dataset\.confirmIndex\)/);
-  assert.match(moduleScript, /function settleNorthstarDialog\(value\)\{[^}]*confirmGuarded=false;confirmArmedAt=0/);
+  const asking = section('function askSyncChoice(', 'async function answerSyncChoice(');
+  assert.doesNotMatch(asking, /showNorthstarDialog/, 'asking never opens an overlay that could fail to paint or hold the page');
+  assert.match(asking, /return Promise\.resolve\(null\)\s*\}\s*$/, 'the callers get "not decided yet" at once');
+  assert.doesNotMatch(moduleScript, /confirmGuarded|confirmArmedAt|confirm-backdrop-plain|confirm-dialog-choice|config\.guarded|confirmSticky|config\.sticky|sticky:true/, 'the guarded overlay is gone');
   // The two plaintext questions say what each side holds.
   assert.match(moduleScript, /This browser has \$\{here\}\. Your Google account has \$\{there\}\$\{cloudSavedLabel\(raw\)\}/);
   assert.match(moduleScript, /The Google-account copy has \$\{accountCopy\}\. The local workspace has \$\{localCopy\}/);
-  // Initial focus is on the choice that changes and uploads nothing, in these three dialogs only.
-  for (const [text, title] of dialogs) {
-    const choices = moduleScript.slice(moduleScript.indexOf(text), moduleScript.indexOf('})', moduleScript.indexOf(text) + text.length));
-    assert.match(choices, /\{value:'cancel',label:'Decide later',style:'quiet',focus:true\}/, title);
-    assert.equal((choices.match(/focus:true/g) || []).length, 1, title);
-  }
-  assert.equal((moduleScript.match(/focus:true\}/g) || []).length, 3);
-  assert.match(moduleScript, /choices\.findIndex\(choice=>choice\.focus===true\)/);
+  // The bar lives outside the page shell (which is inert while a sync runs), and every change of state redraws it.
+  assert.match(html, /<div id="toastRoot" aria-live="polite"><\/div><div id="syncChoiceBarRoot"><\/div>/);
+  assert.ok(html.indexOf('id="syncChoiceBarRoot"') > html.indexOf('<main') || html.indexOf('id="syncChoiceBarRoot"') > html.indexOf('class="app-shell"'));
+  assert.match(section('function renderSyncIssueBanner(', 'function showSyncDetailsDialog('), /try\{renderSyncChoiceBar\(\)\}catch\(e\)\{\}/);
+  assert.match(section('function updateBackgroundAvailability(', 'function setCloudLoading('), /try\{renderSyncChoiceBar\(\)\}catch\(e\)\{\}/);
+  assert.match(moduleScript, /case'answer-sync-choice':answerSyncChoice\(b\.dataset\.value\);break;case'minimize-sync-choice':minimizeSyncChoice\(\);break;case'expand-sync-choice':expandSyncChoice\(\);break;/);
+  assert.match(moduleScript, /initWelcomeJourney\(\);initSyncChoiceLayout\(\);updateBackgroundAvailability\(\)/);
+  assert.doesNotMatch(section('function renderSettings(', 'function openModal('), /syncChoice|SyncChoice/, 'Settings neither hides the question further down the page nor hides its own button because of it');
+  assert.doesNotMatch(section('function renderSyncIssuePanel(', 'function renderSettings('), /syncChoice|SyncChoice/);
 });
 
-test('no dialog combines a blur of its own with an entry animation, and the three questions use a flat overlay', () => {
-  // iPhone Safari painted the dimmed page but not the dialog. The dialog had a backdrop-filter of its own nested in the backdrop's, plus an entry animation starting at opacity 0.
+test('the bar is pinned to the screen above the tab bar, lifts the toast and the assistant button, and has no blur or animation to fail to paint', () => {
+  const rule = html.match(/\.sync-choice-bar\{([^}]*)\}/)?.[1];
+  assert.ok(rule, 'the bar has a rule');
+  assert.match(rule, /position:fixed;/, 'pinned to the screen, not to the page');
+  assert.match(rule, /bottom:calc\(var\(--dock-height,67px\) \+ 20px \+ env\(safe-area-inset-bottom,0px\)\)/, 'right above the tab bar');
+  assert.match(rule, /z-index:55;/, 'under the tab bar (60), toasts (80) and every overlay');
+  assert.match(html, /#mobileDock\{[^}]*z-index:60;/);
+  assert.doesNotMatch(rule, /backdrop-filter|animation|transition|transform/, 'nothing that iPhone Safari is known to leave unpainted');
+  assert.match(rule, /max-height:min\(60vh,calc\(100vh - var\(--dock-height,67px\) - 110px\)\);max-height:min\(60dvh,calc\(100dvh - var\(--dock-height,67px\) - 110px - env\(safe-area-inset-bottom,0px\)\)\);overflow-y:auto;/, 'a question never takes more than 60% of the screen; past that it scrolls inside itself');
+  assert.match(html, /\.sync-choice-buttons\{display:grid;grid-template-columns:repeat\(auto-fit,minmax\(min\(100%,118px\),1fr\)\);/, 'the two choices sit side by side and stack only on a very narrow screen');
+  assert.doesNotMatch(section('function syncChoiceBarHtml(', 'function renderSyncChoiceBar('), /sync-choice-note/, 'the bar does not share a class with the diagnostics panel note');
+  assert.doesNotMatch(html, /\n\.sync-choice-note\{/, 'so the panel note keeps only its own styling');
+  assert.doesNotMatch(rule, /top:|inset:/, 'it is anchored to the bottom only, never centred');
+  assert.match(html, /body\.has-sync-choice-bar \.toast,body\.has-sync-choice-bar \.nsj-orb\{bottom:calc\(var\(--dock-height,67px\) \+ 30px \+ var\(--sync-choice-height,0px\) \+ env\(safe-area-inset-bottom,0px\)\)\}/, 'a toast and the assistant button sit above the bar instead of under it');
+  assert.match(html, /body\.has-sync-choice-bar \.app-shell \.content\{padding-bottom:calc\(118px \+ var\(--sync-choice-height,0px\) \+ 14px/, 'the last of the page can be scrolled above the bar');
+  // iPhone Safari painted the dimmed page but not a dialog. Dialogs had a backdrop-filter of their own nested in the backdrop's, plus an entry animation starting at opacity 0.
   assert.match(html, /\.confirm-backdrop \.confirm-dialog,\.modal-backdrop \.modal\{-webkit-backdrop-filter:none;backdrop-filter:none;animation:none\}/);
-  assert.match(html, /\.confirm-backdrop\.confirm-backdrop-plain\{background:rgba\(8,8,8,\.62\)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;animation:none!important\}/);
-  assert.match(html, /\.confirm-backdrop-plain \.confirm-dialog\{background:#fff!important;/);
-  assert.match(moduleScript, /'<div class="confirm-backdrop'\+\(config\.guarded\?' confirm-backdrop-plain':''\)\+'" role="presentation">/);
   // The override has to come after the layers that set the blur and the animation, or it would lose.
   const override = html.indexOf('.confirm-backdrop .confirm-dialog,.modal-backdrop .modal{-webkit-backdrop-filter:none');
   for (const earlier of ['animation:confirmRise', 'backdrop-filter:blur(30px) saturate(180%)']) assert.ok(html.indexOf(earlier) > 0 && html.lastIndexOf(earlier, override) > 0 && html.lastIndexOf(earlier) < override, `${earlier} comes before the override`);
 });
 
 function choiceHarness({ user = { uid: 'alice' }, issueMessage = 'Choose which data to keep to resume cloud sync.', loading = false } = {}) {
-  const log = { dialogs: [], toasts: [], retries: [], navigated: [] };
-  const h = { log, answer: 'cancel', next: null, asked: [] };
+  const log = { toasts: [], retries: [], styles: new Map(), classes: new Set(), rootWrites: 0, focused: [] };
+  const h = { log, next: null, asked: [], welcome: false };
+  const root = { _html: '', get innerHTML() { return this._html; }, set innerHTML(value) { this._html = value; log.rootWrites++; }, get firstChild() { return this._html ? {} : null; } };
+  const open = { focus: options => log.focused.push(['open', options]) };
+  const bar = { offsetHeight: 180, focus: options => log.focused.push(['bar', options]), querySelector: selector => (root.innerHTML.includes('data-action="expand-sync-choice"') && selector.includes('expand-sync-choice') ? open : null) };
   const context = vm.createContext({
-    user, syncLoading: loading, pendingChoice: null, scriptedChoice: null, syncChoiceGuardUntil: 0,
+    user, syncLoading: loading, pendingChoice: null, scriptedChoice: null, syncChoiceGuardUntil: 0, syncChoiceCollapsed: false, syncChoiceShown: '',
     syncIssue: issueMessage === null ? null : { code: 'northstar/conflict', stage: 'Cloud sync', message: issueMessage },
     esc: value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character])),
     showToast: text => log.toasts.push(text),
-    showNorthstarDialog: config => { log.dialogs.push(config); return Promise.resolve(h.answer); },
+    showNorthstarDialog: () => { throw new Error('a "which copy to keep" question must not open a dialog'); },
     // Stands in for onAuthChanged: it asks the question it finds when it runs again.
-    retryCloudSync: async () => { log.retries.push(true); if (h.failRetry) throw new Error('retry failed'); for (const asked of [].concat(h.next || [])) h.asked.push(await context.askSyncChoice(asked)); },
-    navigate: page => log.navigated.push(page), requestAnimationFrame: callback => callback(), $: () => null,
+    retryCloudSync: async () => { log.retries.push(true); if (h.failRetry) throw new Error('retry failed'); h.beforeAsk?.(); for (const asked of [].concat(h.next || [])) h.asked.push(await context.askSyncChoice(asked)); },
+    isWelcomeVisible: () => h.welcome, window: { NorthstarVaultLocked: false, addEventListener() {} },
+    document: { documentElement: { style: { setProperty: (name, value) => log.styles.set(name, value), removeProperty: name => log.styles.delete(name) } }, body: { classList: { toggle: (name, on) => (on ? log.classes.add(name) : log.classes.delete(name)) } } },
+    $: id => ({ syncChoiceBarRoot: root, syncChoiceBar: root.innerHTML.includes('id="syncChoiceBar"') ? bar : null, mobileDock: { offsetHeight: 67 } }[id] || null),
+    requestAnimationFrame: callback => callback(),
   });
   vm.runInContext([section('function syncNeedsChoice(', 'function syncIssueStatus('), section('function syncChoiceReady(', 'function syncDiagnosticsText(')].join('\n'), context);
-  h.context = context;
+  h.context = context; h.root = root;
   h.read = expression => vm.runInContext(expression, context);
   h.run = code => vm.runInContext(code, context);
   return h;
@@ -355,60 +376,73 @@ const question = (overrides = {}) => ({
   title: 'Choose which data to keep',
   message: 'Northstar found different finance data. This browser has 1 transaction. Your Google account has 3 transactions (last saved Nov 15, 9:12 PM).',
   cardNote: 'Use cloud copy replaces what this device shows.',
+  signature: 'device-copy\ncloud-copy',
   choices: [{ value: 'cloud', label: 'Use cloud copy' }, { value: 'local', label: 'Keep this device' }, { value: 'cancel', label: 'Decide later', focus: true }],
   ...overrides,
 });
 
-test('askSyncChoice remembers the question, forgets it after a real choice, and keeps it after a deferral', async () => {
+test('askSyncChoice remembers the question and says "not decided yet" at once, without any overlay', async () => {
   const h = choiceHarness();
-  for (const deferred of ['cancel', null]) {
-    h.answer = deferred;
-    assert.equal(await h.context.askSyncChoice(question()), deferred);
+  for (let again = 0; again < 2; again++) {
+    assert.equal(await h.context.askSyncChoice(question()), null);
     assert.deepEqual(JSON.parse(JSON.stringify(h.read('pendingChoice'))), {
-      uid: 'alice', title: 'Choose which data to keep', message: question().message, cardNote: 'Use cloud copy replaces what this device shows.',
+      uid: 'alice', title: 'Choose which data to keep', message: question().message, cardNote: 'Use cloud copy replaces what this device shows.', signature: 'device-copy\ncloud-copy',
       choices: [{ value: 'cloud', label: 'Use cloud copy' }, { value: 'local', label: 'Keep this device' }]
     });
-    assert.ok(h.read('syncChoiceGuardUntil') > Date.now(), 'the card ignores an immediate tap after a deferral');
+    assert.ok(h.read('syncChoiceGuardUntil') > Date.now(), 'the bar ignores an immediate tap when it appears');
+    assert.equal(h.read('syncChoiceCollapsed'), false, 'a new question starts open');
     assert.equal(h.context.syncChoiceReady(), true);
   }
-  h.answer = 'local';
-  assert.equal(await h.context.askSyncChoice(question()), 'local');
-  assert.equal(h.read('pendingChoice'), null);
-  assert.equal(h.log.dialogs.length, 3, 'each ask without a scripted answer opens the dialog');
+  assert.match(h.root.innerHTML, /Which copy should Northstar keep\?/, 'the question is on screen as soon as it is asked');
 });
 
-test('an answer given from the page applies to an identical question once, and never to a different one', async () => {
+test('an answer given from the bar applies to an identical question once, and never to a different one', async () => {
   const h = choiceHarness();
   await h.context.askSyncChoice(question());
   h.run('syncChoiceGuardUntil = 0'); h.next = question();
   await h.context.answerSyncChoice('cloud');
   assert.deepEqual(h.asked, ['cloud'], 'the identical question is answered with the visitor\'s choice');
-  assert.equal(h.log.dialogs.length, 1, 'no dialog was needed');
   assert.equal(h.read('pendingChoice'), null);
   assert.equal(h.read('scriptedChoice'), null);
-  // One shot: the next question opens the dialog.
-  h.answer = 'cancel'; assert.equal(await h.context.askSyncChoice(question()), 'cancel'); assert.equal(h.log.dialogs.length, 2);
+  // One shot: the next question is only asked.
+  assert.equal(await h.context.askSyncChoice(question()), null);
   // One shot within a single run too: a retry can ask two questions in a row, and only an identical first one is answered for the visitor.
   const twice = choiceHarness(); await twice.context.askSyncChoice(question());
-  twice.run('syncChoiceGuardUntil = 0'); twice.next = [question(), question()]; twice.answer = 'cancel';
+  twice.run('syncChoiceGuardUntil = 0'); twice.next = [question(), question()];
   await twice.context.answerSyncChoice('local');
-  assert.deepEqual(twice.asked, ['local', 'cancel'], 'the stored answer was used up by the first question');
-  assert.equal(twice.log.dialogs.length, 2, 'the second question opened the dialog');
+  assert.deepEqual(twice.asked, ['local', null], 'the stored answer was used up by the first question');
   assert.equal(twice.log.toasts.length, 0, 'it was not treated as a changed question');
 
-  for (const [name, changed] of [['the counts changed', { message: question().message.replace('3 transactions', '40 transactions') }], ['another question came first', { title: 'Choose a device workspace' }]]) {
+  for (const [name, changed] of [
+    ['the counts changed', { message: question().message.replace('3 transactions', '40 transactions') }],
+    ['another question came first', { title: 'Choose a device workspace' }],
+    ['a value in this device\'s copy was edited while the question waited', { signature: 'edited-device-copy\ncloud-copy' }],
+    ['the cloud copy was changed by another device', { signature: 'device-copy\nnewer-cloud-copy' }],
+    ['the answer is no longer one of the choices', { choices: [{ value: 'account', label: 'Use account device copy' }, { value: 'local', label: 'Use local workspace' }] }],
+  ]) {
     const g = choiceHarness(); await g.context.askSyncChoice(question());
-    g.run('syncChoiceGuardUntil = 0'); g.next = question(changed); g.answer = 'cancel';
-    await g.context.answerSyncChoice('local');
-    assert.deepEqual(g.asked, ['cancel'], `${name}: the visitor's choice was not applied`);
-    assert.equal(g.log.dialogs.length, 2, `${name}: the new question was shown`);
+    g.run('syncChoiceGuardUntil = 0'); g.next = question(changed);
+    await g.context.answerSyncChoice('cloud');
+    assert.deepEqual(g.asked, [null], `${name}: the visitor's choice was not applied`);
     assert.match(g.log.toasts.at(-1), /^That question changed since you looked, so nothing was applied\./, name);
     assert.equal(g.read('scriptedChoice'), null, name);
-    assert.equal(g.read('pendingChoice.message'), changed.message || question().message, `${name}: the card now shows the new question`);
+    assert.equal(g.read('pendingChoice.title'), changed.title || question().title, `${name}: the bar now shows the new question`);
+    assert.equal(g.read('pendingChoice.signature'), changed.signature || question().signature, name);
   }
 });
 
-test('the page answer is ignored unless a deferred question is really waiting, and it never outlives a failure', async () => {
+test('an answer given for one account is never applied to another account\'s question, even one that reads the same', async () => {
+  const h = choiceHarness(); await h.context.askSyncChoice(question());
+  h.run('syncChoiceGuardUntil = 0'); h.next = question(); // the same title, counts, copies and choices
+  h.beforeAsk = () => h.run("user = { uid: 'bob' }"); // another account signs in while the answer is being applied
+  await h.context.answerSyncChoice('cloud');
+  assert.deepEqual(h.asked, [null], 'the answer was not carried over to the other account');
+  assert.match(h.log.toasts.at(-1), /^That question changed since you looked, so nothing was applied\./);
+  assert.equal(h.read('scriptedChoice'), null);
+  assert.equal(h.read('pendingChoice.uid'), 'bob', 'the bar now holds the other account\'s question');
+});
+
+test('the bar answer is ignored unless a question is really waiting, and it never outlives a failure', async () => {
   const waiting = async overrides => { const h = choiceHarness(overrides); await h.context.askSyncChoice(question()); h.run('syncChoiceGuardUntil = 0'); h.next = question(); return h; };
   const refused = [
     ['an unoffered value', await waiting(), 'cancel'], ['a made-up value', await waiting(), 'delete-everything'],
@@ -418,35 +452,103 @@ test('the page answer is ignored unless a deferred question is really waiting, a
   const other = await waiting(); other.run("user = { uid: 'mallory' }"); await other.context.answerSyncChoice('cloud');
   assert.equal(other.log.retries.length, 0, 'another account cannot answer it'); assert.equal(other.context.syncChoiceReady(), false);
   const early = choiceHarness(); await early.context.askSyncChoice(question()); early.next = question();
-  await early.context.answerSyncChoice('cloud'); assert.equal(early.log.retries.length, 0, 'a tap in the first moments after the card appears is ignored');
+  await early.context.answerSyncChoice('cloud'); assert.equal(early.log.retries.length, 0, 'a tap in the first moments after the bar appears is ignored');
   const failing = await waiting(); failing.failRetry = true;
   await assert.rejects(failing.context.answerSyncChoice('cloud'), /retry failed/);
   assert.equal(failing.read('scriptedChoice'), null, 'a failed attempt leaves no stored answer behind');
 });
 
-test('the in-page question shows the remembered one, escapes it and offers no Decide later', async () => {
+test('the bar shows the remembered question, escapes it, offers no Decide later, and can shrink to a strip', async () => {
   const h = choiceHarness();
-  assert.equal(h.context.renderSyncChoiceCard(), '', 'nothing before a question has been deferred');
-  h.answer = 'cancel'; await h.context.askSyncChoice(question({ message: 'This browser has <b>1</b> transaction & "more".' }));
-  const card = h.context.renderSyncChoiceCard();
-  assert.match(card, /id="syncChoiceCard"[^>]*role="group"/);
-  assert.match(card, /This browser has &lt;b&gt;1&lt;\/b&gt; transaction &amp; &quot;more&quot;\./);
-  assert.match(card, /data-action="answer-sync-choice" data-value="cloud">Use cloud copy<\/button>/);
-  assert.match(card, /data-action="answer-sync-choice" data-value="local">Keep this device<\/button>/);
-  assert.doesNotMatch(card, /cancel|Decide later/);
-  assert.match(card, /Nothing changes until you tap a button\./);
-  h.run('syncLoading = true'); assert.equal(h.context.renderSyncChoiceCard(), '', 'hidden while a sync is running');
+  assert.equal(h.root.innerHTML, '', 'nothing before a question has been asked');
+  await h.context.askSyncChoice(question({ message: 'This browser has <b>1</b> transaction & "more".' }));
+  const open = h.root.innerHTML;
+  assert.match(open, /id="syncChoiceBar"[^>]*role="group"/);
+  assert.match(open, /<h2 id="syncChoiceTitle">Which copy should Northstar keep\?<\/h2>/);
+  assert.match(open, /This browser has &lt;b&gt;1&lt;\/b&gt; transaction &amp; &quot;more&quot;\./);
+  assert.match(open, /data-action="answer-sync-choice" data-value="cloud">Use cloud copy<\/button>/);
+  assert.match(open, /data-action="answer-sync-choice" data-value="local">Keep this device<\/button>/);
+  assert.doesNotMatch(open, /cancel|Decide later/);
+  assert.match(open, /Use cloud copy replaces what this device shows\./);
+  assert.match(open, /Nothing changes until you tap a button\./);
+  assert.match(open, /data-action="minimize-sync-choice"[^>]*>Later<\/button>/);
+  assert.doesNotMatch(open, /Open<\/button>/);
+
+  // Later and Open change how the question is shown, never what is decided.
+  h.context.minimizeSyncChoice();
+  const strip = h.root.innerHTML;
+  assert.match(strip, /class="sync-choice-bar is-collapsed" id="syncChoiceBar"/);
+  assert.match(strip, /<strong>Choose which data to keep<\/strong><button type="button" class="primary-btn small" data-action="expand-sync-choice">Open<\/button>/);
+  assert.doesNotMatch(strip, /answer-sync-choice|Use cloud copy|Keep this device/, 'a strip cannot answer anything');
+  assert.deepEqual(JSON.parse(JSON.stringify(h.log.focused.at(-1))), ['open', { preventScroll: true }], 'focus follows the button that replaced Later');
+  h.run('syncChoiceGuardUntil = 0'); h.context.expandSyncChoice();
+  assert.equal(h.root.innerHTML, open, 'opening shows the same question again');
+  assert.ok(h.read('syncChoiceGuardUntil') > Date.now(), 'the tap that opened it cannot land on a choice');
+  assert.equal(h.log.retries.length, 0, 'nothing was decided or retried');
+  assert.equal(h.read('scriptedChoice'), null);
+  assert.equal(h.read('pendingChoice.message'), 'This browser has <b>1</b> transaction & "more".');
+  // Drawing the same state again does not rebuild the bar, so a tap in progress keeps its button.
+  const writes = h.log.rootWrites; h.context.renderSyncChoiceBar(); h.context.renderSyncChoiceBar();
+  assert.equal(h.log.rootWrites, writes, 'an unchanged bar is left alone');
 });
 
-test('the one-tap button opens the in-page question when there is one, and asks again when there is not', async () => {
+test('the tap guard starts when the bar actually appears, not when the question was asked', async () => {
+  const h = choiceHarness({ loading: true }); // the sync that asks the question is still running
+  await h.context.askSyncChoice(question());
+  assert.equal(h.root.innerHTML, '', 'nothing is on screen while that sync runs');
+  h.run('syncChoiceGuardUntil = 0'); // the guard from the moment of asking has long run out
+  h.run('syncLoading = false'); h.context.renderSyncChoiceBar();
+  assert.match(h.root.innerHTML, /Which copy should Northstar keep\?/);
+  const until = h.read('syncChoiceGuardUntil');
+  assert.ok(until > Date.now(), 'a tap in the first moments after the bar shows is ignored');
+  h.context.renderSyncChoiceBar(); h.context.renderSyncChoiceBar();
+  assert.equal(h.read('syncChoiceGuardUntil'), until, 'drawing the same bar again does not move the guard');
+  await h.context.answerSyncChoice('cloud'); assert.equal(h.log.retries.length, 0, 'so an immediate tap on a choice does nothing');
+  // Each time it comes back from being hidden, it protects the first tap again.
+  for (const [hide, show] of [[() => { h.welcome = true; }, () => { h.welcome = false; }], [() => h.run('window.NorthstarVaultLocked = true'), () => h.run('window.NorthstarVaultLocked = false')]]) {
+    hide(); h.context.renderSyncChoiceBar(); assert.equal(h.root.innerHTML, '');
+    h.run('syncChoiceGuardUntil = 0'); show(); h.context.renderSyncChoiceBar();
+    assert.ok(h.read('syncChoiceGuardUntil') > Date.now(), 'guarded again when it returns');
+  }
+  // Opening the bar from its strip does the same.
+  h.context.minimizeSyncChoice(); h.run('syncChoiceGuardUntil = 0'); h.context.expandSyncChoice();
+  assert.ok(h.read('syncChoiceGuardUntil') > Date.now(), 'and when it is opened from the strip');
+});
+
+test('the bar is hidden while syncing, behind the welcome screen or a locked vault, and publishes its height for the layout', async () => {
+  const h = choiceHarness();
+  await h.context.askSyncChoice(question());
+  assert.equal(h.log.styles.get('--sync-choice-height'), '180px');
+  assert.equal(h.log.styles.get('--dock-height'), '67px', 'the bar learns how tall the tab bar is');
+  assert.equal(h.log.classes.has('has-sync-choice-bar'), true, 'the page, the toast and the assistant button make room');
+  for (const [name, hide, show] of [
+    ['a sync is running', () => h.run('syncLoading = true'), () => h.run('syncLoading = false')],
+    ['the welcome screen is showing', () => { h.welcome = true; }, () => { h.welcome = false; }],
+    ['the protected workspace is locked', () => h.run('window.NorthstarVaultLocked = true'), () => h.run('window.NorthstarVaultLocked = false')],
+  ]) {
+    hide(); h.context.renderSyncChoiceBar();
+    assert.equal(h.root.innerHTML, '', `hidden while ${name}`);
+    assert.equal(h.log.classes.has('has-sync-choice-bar'), false, name);
+    assert.equal(h.log.styles.has('--sync-choice-height'), false, name);
+    show(); h.context.renderSyncChoiceBar();
+    assert.match(h.root.innerHTML, /Which copy should Northstar keep\?/, `back when ${name} ends`);
+    assert.equal(h.log.classes.has('has-sync-choice-bar'), true, name);
+  }
+  h.run("syncIssue = null"); h.context.renderSyncChoiceBar();
+  assert.equal(h.root.innerHTML, '', 'gone once nothing is waiting any more');
+});
+
+test('the one-tap buttons bring the bar back when a question waits, and ask again when none does', async () => {
   const h = choiceHarness(); h.context.chooseSyncData();
-  assert.deepEqual([h.log.retries.length, h.log.navigated.length], [1, 0], 'no remembered question yet: ask again');
-  h.answer = 'cancel'; await h.context.askSyncChoice(question()); h.run('syncChoiceGuardUntil = 0');
+  assert.equal(h.log.retries.length, 1, 'no remembered question yet (a reload, for instance): ask again');
+  await h.context.askSyncChoice(question()); h.context.minimizeSyncChoice(); h.run('syncChoiceGuardUntil = 0');
   h.context.chooseSyncData();
-  assert.deepEqual(h.log.navigated, ['Settings']); assert.equal(h.log.retries.length, 1);
-  assert.ok(h.read('syncChoiceGuardUntil') > Date.now(), 'a double tap on the button cannot land on the card');
+  assert.equal(h.log.retries.length, 1, 'nothing is asked again while the question is already waiting');
+  assert.match(h.root.innerHTML, /Which copy should Northstar keep\?/, 'a minimised question is opened');
+  assert.deepEqual(JSON.parse(JSON.stringify(h.log.focused.at(-1))), ['bar', { preventScroll: true }], 'and given focus without moving the page');
+  assert.ok(h.read('syncChoiceGuardUntil') > Date.now(), 'a double tap on the button cannot land on a choice');
   h.run('syncLoading = true'); h.context.chooseSyncData();
-  assert.equal(h.log.navigated.length, 1); assert.equal(h.log.retries.length, 1, 'ignored while a sync runs');
+  assert.equal(h.log.retries.length, 1, 'ignored while a sync runs');
 });
 
 test('the diagnostics offer a direct Firestore check and name the project', () => {
