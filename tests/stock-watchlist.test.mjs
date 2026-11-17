@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { STARTER_STOCKS, starterSymbols, watchlistSymbols, normalizeSymbol, stockName,
   parseSnapshot, parseTrade, mergeQuote, quoteLabel, createStockFeed,
   SNAPSHOT_INTERVAL_MS, REQUEST_SPACING_MS, REQUEST_TIMEOUT_MS, RETRY_DELAY_MS, LIVE_AGE_MS } from '../stock-watchlist.mjs';
-import { renderStockPage, renderStockQuote, stockStatusText, nextStockLabelChange } from '../stock-watchlist-view.mjs';
+import { renderStockPage, renderStockQuote, renderStockSaveStatus, stockSaveStatus, stockStatusText, nextStockLabelChange } from '../stock-watchlist-view.mjs';
 
 const epoch = 1_700_000_000_000;
 class Clock {
@@ -286,4 +286,66 @@ test('sync treats an edited or empty watchlist and saved Guide-only data as mean
   assert.equal(hasRecords({ ...blank, settings: { ...blank.settings, profile: { ...blank.settings.profile, notes: 'Saved note' } } }), true);
   assert.equal(hasRecords({ ...blank, settings: { ...blank.settings, profile: { ...blank.settings.profile, cushion: '0' } } }), true);
   assert.equal(hasRecords({ ...blank, settings: { ...blank.settings, guideMemory: { answer: 'remember' } } }), true);
+});
+
+// The save line is derived from live sync state. These cases pin the wording that
+// tells a visitor whether a watchlist edit reached their Google account.
+test('the save line only claims the account copy when sync is confirmed and nothing is in flight', () => {
+  const confirmed = { signedIn: true, synced: true, custom: true };
+  const ok = stockSaveStatus({ ...confirmed, confirmedAt: Date.UTC(2026, 10, 16, 21, 46) });
+  assert.equal(ok.tone, 'ok'); assert.equal(ok.action, undefined);
+  assert.match(ok.message, /^Saved to your Google account · confirmed \d{1,2}:\d{2}\u00a0?[AP]?M?\.$/);
+  assert.equal(stockSaveStatus(confirmed).message, 'Saved to your Google account.', 'no invented time when none was confirmed');
+  assert.equal(stockSaveStatus({ ...confirmed, confirmedAt: Number.NaN }).message, 'Saved to your Google account.');
+  assert.equal(stockSaveStatus({ ...confirmed, protectedCloud: true }).message, 'Saved to your Google account, encrypted with your passphrase.');
+  // A save in flight or a cloud copy still loading is never reported as saved.
+  assert.equal(stockSaveStatus({ ...confirmed, saving: true }).message, 'Saving to your Google account…');
+  assert.equal(stockSaveStatus({ ...confirmed, loading: true, saving: true }).message, 'Checking your cloud copy…');
+  assert.equal(stockSaveStatus({ ...confirmed, saving: true }).tone, 'neutral');
+});
+
+test('the save line says an untouched starter list is not a saved custom list', () => {
+  const status = stockSaveStatus({ signedIn: true, synced: true, custom: false });
+  assert.equal(status.tone, 'neutral');
+  assert.match(status.message, /^Showing the starter list\. Your first add or remove saves your own list to your Google account\.$/);
+  // A paused sync still wins: the starter-list wording must not hide a problem.
+  assert.equal(stockSaveStatus({ signedIn: true, synced: false, custom: false, code: 'permission-denied' }).tone, 'warn');
+});
+
+test('the save line names the device-only cases, the recorded code, and links to diagnostics', () => {
+  assert.equal(stockSaveStatus({}).message, 'Saved on this device only. Sign in with Google to save your list to your account too.');
+  assert.equal(stockSaveStatus({}).tone, 'neutral'); assert.equal(stockSaveStatus({}).action, undefined);
+  assert.equal(stockSaveStatus({ initializing: true }).message, 'Checking whether you are signed in…');
+  const paused = stockSaveStatus({ signedIn: true, synced: false, code: 'permission-denied' });
+  assert.equal(paused.tone, 'warn'); assert.equal(paused.action, 'Open sync diagnostics');
+  assert.equal(paused.message, 'Saved on this device only. Cloud sync is paused (permission-denied).');
+  assert.equal(stockSaveStatus({ signedIn: true, synced: false }).message, 'Saved on this device only. Cloud sync is paused.', 'no empty parentheses without a code');
+  assert.equal(stockSaveStatus({ signedIn: true, synced: false, code: 42 }).message, 'Saved on this device only. Cloud sync is paused.', 'a non-string code is ignored');
+  const unavailable = stockSaveStatus({ unavailable: true, code: 'TypeError', signedIn: true, synced: true });
+  assert.equal(unavailable.tone, 'warn'); assert.match(unavailable.message, /Firebase did not load \(TypeError\)\.$/); assert.equal(unavailable.action, 'Open sync diagnostics');
+  // Signed in but not confirmed is never worded as saved to the account, whatever else is true.
+  for (const input of [{ signedIn: true }, { signedIn: true, code: 'northstar/conflict' }, { signedIn: false, synced: true }]) {
+    assert.doesNotMatch(stockSaveStatus(input).message, /^Saved to your Google account/);
+  }
+});
+
+test('the save line markup escapes provider-supplied codes and only offers a button when there is an action', () => {
+  const hostile = stockSaveStatus({ signedIn: true, synced: false, code: '<img src=x onerror=alert(1)>' });
+  const html = renderStockSaveStatus(hostile);
+  assert.doesNotMatch(html, /<img/); assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
+  assert.match(html, /<button type="button" class="stock-save-link" data-action="page" data-page="Settings">Open sync diagnostics<\/button>/);
+  assert.doesNotMatch(renderStockSaveStatus(stockSaveStatus({ signedIn: true, synced: true })), /<button/);
+  assert.equal(renderStockSaveStatus(null), '');
+});
+
+test('the page renders the save line inside the list header as a polite status region, with a safe default', () => {
+  const state = { hasKey: false, fatal: '', running: false, stream: 'idle', subscribed: [], batchIndex: 0, snapshotMessage: '' };
+  const withStatus = renderStockPage(['AAPL'], state, () => null, () => '', '', { save: stockSaveStatus({ signedIn: true, synced: false, code: 'unavailable' }) });
+  assert.match(withStatus, /<p class="stock-save-status" id="stockSaveStatus" data-tone="warn" role="status" aria-live="polite">/);
+  assert.match(withStatus, /Cloud sync is paused \(unavailable\)\./);
+  const bare = renderStockPage(['AAPL'], state, () => null, () => '');
+  assert.match(bare, /id="stockSaveStatus" data-tone="neutral"/, 'older callers that pass no options still render a valid, empty region');
+  assert.equal((bare.match(/id="stockSaveStatus"/g) || []).length, 1);
+  // The privacy promise about prices and the key is unchanged by this feature.
+  assert.match(bare, /not in finance backups or cloud sync/);
 });

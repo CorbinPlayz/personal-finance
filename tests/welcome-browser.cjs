@@ -47,6 +47,7 @@ const firebaseModules = {
     export function getAuth(){return {currentUser:{uid:'mock-user',displayName:'Synthetic User'}}}
     export function onAuthStateChanged(auth,callback){setTimeout(()=>callback(auth.currentUser),0)}
     export class GoogleAuthProvider{}
+    export function getRedirectResult(){return Promise.resolve(null)}
   `,
   'firebase-firestore.js': `
     export function getFirestore(){return {}}
