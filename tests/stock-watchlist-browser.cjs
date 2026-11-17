@@ -126,6 +126,25 @@ const server = http.createServer((req, res) => {
     fs.mkdirSync(process.env.STOCK_QA_SCREENSHOTS, { recursive: true });
     await page.screenshot({ path: path.join(process.env.STOCK_QA_SCREENSHOTS, name + '.png') });
   }
+  // An account document that differs from the device fixture: 3 transactions and 2 accounts, saved on 15 Nov.
+  const differentCloudCopy = () => ({
+    data: {
+      version: 1,
+      accounts: [{ id: 'cloud-a', name: 'Cloud checking', type: 'Checking', balance: 900 }, { id: 'cloud-b', name: 'Cloud savings', type: 'Savings', balance: 1200 }],
+      transactions: [1, 2, 3].map(n => ({ id: 'cloud-tx-' + n, type: 'Expense', amount: n * 10, date: '2026-02-0' + n, accountId: 'cloud-a', category: 'Food', description: 'Cloud payee ' + n })),
+      budgets: [], goals: [], purchases: [],
+      settings: { currency: 'USD', goalSounds: false, stockWatchlist: null, profile: { monthlyIncome: '', essentialBills: '', cushion: '250', payFrequency: 'monthly', payDay: '', goalFocus: '', notes: '' }, guideMemory: null },
+    },
+    updatedAt: Date.UTC(2026, 10, 15, 21, 12), schemaVersion: 1,
+  });
+  // Focus moves into a dialog on a short timer, and Escape is only heard from inside it, so wait for both before touching it.
+  const dialogOpen = async page => { await page.waitForSelector('#confirmRoot .confirm-dialog'); await page.waitForFunction(() => document.querySelector('#confirmRoot')?.contains(document.activeElement)); };
+  // The three "which copy to keep" dialogs ignore taps for their first half second (a double tap on the button that opened them must not land on a choice that replaces data).
+  // They mark themselves ready afterwards; every other dialog responds immediately, so this waits only for the guarded ones.
+  const choose = async (page, index) => {
+    await page.waitForFunction(() => { const d = document.querySelector('#confirmRoot .confirm-dialog'); return !!d && (!d.classList.contains('confirm-dialog-choice') || d.dataset.ready === 'true'); });
+    await page.$eval(`#confirmRoot [data-confirm-index="${index}"]`, el => el.click());
+  };
   try {
     await check('100 starters replace the dock Guide without creating prices or changing finance or Guide data', async () => {
       const page = await newPage(); const before = await page.evaluate(key => localStorage.getItem(key), ledgerKey);
@@ -179,10 +198,10 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.$$eval('#stockRows .stock-row', rows => rows.length), 0);
       assert.match(await text(page, '#stockEmpty'), /watchlist is empty/i);
       await page.$eval('[data-action="stock-reset"]', el => el.click()); await page.waitForSelector('#confirmRoot .confirm-dialog');
-      await page.$eval('#confirmRoot [data-confirm-index="1"]', el => el.click());
+      await choose(page, 1);
       assert.equal(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist.length), 0);
       await page.$eval('[data-action="stock-reset"]', el => el.click()); await page.waitForSelector('#confirmRoot .confirm-dialog');
-      await page.$eval('#confirmRoot [data-confirm-index="0"]', el => el.click());
+      await choose(page, 0);
       assert.equal(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist.length), 100);
       assert.equal(await page.$$eval('#stockRows .stock-row', rows => rows.length), 100);
       assert.deepEqual(await page.evaluate(() => window.NorthstarLedger().settings.guideMemory), fixture.settings.guideMemory);
@@ -278,7 +297,7 @@ const server = http.createServer((req, res) => {
         input.files = files.files; input.dispatchEvent(new Event('change', { bubbles: true }));
       }, data);
       await page.waitForSelector('#confirmRoot .confirm-dialog');
-      await page.$eval('#confirmRoot [data-confirm-index="0"]', el => el.click());
+      await choose(page, 0);
       await page.waitForFunction(() => !document.querySelector('#confirmRoot .confirm-dialog'));
       await nav(page, 'Stocks');
       assert.ok(await page.$('#stockApiKey')); assert.match(await text(page, '[data-stock-symbol="AAPL"]'), /No price yet/);
@@ -303,7 +322,7 @@ const server = http.createServer((req, res) => {
       await page.evaluate(fixture => { window.__mockCloud = { data: fixture, updatedAt: 1 }; void window.__authCallback({ uid: 'alice', displayName: 'Synthetic user' }); }, fixture);
       await page.waitForSelector('#confirmRoot .confirm-dialog');
       assert.match(await text(page, '#confirmRoot'), /different finance data/i);
-      await page.$eval('#confirmRoot [data-confirm-index="2"]', el => el.click());
+      await choose(page, 2);
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
       assert.deepEqual(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist), ['AAPL']);
       assert.equal(await page.evaluate(key => localStorage.getItem(key), ledgerKey), localBefore);
@@ -312,7 +331,7 @@ const server = http.createServer((req, res) => {
       // Retry and explicitly choose the device copy; only then is it uploaded.
       await page.evaluate(() => { void window.__authCallback({ uid: 'alice', displayName: 'Synthetic user' }); });
       await page.waitForSelector('#confirmRoot .confirm-dialog');
-      await page.$eval('#confirmRoot [data-confirm-index="1"]', el => el.click());
+      await choose(page, 1);
       await page.waitForFunction(() => window.__cloudWrites?.length === 1);
       assert.deepEqual(await page.evaluate(() => window.__cloudWrites[0].data.settings.stockWatchlist), ['AAPL']);
       assert.equal(await page.evaluate(key => localStorage.getItem(key), ledgerKey), localBefore);
@@ -329,7 +348,7 @@ const server = http.createServer((req, res) => {
       await page.evaluate(() => { window.__mockCloud = null; void window.__authCallback({ uid: 'alice', displayName: 'Synthetic user' }); });
       await page.waitForSelector('#confirmRoot .confirm-dialog');
       assert.match(await text(page, '#confirmRoot'), /different local and Google-account device copies/i);
-      await page.$eval('#confirmRoot [data-confirm-index="2"]', el => el.click());
+      await choose(page, 2);
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
       assert.deepEqual(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist), []);
       assert.equal(await page.evaluate(() => localStorage.getItem('northstar-finance-v1:alice')), before.account);
@@ -346,7 +365,7 @@ const server = http.createServer((req, res) => {
       await page.evaluate(() => { void window.__authCallback({ uid: 'alice', displayName: 'Synthetic user' }); });
       await page.waitForSelector('#confirmRoot .confirm-dialog');
       assert.match(await text(page, '#confirmRoot'), /different local and Google-account device copies/i);
-      await page.$eval('#confirmRoot [data-confirm-index="2"]', el => el.click());
+      await choose(page, 2);
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
       assert.deepEqual(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist), ['NVDA']);
       assert.equal(await page.evaluate(key => localStorage.getItem(key), ledgerKey), before.local);
@@ -362,7 +381,7 @@ const server = http.createServer((req, res) => {
         await page.evaluate(fixture => { window.__mockCloud = { data: fixture, updatedAt: 1 }; void window.__authCallback({ uid: 'alice' }); }, fixture);
         await page.waitForSelector('#confirmRoot .confirm-dialog');
         assert.match(await text(page, '#confirmRoot'), /different finance data/i);
-        await page.$eval('#confirmRoot [data-confirm-index="2"]', el => el.click());
+        await choose(page, 2);
         await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
         assert.equal(await page.evaluate(key => localStorage.getItem(key), ledgerKey), before);
         assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
@@ -386,7 +405,7 @@ const server = http.createServer((req, res) => {
       await page.evaluate(guide => { localStorage.setItem('northstar-finance-v1:alice', JSON.stringify(guide)); window.__mockCloud = null; void window.__authCallback({ uid: 'alice' }); }, guide);
       await page.waitForSelector('#confirmRoot .confirm-dialog');
       assert.match(await text(page, '#confirmRoot'), /different local and Google-account device copies/i);
-      await page.$eval('#confirmRoot [data-confirm-index="2"]', el => el.click());
+      await choose(page, 2);
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
       assert.equal(await page.evaluate(() => window.NorthstarLedger().settings.profile.notes), 'Account Guide only');
       assert.deepEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).accounts, ledgerKey), fixture.accounts);
@@ -410,7 +429,7 @@ const server = http.createServer((req, res) => {
           const replacement = JSON.stringify({ version: 1, accounts: [], transactions: [], budgets: [], goals: [], purchases: [], settings: { stockWatchlist: ['NVDA'] } });
           localStorage.setItem('northstar-finance-v1:alice', replacement); return replacement;
         });
-        await page.$eval('#confirmRoot [data-confirm-index="1"]', el => el.click());
+        await choose(page, 1);
         await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
         assert.equal(await page.evaluate(() => localStorage.getItem('northstar-finance-v1:alice')), newRaw);
         assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
@@ -435,7 +454,7 @@ const server = http.createServer((req, res) => {
         const newer = structuredClone(initial); newer.settings.stockWatchlist = ['NVDA'];
         localStorage.setItem(key, JSON.stringify(newer));
       }, { initial, key: ledgerKey });
-      await page.$eval('#confirmRoot [data-confirm-index="1"]', el => el.click());
+      await choose(page, 1);
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
       assert.deepEqual(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist), []);
       assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
@@ -445,7 +464,7 @@ const server = http.createServer((req, res) => {
       await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForFunction(() => window.NorthstarLedger?.() && window.__authCallback);
       await page.evaluate(() => { window.__mockCloud = null; void window.__authCallback({ uid: 'alice' }); });
       await page.waitForSelector('#confirmRoot .confirm-dialog');
-      await page.$eval('#confirmRoot [data-confirm-index="1"]', el => el.click());
+      await choose(page, 1);
       await page.waitForFunction(() => window.__cloudWrites?.length === 1 && !document.querySelector('.app-shell').inert);
       assert.deepEqual(await page.evaluate(() => window.__mockCloud.data.settings.stockWatchlist), ['NVDA']);
       await page.close();
@@ -463,7 +482,7 @@ const server = http.createServer((req, res) => {
         input.files = files.files; input.dispatchEvent(new Event('change', { bubbles: true }));
       }, fixture);
       await page.waitForSelector('#confirmRoot .confirm-dialog');
-      await page.$eval('#confirmRoot [data-confirm-index="0"]', el => el.click());
+      await choose(page, 0);
       await page.waitForFunction(() => window.__cloudWrites?.length && window.__mockCloud?.data?.settings?.stockWatchlist?.length === 100);
       assert.equal(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist.length), 100);
       assert.deepEqual(await page.evaluate(() => window.__mockCloud.data.settings.stockWatchlist.slice(0, 2)), ['AAPL', 'MSFT']);
@@ -485,7 +504,7 @@ const server = http.createServer((req, res) => {
       await page.$eval('[data-action="clear-data"]', el => el.click()); await page.waitForSelector('#clearPasswordForm');
       await setInput(page, '#clearPasswordInput', 'test-password'); await submit(page, '#clearPasswordForm');
       await page.waitForSelector('#confirmRoot [data-confirm-index="0"]');
-      await page.$eval('#confirmRoot [data-confirm-index="0"]', el => el.click());
+      await choose(page, 0);
       await page.waitForFunction(() => window.__cloudWrites?.length && window.__mockCloud?.data?.settings?.stockWatchlist?.length === 100 && window.__mockCloud.data.accounts.length === 0);
       assert.equal(await page.evaluate(() => window.__stockSockets[0].closed), true);
       assert.deepEqual(await page.evaluate(() => window.NorthstarLedger().accounts), []);
@@ -506,7 +525,7 @@ const server = http.createServer((req, res) => {
           window.__mockCloud = { data: account, updatedAt: 1 }; void window.__authCallback({ uid: 'alice' });
         }, account);
         await page.waitForSelector('#confirmRoot .confirm-dialog');
-        await page.$eval('#confirmRoot [data-confirm-index="2"]', el => el.click());
+        await choose(page, 2);
         await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
         await nav(page, 'Settings');
         if (action === 'clear') {
@@ -524,7 +543,7 @@ const server = http.createServer((req, res) => {
           });
         }
         await page.waitForSelector('#confirmRoot [data-confirm-index="0"]');
-        await page.$eval('#confirmRoot [data-confirm-index="0"]', el => el.click());
+        await choose(page, 0);
         await page.waitForFunction(() => !document.querySelector('#confirmRoot .confirm-dialog'));
         assert.deepEqual(await page.evaluate(() => window.NorthstarLedger().accounts), []);
         assert.equal(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist.length), 100);
@@ -534,7 +553,7 @@ const server = http.createServer((req, res) => {
         await page.evaluate(() => { void window.__authCallback({ uid: 'alice' }); });
         await page.waitForSelector('#confirmRoot .confirm-dialog');
         assert.match(await text(page, '#confirmRoot'), /different finance data/i);
-        await page.$eval('#confirmRoot [data-confirm-index="1"]', el => el.click());
+        await choose(page, 1);
         await page.waitForFunction(() => window.__cloudWrites?.length === 1 && !document.querySelector('.app-shell').inert);
         assert.deepEqual(await page.evaluate(() => window.__mockCloud.data.accounts), []);
         assert.equal(await page.evaluate(() => window.__mockCloud.data.settings.stockWatchlist.length), 100);
@@ -763,6 +782,129 @@ const server = http.createServer((req, res) => {
       }
     });
 
+    await check('a different cloud copy asks which data to keep, describing both; a tap outside cannot dismiss it; deferring leaves a one-tap way back; each choice does what it says', async () => {
+      const page = await newPage(); await nav(page, 'Stocks'); // the device holds the synthetic fixture
+      await signIn(page, { cloud: differentCloudCopy() });
+      await dialogOpen(page);
+      // A double tap on the button that opened the dialog must not land on a choice that replaces data.
+      assert.equal(await page.evaluate(() => { document.querySelector('#confirmRoot [data-confirm-index="0"]').click(); return !!document.querySelector('#confirmRoot .confirm-dialog'); }), true, 'an immediate tap on a choice is ignored');
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:local')).transactions.length), 1, 'the device copy was not replaced by it');
+      assert.equal(await page.evaluate(() => (window.__cloudWrites?.length || 0) + (window.__mockCloud.data.transactions.length === 3 ? 0 : 1)), 0, 'the cloud copy was not replaced by it');
+      // Keyboard and screen-reader users start on the one choice that changes nothing, so a stray Enter or Space cannot replace data.
+      assert.equal(await page.evaluate(() => document.activeElement?.innerText), 'Decide later', 'initial focus is on Decide later');
+      const dialog = await text(page, '#confirmRoot .confirm-dialog');
+      assert.match(dialog, /Choose which data to keep/);
+      assert.match(dialog, /This browser has 1 transaction, 1 account, 1 budget, 1 goal, 1 planned purchase\./);
+      assert.match(dialog, /Your Google account has 3 transactions, 2 accounts \(last saved [^)]*\d[^)]*\)\./);
+      assert.doesNotMatch(dialog, /Synthetic|Cloud payee|Cloud checking|432/, 'the dialog shows counts only, never names or amounts');
+      assert.match(dialog, /export a backup from Settings/);
+      // A tap on the dimmed area around the dialog is not a choice (on a phone it is an easy mistake to make).
+      await page.$eval('#confirmRoot .confirm-backdrop', el => el.click());
+      assert.ok(await page.$('#confirmRoot .confirm-dialog'), 'the dialog is still open after a tap outside it');
+      assert.equal(await page.evaluate(() => document.querySelector('.app-shell').inert), true, 'the app stays paused behind it');
+      // "Decide later" is the deliberate way out. Nothing is changed or uploaded.
+      await choose(page, 2);
+      await waitForSaveTone(page, 'warn');
+      let line = await saveLine(page);
+      assert.equal(line.text, 'Saved on this device only. Cloud sync is waiting for you to choose which data to keep (northstar/conflict). Choose which data to keep');
+      assert.equal(line.link, true);
+      assert.match(await toastText(page), /^Choice deferred\. Nothing was changed\. Tap Choose which data to keep/);
+      await page.evaluate(() => { document.querySelector('#toastRoot')?.replaceChildren(); document.querySelector('#stockSaveStatus').scrollIntoView({ block: 'center' }); });
+      await screenshot(page, 'choice-stocks-line-390');
+      await page.evaluate(() => scrollTo(0, 0)); await screenshot(page, 'choice-banner-390');
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'nothing was uploaded');
+      assert.equal(await page.evaluate(() => window.__mockCloud.data.transactions.length), 3, 'the cloud copy is untouched');
+      assert.equal(await page.evaluate(() => window.NorthstarLedger().transactions.length), 1, 'the device copy is untouched');
+      // The notice under the header offers the same one-tap action.
+      const banner = await page.$eval('#syncIssueRoot', el => ({ text: el.innerText, action: el.querySelector('[data-action="retry-sync"]')?.innerText }));
+      assert.equal(banner.action, 'Choose which data to keep'); assert.match(banner.text, /northstar\/conflict/);
+      // Settings says what is going on instead of describing a different kind of conflict.
+      await nav(page, 'Settings');
+      let panel = await text(page, '#syncDiagnosticsPanel');
+      assert.match(panel, /Sync is waiting for your choice\./);
+      assert.match(panel, /saved on this device only/);
+      assert.equal(await page.$eval('#syncDiagnosticsPanel [data-action="retry-sync"]', el => el.innerText), 'Choose which data to keep');
+      assert.doesNotMatch(panel, /Retry cloud sync/);
+      assert.doesNotMatch(panel, /changed the cloud document after this device loaded it, so nothing was overwritten/);
+      await page.evaluate(() => document.querySelector('#syncDiagnosticsPanel').scrollIntoView()); await screenshot(page, 'choice-settings-panel-390');
+      // The access check proves the read works, but the header must not claim that sync is fine.
+      await page.$eval('[data-action="check-cloud-access"]', el => el.click());
+      await page.waitForFunction(() => /Read access confirmed/.test(document.querySelector('#syncDiagnosticsPanel')?.innerText || '') && !document.querySelector('.app-shell').inert);
+      const header = await page.$eval('#syncStatus', el => ({ text: el.innerText, err: el.classList.contains('err') }));
+      assert.match(header.text, /^Sync conflict · action needed/); assert.equal(header.err, true); assert.doesNotMatch(header.text, /confirmed/i);
+      assert.match(await toastText(page), /Tap Choose which data to keep to finish syncing\.$/);
+      assert.match(await text(page, '#syncIssueRoot'), /northstar\/conflict/, 'the access check did not clear the conflict');
+      // From Stocks, one tap brings the question back; "Use cloud copy" resolves it without uploading.
+      await nav(page, 'Stocks');
+      await page.$eval('.stock-save-link', el => el.click());
+      await dialogOpen(page);
+      await choose(page, 0);
+      await page.waitForFunction(() => document.querySelector('#syncStatus')?.innerText === 'Cloud sync on' && !document.querySelector('.app-shell').inert);
+      assert.equal(await page.evaluate(() => window.NorthstarLedger().transactions.length), 3, 'the device now shows the cloud copy');
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'choosing the cloud copy uploads nothing');
+      line = await saveLine(page); assert.equal(line.tone, 'neutral'); assert.match(line.text, /^Showing the starter list\./);
+      assert.equal(await page.$('#syncIssueRoot .sync-issue-bar'), null, 'the notice is gone once sync is confirmed');
+      await page.close();
+
+      // "Keep this device" uploads this device's copy and the line then confirms the saved list.
+      const second = await newPage(); await nav(second, 'Stocks');
+      await signIn(second, { cloud: differentCloudCopy() });
+      await dialogOpen(second);
+      await choose(second, 1);
+      await second.waitForFunction(() => window.__cloudWrites?.length >= 1 && document.querySelector('#syncStatus')?.innerText === 'Cloud sync on' && !document.querySelector('.app-shell').inert);
+      assert.equal(await second.evaluate(() => window.__mockCloud.data.transactions.length), 1, 'the account now holds this device\'s copy');
+      await addTicker(second, 'synt');
+      await second.waitForFunction(() => /^Saved to your Google account · confirmed/.test(document.querySelector('#stockSaveStatus')?.innerText.replace(/\s+/g, ' ') || ''));
+      assert.equal(await second.evaluate(() => window.__mockCloud.data.settings.stockWatchlist.at(-1)), 'SYNT');
+      await second.close();
+    });
+
+    await check('two different device copies ask which workspace to use, describe both, ignore a tap outside, and the one-tap button re-asks', async () => {
+      const page = await newPage(); await nav(page, 'Stocks'); // the local workspace is the synthetic fixture
+      await page.evaluate(copy => localStorage.setItem('northstar-finance-v1:alice', JSON.stringify(copy)), differentCloudCopy().data); // the account's earlier device copy
+      await signIn(page, { cloud: null });
+      await dialogOpen(page);
+      assert.equal(await page.evaluate(() => document.activeElement?.innerText), 'Decide later', 'initial focus is on Decide later');
+      const dialog = await text(page, '#confirmRoot .confirm-dialog');
+      assert.match(dialog, /Choose a device workspace/);
+      assert.match(dialog, /The Google-account copy has 3 transactions, 2 accounts\. The local workspace has 1 transaction, 1 account, 1 budget, 1 goal, 1 planned purchase\./);
+      assert.doesNotMatch(dialog, /Synthetic|Cloud payee|Cloud checking/, 'counts only');
+      await page.$eval('#confirmRoot .confirm-backdrop', el => el.click());
+      assert.ok(await page.$('#confirmRoot .confirm-dialog'), 'a tap outside does not defer the choice');
+      await choose(page, 2); // Decide later
+      await waitForSaveTone(page, 'warn');
+      assert.match(await toastText(page), /^Choice deferred\. Showing the account device copy; your other copy was kept\./);
+      assert.match((await saveLine(page)).text, /waiting for you to choose which data to keep \(northstar\/conflict\)\. Choose which data to keep$/);
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'nothing was uploaded');
+      await page.$eval('.stock-save-link', el => el.click());
+      await dialogOpen(page);
+      assert.match(await text(page, '#confirmRoot .confirm-dialog'), /Choose a device workspace/);
+      await choose(page, 1); // Use local workspace, then the cloud step runs
+      await page.waitForFunction(() => document.querySelector('#syncStatus')?.innerText === 'Cloud sync on' && !document.querySelector('.app-shell').inert);
+      assert.equal(await page.evaluate(() => window.__mockCloud.data.transactions.length), 1, 'the local workspace is what reached the account');
+      await page.close();
+    });
+
+    await check('the choose-data dialog stays usable on the narrowest phone, and Escape still defers without uploading', async () => {
+      const page = await newPage({ width: 320, height: 568 }); await nav(page, 'Stocks');
+      await signIn(page, { cloud: differentCloudCopy() });
+      await dialogOpen(page);
+      const geometry = await page.evaluate(() => {
+        const dialog = document.querySelector('#confirmRoot .confirm-dialog'), box = dialog.getBoundingClientRect();
+        const buttons = [...dialog.querySelectorAll('[data-confirm-index]')].map(button => { button.scrollIntoView({ block: 'nearest' }); const r = button.getBoundingClientRect(); return { label: button.innerText, top: r.top, bottom: r.bottom, left: r.left, right: r.right, height: r.height }; });
+        return { overflowX: dialog.scrollWidth - dialog.clientWidth, within: box.left >= 0 && box.right <= innerWidth && box.bottom <= innerHeight, buttons, pageOverflow: document.documentElement.scrollWidth - innerWidth };
+      });
+      assert.deepEqual(geometry.buttons.map(b => b.label), ['Use cloud copy', 'Keep this device', 'Decide later']);
+      for (const b of geometry.buttons) { assert.ok(b.top >= 0 && b.bottom <= 568 && b.left >= 0 && b.right <= 320, `${b.label} can be reached on screen`); assert.ok(b.height >= 44, `${b.label} is at least 44px tall (${b.height}px)`); }
+      assert.ok(geometry.overflowX <= 1 && geometry.pageOverflow <= 1 && geometry.within, JSON.stringify(geometry));
+      await screenshot(page, 'choose-data-dialog-320');
+      await page.keyboard.press('Escape');
+      await waitForSaveTone(page, 'warn');
+      assert.match((await saveLine(page)).text, /waiting for you to choose which data to keep \(northstar\/conflict\)/);
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
+      await page.close();
+    });
+
     await check('the paused save line and its link fit narrow phones, tablet, and desktop with accessible targets', async () => {
       for (const [width, height, mobile] of [[320, 568, true], [390, 844, true], [768, 1024, true], [1440, 900, false]]) {
         const page = await newPage({ width, height, mobile }); await nav(page, 'Stocks');
@@ -800,6 +942,23 @@ const server = http.createServer((req, res) => {
       await page.$eval('[data-action="stock-remove"][data-symbol="SYNT"]', el => el.click()); await waitForSaveTone(page, 'warn'); seen.push(await audit());
       assert.deepEqual(seen.map(item => item.tone), ['neutral', 'ok', 'warn']);
       for (const item of seen) assert.deepEqual(item.violations, [], `${item.tone}: ${JSON.stringify(item.violations, null, 2)}`);
+      await page.close();
+    });
+
+    await check('the choose-data dialog, the notice, the save line and the Settings panel pass scoped automated WCAG checks while sync waits for a choice', async () => {
+      const page = await newPage({ width: 1000, height: 800, mobile: false }); await nav(page, 'Stocks');
+      await page.addScriptTag({ path: axePath });
+      const audit = (selector) => page.evaluate(async selector => {
+        const result = await window.axe.run(document.querySelector(selector), { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } });
+        return { selector, violations: result.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => ({ target: n.target, summary: n.failureSummary })) })) };
+      }, selector);
+      await signIn(page, { cloud: differentCloudCopy() }); await dialogOpen(page);
+      const seen = [await audit('#confirmRoot .confirm-dialog')];
+      await choose(page, 2); await waitForSaveTone(page, 'warn');
+      seen.push(await audit('.stock-list-top'), await audit('#syncIssueRoot'));
+      await nav(page, 'Settings'); seen.push(await audit('#syncDiagnosticsPanel'));
+      for (const item of seen) assert.deepEqual(item.violations, [], `${item.selector}: ${JSON.stringify(item.violations, null, 2)}`);
+      assert.deepEqual(seen.map(item => item.selector), ['#confirmRoot .confirm-dialog', '.stock-list-top', '#syncIssueRoot', '#syncDiagnosticsPanel']);
       await page.close();
     });
 

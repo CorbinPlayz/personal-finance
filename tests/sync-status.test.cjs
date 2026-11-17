@@ -158,7 +158,7 @@ test('the page keeps the new surfaces and no longer pauses silently', () => {
   assert.match(moduleScript, /getRedirectResult/);
 });
 
-function cloudHarness({ result = { exists: () => false }, rejection = null, issueCode = null } = {}) {
+function cloudHarness({ result = { exists: () => false }, rejection = null, issueCode = null, issueMessage = 'Previous failure.' } = {}) {
   const store = new Map(), toasts = [], statuses = [];
   const context = vm.createContext({
     window: { localStorage: {
@@ -182,7 +182,7 @@ function cloudHarness({ result = { exists: () => false }, rejection = null, issu
     console
   });
   vm.runInContext(errorHelpers + '\n' + issueHelpers + '\n' + accessHelpers, context);
-  if (issueCode) context.reportSyncIssue(Object.assign(new Error('Previous failure.'), { code: issueCode }), 'Cloud load');
+  if (issueCode) context.reportSyncIssue(Object.assign(new Error(issueMessage), { code: issueCode }), 'Cloud sync');
   return { context, store, toasts, statuses, read: expression => vm.runInContext(expression, context) };
 }
 
@@ -231,6 +231,94 @@ test('check cloud access names the Firestore failure on a phone', async () => {
   await conflict.context.checkCloudAccess();
   assert.equal(conflict.read('cloudCheck').code, 'northstar/conflict');
   assert.match(conflict.toasts.at(-1), /\[northstar\/conflict\]/);
+});
+
+const pendingChoice = (message = 'Choose which data to keep to resume cloud sync.') => Object.assign(new Error(message), { code: 'northstar/conflict' });
+
+test('only a conflict that is waiting for the visitor to choose is treated as a pending choice', () => {
+  const h = harness();
+  for (const message of ['Choose which data to keep to resume cloud sync.', 'Choose a device workspace to resume cloud sync.', 'Choose which protected copy to keep to resume cloud sync.']) {
+    h.context.reportSyncIssue(pendingChoice(message), 'Cloud sync');
+    assert.equal(h.context.syncNeedsChoice(), true, message);
+    assert.equal(h.context.syncIssueStatus(), 'Sync conflict · action needed · northstar/conflict');
+  }
+  // A write that lost a race, another tab, other codes and no issue at all are different situations.
+  for (const error of [conflict(), pendingChoice('The device copy changed in another tab. No local copy was overwritten.'), Object.assign(new Error('Choose which data to keep.'), { code: 'permission-denied' })]) {
+    h.context.reportSyncIssue(error, 'Cloud sync');
+    assert.equal(h.context.syncNeedsChoice(), false, error.message);
+  }
+  assert.equal(h.context.syncIssueStatus(), 'Cloud sync needs attention · permission-denied');
+  h.context.clearSyncIssue();
+  assert.equal(h.context.syncNeedsChoice(), false);
+});
+
+test('the notice and the copied details point at the choice, and only when there is one', () => {
+  const choice = harness();
+  choice.context.reportSyncIssue(pendingChoice(), 'Cloud sync');
+  assert.match(choice.root.innerHTML, /<button type="button" class="primary-btn small" data-action="retry-sync">Choose which data to keep<\/button>/);
+  assert.match(choice.context.syncDiagnosticsText(), /tap Choose which data to keep\. Nothing has been overwritten\.$/);
+  const other = harness();
+  other.context.reportSyncIssue(conflict(), 'Cloud save');
+  assert.doesNotMatch(other.root.innerHTML, /retry-sync/);
+  assert.match(other.context.syncDiagnosticsText(), /then Retry cloud sync to review both copies\.$/);
+});
+
+test('Check cloud access never reports "confirmed" in the header while sync is still waiting on a choice', async () => {
+  const h = cloudHarness({ result: { exists: () => true, data: () => ({ data: {} }) }, issueCode: 'northstar/conflict', issueMessage: 'Choose which data to keep to resume cloud sync.' });
+  await h.context.checkCloudAccess();
+  assert.equal(h.read('cloudCheck').ok, true, 'the read itself worked');
+  assert.equal(h.read('syncIssue.code'), 'northstar/conflict', 'a successful read does not resolve the conflict');
+  assert.deepEqual(h.statuses.at(-1), { text: 'Sync conflict · action needed · northstar/conflict', kind: 'err' });
+  assert.match(h.toasts.at(-1), /Tap Choose which data to keep to finish syncing\.$/);
+  assert.doesNotMatch(h.toasts.at(-1), /Retry cloud sync/);
+  // A stale access failure is still cleared and reported as confirmed, as before.
+  const stale = cloudHarness({ result: { exists: () => true, data: () => ({ data: {} }) }, issueCode: 'permission-denied' });
+  await stale.context.checkCloudAccess();
+  assert.deepEqual(stale.statuses.at(-1), { text: 'Cloud access confirmed', kind: 'ok' });
+  assert.match(stale.toasts.at(-1), /Use Retry cloud sync to reconcile both copies\.$/);
+});
+
+test('both copies are described in plain counts, with no amounts, names or notes', () => {
+  const helpers = section('const hasRecords=d=>{', 'const VAULT_MARKER=');
+  const context = vm.createContext({ console });
+  vm.runInContext(helpers, context);
+  const one = { transactions: [{ amount: 123456.78, description: 'Secret payee' }], accounts: [{ name: 'Private account' }], budgets: [], goals: [], purchases: [], settings: { stockWatchlist: null } };
+  assert.equal(context.describeWorkspace(one), '1 transaction, 1 account');
+  const text = context.describeWorkspace({ ...one, transactions: [{}, {}, {}], goals: [{}], purchases: [{}, {}], settings: { stockWatchlist: ['AAPL', 'MSFT'] } });
+  assert.equal(text, '3 transactions, 1 account, 1 goal, 2 planned purchases, a custom stock list (2)');
+  assert.doesNotMatch(context.describeWorkspace(one), /Secret|Private|123456/);
+  assert.equal(context.describeWorkspace({ settings: { stockWatchlist: [] } }), 'a custom stock list (0)');
+  assert.equal(context.describeWorkspace({ settings: { guideMemory: { answer: 'x' } } }), 'only settings or a saved Guide profile');
+  assert.equal(context.describeWorkspace({ transactions: [], settings: {} }), 'no records');
+  assert.equal(context.describeWorkspace(null), 'no records');
+  const saved = Date.UTC(2026, 10, 15, 21, 12);
+  assert.match(context.cloudSavedLabel({ updatedAt: saved }), /^ \(last saved [^)]*\d[^)]*\)$/, 'a readable date and time, whatever the machine locale');
+  for (const bad of [null, {}, { updatedAt: 0 }, { updatedAt: 'soon' }, { updatedAt: 1e30 }, { updatedAt: { seconds: 5 } }]) assert.equal(context.cloudSavedLabel(bad), '', JSON.stringify(bad));
+});
+
+test('the three "which copy to keep" dialogs ignore a stray tap outside them, and the two plaintext ones show both copies', () => {
+  const dialogs = [...moduleScript.matchAll(/showNorthstarDialog\(\{title:'(Choose a device workspace|Choose which data to keep|Protected copies are different)'[\s\S]*?choices:\[/g)];
+  assert.equal(dialogs.length, 3);
+  for (const [text, title] of dialogs) assert.match(text, /sticky:true,choices:\[$/, title);
+  assert.match(moduleScript, /contains\('confirm-backdrop'\)&&!confirmSticky\)\{settleNorthstarDialog\(null\)\}/);
+  assert.match(moduleScript, /confirmSticky=config\.sticky===true/);
+  assert.match(moduleScript, /function settleNorthstarDialog\(value\)\{[^}]*confirmSticky=false/);
+  // A double tap on the button that opened the dialog cannot land on a choice in its first half second, and the window always closes.
+  assert.match(moduleScript, /confirmArmedAt=confirmSticky\?Date\.now\(\)\+500:0/);
+  assert.match(moduleScript, /if\(Date\.now\(\)<confirmArmedAt\)return;const index=Number\(option\.dataset\.confirmIndex\)/);
+  assert.match(moduleScript, /function settleNorthstarDialog\(value\)\{[^}]*confirmArmedAt=0/);
+  assert.match(moduleScript, /This browser has \$\{here\}\. Your Google account has \$\{there\}\$\{cloudSavedLabel\(raw\)\}/);
+  assert.match(moduleScript, /The Google-account copy has \$\{accountCopy\}\. The local workspace has \$\{localCopy\}/);
+  // Every other dialog keeps its tap-outside-to-cancel behaviour.
+  assert.equal((moduleScript.match(/sticky:true/g) || []).length, 3);
+  // Initial focus is on the choice that changes and uploads nothing, in these three dialogs only.
+  for (const [text, title] of dialogs) {
+    const choices = moduleScript.slice(moduleScript.indexOf(text), moduleScript.indexOf('})', moduleScript.indexOf(text) + text.length));
+    assert.match(choices, /\{value:'cancel',label:'Decide later',style:'quiet',focus:true\}/, title);
+    assert.equal((choices.match(/focus:true/g) || []).length, 1, title);
+  }
+  assert.equal((moduleScript.match(/focus:true\}/g) || []).length, 3);
+  assert.match(moduleScript, /choices\.findIndex\(choice=>choice\.focus===true\)/);
 });
 
 test('the diagnostics offer a direct Firestore check and name the project', () => {
