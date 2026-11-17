@@ -76,7 +76,7 @@ export function renderStockQuote(symbol, quote, issue, state, now = Date.now()) 
 // Finnhub key are never saved anywhere (see the privacy note on the page).
 export function stockSaveStatus({
   initializing = false, unavailable = false, signedIn = false, loading = false, saving = false,
-  synced = false, custom = true, code = '', protectedCloud = false, confirmedAt = 0,
+  synced = false, custom = true, code = '', protectedCloud = false, confirmedAt = 0, needsChoice = false,
 } = {}) {
   const reason = typeof code === 'string' && code ? ` (${code})` : '';
   if (unavailable) return { tone: 'warn', message: `Saved on this device only. Cloud sync is unavailable because Firebase did not load${reason}.`, action: 'Open sync diagnostics' };
@@ -84,6 +84,8 @@ export function stockSaveStatus({
   if (!signedIn) return { tone: 'neutral', message: 'Saved on this device only. Sign in with Google to save your list to your account too.' };
   if (loading) return { tone: 'neutral', message: 'Checking your cloud copy…' };
   if (saving) return { tone: 'neutral', message: 'Saving to your Google account…' };
+  // Two copies differ and nobody has chosen one: the fix is one tap, so the line offers that tap instead of a trip to Settings.
+  if (!synced && needsChoice) return { tone: 'warn', message: `Saved on this device only. Cloud sync is waiting for you to choose which data to keep${reason}.`, action: 'Choose which data to keep', command: 'retry-sync' };
   if (!synced) return { tone: 'warn', message: `Saved on this device only. Cloud sync is paused${reason}.`, action: 'Open sync diagnostics' };
   if (!custom) return { tone: 'neutral', message: 'Showing the starter list. Your first add or remove saves your own list to your Google account.' };
   let when = '';
@@ -94,7 +96,8 @@ export function stockSaveStatus({
 }
 export function renderStockSaveStatus(status) {
   if (!status) return '';
-  const action = status.action ? `<button type="button" class="stock-save-link" data-action="page" data-page="Settings">${esc(status.action)}</button>` : '';
+  const target = status.command ? `data-action="${esc(status.command)}"` : 'data-action="page" data-page="Settings"';
+  const action = status.action ? `<button type="button" class="stock-save-link" ${target}>${esc(status.action)}</button>` : '';
   return `<span class="stock-save-dot" aria-hidden="true"></span><span class="stock-save-text">${esc(status.message)}</span>${action}`;
 }
 export function renderStockPage(symbols, state, quoteFor, issueFor, query = '', options = {}) {

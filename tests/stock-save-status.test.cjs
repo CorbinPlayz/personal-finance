@@ -20,7 +20,9 @@ const stateHelpers = section('/* Where does a watchlist edit go right now?', 'fu
 const saveHelpers = section('// Every place that drops a pending save', '/* iOS Safari and an installed home-screen app');
 const setSyncLine = moduleScript.split('\n').find(line => line.startsWith('function setSync('));
 const errorCode = section('function firebaseErrorCode(', '\nfunction ');
-assert.ok(setSyncLine);
+// The real predicate, not a stub: it decides whether the line offers the one-tap "choose which data to keep".
+const needsChoiceLine = moduleScript.split('\n').find(line => line.startsWith('function syncNeedsChoice('));
+assert.ok(setSyncLine && needsChoiceLine);
 
 const signedIn = { uid: 'alice' };
 async function harness(overrides = {}) {
@@ -46,7 +48,7 @@ async function harness(overrides = {}) {
     navigator: { onLine: true },
     ...overrides,
   });
-  vm.runInContext([errorCode, setSyncLine, stateHelpers, saveHelpers].join('\n'), context);
+  vm.runInContext([errorCode, setSyncLine, needsChoiceLine, stateHelpers, saveHelpers].join('\n'), context);
   return {
     context, line, header, writes, renders, toasts, timers,
     text: () => line.innerHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim(),
@@ -71,6 +73,8 @@ test('the Stocks save line is derived from the live sync variables', async () =>
     ['paused with only an error object', { user: signedIn, lastSyncError: { code: 'unavailable' } }, /paused \(unavailable\)\./],
     ['loaded earlier but an error is still held', { user: signedIn, cloudLoaded: true, data: custom, lastSyncError: { code: 'unavailable' } }, /paused \(unavailable\)\./],
     ['waiting on a conflict choice without a code', { user: signedIn }, /^Saved on this device only\. Cloud sync is paused\. Open sync diagnostics$/],
+    ['waiting for the visitor to choose between two copies', { user: signedIn, syncIssue: { code: 'northstar/conflict', message: 'Choose which data to keep to resume cloud sync.' } }, /^Saved on this device only\. Cloud sync is waiting for you to choose which data to keep \(northstar\/conflict\)\. Choose which data to keep$/],
+    ['a write conflict is not a pending choice', { user: signedIn, syncIssue: { code: 'northstar/conflict', message: 'The cloud copy changed on another device. Review the conflict before saving.' } }, /^Saved on this device only\. Cloud sync is paused \(northstar\/conflict\)\. Open sync diagnostics$/],
   ];
   for (const [name, overrides, expected] of cases) {
     const h = await harness(overrides);
@@ -85,6 +89,17 @@ test('signed in but unconfirmed is never worded as saved to the account', async 
     h.context.updateStockSaveStatus();
     assert.doesNotMatch(h.text(), /^Saved to your Google account/, JSON.stringify(overrides));
   }
+});
+
+test('the one-tap choice button retries the load, while other pauses still open diagnostics', async () => {
+  const choose = await harness({ user: signedIn, syncIssue: { code: 'northstar/conflict', message: 'Choose a device workspace to resume cloud sync.' } });
+  choose.context.updateStockSaveStatus();
+  assert.match(choose.line.innerHTML, /<button type="button" class="stock-save-link" data-action="retry-sync">Choose which data to keep<\/button>/);
+  assert.doesNotMatch(choose.line.innerHTML, /data-page=/);
+  const paused = await harness({ user: signedIn, syncIssue: { code: 'permission-denied', message: 'Missing or insufficient permissions.' } });
+  paused.context.updateStockSaveStatus();
+  assert.match(paused.line.innerHTML, /data-action="page" data-page="Settings">Open sync diagnostics</);
+  assert.match(stateHelpers, /needsChoice:syncNeedsChoice\(\)/, 'the page feeds the real predicate into the line');
 });
 
 test('every edit toast says where the edit went', async () => {
