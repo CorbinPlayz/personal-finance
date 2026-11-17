@@ -91,10 +91,10 @@ test('signed in but unconfirmed is never worded as saved to the account', async 
   }
 });
 
-test('the one-tap choice button retries the load, while other pauses still open diagnostics', async () => {
+test('the one-tap choice button goes to the in-page question, while other pauses still open diagnostics', async () => {
   const choose = await harness({ user: signedIn, syncIssue: { code: 'northstar/conflict', message: 'Choose a device workspace to resume cloud sync.' } });
   choose.context.updateStockSaveStatus();
-  assert.match(choose.line.innerHTML, /<button type="button" class="stock-save-link" data-action="retry-sync">Choose which data to keep<\/button>/);
+  assert.match(choose.line.innerHTML, /<button type="button" class="stock-save-link" data-action="choose-sync-data">Choose which data to keep<\/button>/);
   assert.doesNotMatch(choose.line.innerHTML, /data-page=/);
   const paused = await harness({ user: signedIn, syncIssue: { code: 'permission-denied', message: 'Missing or insufficient permissions.' } });
   paused.context.updateStockSaveStatus();
