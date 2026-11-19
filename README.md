@@ -22,6 +22,7 @@ Recorded expenses now appear as completed purchase tiles, with explicitly linked
 - Recorded expenses appear as completed purchase tiles. Linked expense/plan pairs appear once; selecting an expense-only tile edits the original transaction. Income and transfers are excluded.
 - A simple 30-day price trend estimate after at least three price checks on different dates. This estimate uses only prices you enter; it is not a live retailer feed or guaranteed prediction.
 - JSON backup and restore, browser storage, optional Google sign-in and Firestore sync, and optional passphrase protection for the active device/cloud workspace.
+- **Export transactions (CSV)** in Settings → Backup & restore: a readable spreadsheet file with date, type, description, category, account, transfer destination and amount (as recorded, to two decimals), newest first. It is **never encrypted, even in a protected workspace**, so Northstar asks before downloading. Text that a spreadsheet could run as a formula (starting with `=`, `+`, `-` or `@`) gets a leading apostrophe. It only reads your records and does not change them.
 - A paused cloud sync always shows an error code, a short reason and a time: in a notice under the header, in **Settings → Sync diagnostics**, and in a copyable details dialog. No email address or finance record is included in that text.
 
 The intro remembers dismissal when browser storage is available. If saving that preference is blocked, you can still enter but the intro may return on reload. If storage cannot be read at all, the protected-workspace check fails closed rather than bypassing a possible vault; restore browser storage access before proceeding.
@@ -89,7 +90,7 @@ The pause behaviour, conditional writes and protected-workspace rules are unchan
 
 ## Optional developer checks
 
-Run `node --test tests/*.test.*` with Node.js 18 or later. These dependency-free tests cover graph calculations and rendering, the Home shortcut, Jarvis answers and drafts, welcome entry and replay, purchase projections, transaction/link integrity, encryption, mocked sync/storage conflicts, the Stocks save line (what it says for signed-out, confirmed, in-flight, paused and unavailable sync), and the choose-which-data question (the dialog's guard and paint-safe styles, and when the Settings card's answer is accepted). They do not validate deployed Firestore rules. The website itself remains a static page and does not require Node.js or a build step.
+Run `node --test tests/*.test.*` with Node.js 18 or later. These dependency-free tests cover graph calculations and rendering, the CSV export, budget rounding and the transaction amount limit, the Home shortcut, Jarvis answers and drafts, welcome entry and replay, purchase projections, transaction/link integrity, encryption, mocked sync/storage conflicts, the Stocks save line (what it says for signed-out, confirmed, in-flight, paused and unavailable sync), and the choose-which-data question (the dialog's guard and paint-safe styles, and when the Settings card's answer is accepted). They do not validate deployed Firestore rules. The website itself remains a static page and does not require Node.js or a build step.
 
 For optional Chromium touch, graph, accessibility and interface checks, install `puppeteer-core` and `axe-core` outside this repository and point the scripts to a Chromium executable (Node.js 22 recommended):
 
@@ -106,7 +107,7 @@ The browser checks use synthetic records and block or mock external services; th
 
 ## GitHub Pages publishing
 
-1. Keep `index.html`, `vault-crypto.mjs`, `finance-graphs.mjs`, `financial-graphs-view.mjs`, `financial-graphs.css`, `stock-watchlist.mjs`, `stock-watchlist-view.mjs`, and `stock-watchlist.css` together in the repository root, alongside `firestore.rules` and `README.md`.
+1. Keep `index.html`, `vault-crypto.mjs`, `csv-export.mjs`, `finance-graphs.mjs`, `financial-graphs-view.mjs`, `financial-graphs.css`, `stock-watchlist.mjs`, `stock-watchlist-view.mjs`, and `stock-watchlist.css` together in the repository root, alongside `firestore.rules` and `README.md`.
 2. Open repository **Settings → Pages**.
 3. Choose **Deploy from a branch**, branch `main`, folder `/ (root)`, then save.
 4. In Firebase Console → Authentication → Settings → Authorized domains, add your GitHub Pages hostname (for example, `corbinplayz.github.io`, without a path).
