@@ -163,3 +163,10 @@ test('passphrase protection cannot be turned on', () => {
   assert.match(html, /if\(!PASSPHRASE_SETUP_AVAILABLE\)\{showToast\('Passphrase protection is no longer available\.'\);return\}/);
   assert.match(html, /if\(!active\)return '';/);
 });
+
+test('Jarvis uses the hosted AI by default, unless the user disconnected it', () => {
+  const html = require('node:fs').readFileSync(__dirname + '/../index.html', 'utf8');
+  assert.match(html, /var CONN_DEFAULT = \{ provider: 'northstar'[^}]*key: 'hosted'[^}]*enabled: true, hostedOff: false \}/);
+  assert.match(html, /!c\.hostedOff/);
+  assert.equal((html.match(/conn\.hostedOff = true/g) || []).length, 2);
+});

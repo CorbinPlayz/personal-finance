@@ -4316,7 +4316,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     openrouter: { label: 'OpenRouter', model: 'google/gemma-4-31b-it:free', url: 'https://openrouter.ai/api/v1/chat/completions', help: 'openrouter.ai/keys' },
     custom: { label: 'Custom (OpenAI-compatible)', model: '', url: '', help: 'your own endpoint' }
   };
-  var CONN_DEFAULT = { provider: 'gemini', model: 'gemini-2.5-flash-lite', key: '', base: '', remember: false, includeTx: false, enabled: false };
+  var CONN_DEFAULT = { provider: 'northstar', model: 'glm-4.7-flash', key: 'hosted', base: '', remember: false, includeTx: false, enabled: true, hostedOff: false };
   var connStorageWarning = false;
   var conn = loadConn();
   var history = [];
@@ -4333,6 +4333,8 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     if (connStorageWarning) c.enabled = false;
     var retired = { gemini: 'gemini-2.0-flash', anthropic: 'claude-3-5-haiku-latest', groq: 'llama-3.3-70b-versatile', openrouter: 'meta-llama/llama-3.3-70b-instruct:free' };
     if (retired[c.provider] === c.model) c.model = PROVIDERS[c.provider].model;
+    // Nothing was ever set up (no key, not switched on): use the free hosted AI so no key is needed.
+    if (raw && !c.key && !c.enabled && !c.hostedOff && !connStorageWarning) { c.provider = 'northstar'; c.model = PROVIDERS.northstar.model; c.key = 'hosted'; c.enabled = true; }
     return c;
   }
   function paintConnStorageWarning() {
@@ -5322,7 +5324,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         box.hidden = false;
       });
       panel.querySelector('#nsjClear').addEventListener('click', function () {
-        cancelConnectionTest(); conn.key = ''; conn.enabled = false; cloudVerified = false;
+        cancelConnectionTest(); conn.key = ''; conn.enabled = false; conn.hostedOff = true; cloudVerified = false;
         var cleared = saveConn(); paintSheet(); refreshStatus();
         setConnStatus(cleared ? '' : 'err', cleared ? 'Key cleared' : 'Key cleared in memory only — check the storage warning');
       });
@@ -5830,7 +5832,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     systemPrompt: systemPrompt,
     conn: function () { return Object.assign({}, conn); },
     setConn: function (patch) { cancelConnectionTest(); Object.assign(conn, patch || {}); cloudVerified = false; saveConn(); },
-    clearConn: function () { cancelConnectionTest(); conn.key = ''; conn.enabled = false; cloudVerified = false; saveConn(); },
+    clearConn: function () { cancelConnectionTest(); conn.key = ''; conn.enabled = false; conn.hostedOff = true; cloudVerified = false; saveConn(); },
     setWorkspaceBlocked: setWorkspaceBlocked,
     resetWorkspace: resetWorkspace,
     callCloud: function (text, opts) { return callCloud(text, [], snapshot(), opts); },
