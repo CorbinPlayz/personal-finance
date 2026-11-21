@@ -22,6 +22,8 @@ Recorded expenses now appear as completed purchase tiles, with explicitly linked
 - Recorded expenses appear as completed purchase tiles. Linked expense/plan pairs appear once; selecting an expense-only tile edits the original transaction. Income and transfers are excluded.
 - A simple 30-day price trend estimate after at least three price checks on different dates. This estimate uses only prices you enter; it is not a live retailer feed or guaranteed prediction.
 - JSON backup and restore, browser storage, optional Google sign-in and Firestore sync, and optional passphrase protection for the active device/cloud workspace.
+- **Export transactions (CSV)** in Settings → Backup & restore: a readable spreadsheet file with date, type, description, category, account, transfer destination and amount (as recorded, to two decimals), newest first. It is **never encrypted, even in a protected workspace**, so Northstar asks before downloading. Text that a spreadsheet could run as a formula (starting with `=`, `+`, `-` or `@`) gets a leading apostrophe. It only reads your records and does not change them.
+- **Recurring bills & income** on the Transactions page: add rent, subscriptions or a paycheck (weekly, monthly or yearly) and see a typical-month summary plus what is scheduled in the next 30 days. **Nothing posts automatically**: when an item is due, Overview shows a banner and you press **Post** to record it as a normal transaction on its due date (it then moves to the next date), or **Skip** to move on without recording anything. Missed periods are caught up one tap at a time, oldest first. Monthly items keep their day, so a bill on the 31st lands on the 28th/29th in February and returns to the 31st. Amounts above 1,000,000,000 are rejected, and an account used by a recurring item cannot be deleted until the item is reassigned.
 - A paused cloud sync always shows an error code, a short reason and a time: in a notice under the header, in **Settings → Sync diagnostics**, and in a copyable details dialog. No email address or finance record is included in that text.
 
 The intro remembers dismissal when browser storage is available. If saving that preference is blocked, you can still enter but the intro may return on reload. If storage cannot be read at all, the protected-workspace check fails closed rather than bypassing a possible vault; restore browser storage access before proceeding.
@@ -89,7 +91,7 @@ The pause behaviour, conditional writes and protected-workspace rules are unchan
 
 ## Optional developer checks
 
-Run `node --test tests/*.test.*` with Node.js 18 or later. These dependency-free tests cover graph calculations and rendering, the Home shortcut, Jarvis answers and drafts, welcome entry and replay, purchase projections, transaction/link integrity, encryption, mocked sync/storage conflicts, the Stocks save line (what it says for signed-out, confirmed, in-flight, paused and unavailable sync), and the choose-which-data bar (that nothing is ever applied without a tap, when a tapped answer is accepted or refused as stale, the tap guard, and the styles that pin it above the tab bar with no blur or animation of its own). They do not validate deployed Firestore rules. The website itself remains a static page and does not require Node.js or a build step.
+Run `node --test tests/*.test.*` with Node.js 18 or later. These dependency-free tests cover graph calculations and rendering, the CSV export, recurring bills and income, the money split, budget rounding and the transaction amount limit, the Home shortcut, Jarvis answers and drafts, welcome entry and replay, purchase projections, transaction/link integrity, encryption, mocked sync/storage conflicts, the Stocks save line (what it says for signed-out, confirmed, in-flight, paused and unavailable sync), and the choose-which-data bar (that nothing is ever applied without a tap, when a tapped answer is accepted or refused as stale, the tap guard, and the styles that pin it above the tab bar with no blur or animation of its own). They do not validate deployed Firestore rules. The website itself remains a static page and does not require Node.js or a build step.
 
 For optional Chromium touch, graph, accessibility and interface checks, install `puppeteer-core` and `axe-core` outside this repository and point the scripts to a Chromium executable (Node.js 22 recommended):
 
@@ -106,7 +108,7 @@ The browser checks use synthetic records and block or mock external services; th
 
 ## GitHub Pages publishing
 
-1. Keep `index.html`, `vault-crypto.mjs`, `finance-graphs.mjs`, `financial-graphs-view.mjs`, `financial-graphs.css`, `stock-watchlist.mjs`, `stock-watchlist-view.mjs`, and `stock-watchlist.css` together in the repository root, alongside `firestore.rules` and `README.md`.
+1. Keep `index.html`, `vault-crypto.mjs`, `csv-export.mjs`, `recurring.mjs`, `finance-graphs.mjs`, `financial-graphs-view.mjs`, `financial-graphs.css`, `stock-watchlist.mjs`, `stock-watchlist-view.mjs`, and `stock-watchlist.css` together in the repository root, alongside `firestore.rules` and `README.md`.
 2. Open repository **Settings → Pages**.
 3. Choose **Deploy from a branch**, branch `main`, folder `/ (root)`, then save.
 4. In Firebase Console → Authentication → Settings → Authorized domains, add your GitHub Pages hostname (for example, `corbinplayz.github.io`, without a path).
@@ -120,3 +122,6 @@ Northstar stores a signed-in user's data at:
 `users/{signed-in-user-uid}/northstar/financeData`
 
 The Firebase configuration inside `index.html` is public web-app configuration, not admin credentials. Never place service-account credentials or private API keys in a browser app. Authentication and properly published Firestore rules remain necessary even when passphrase protection is enabled.
+
+- **Money split**: in Settings, tick the accounts and percents (must total 100) that new income is divided across. Adding income asks Split / Don't split / Edit split first; pieces always add up to the exact amount (`split.mjs`).
+- **Undo after delete**, richer sounds with a volume slider, count-up and grow-in page motion, a goal end date on the savings scenario chart, and target date, days left and monthly pace on the Plan graph.

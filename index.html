@@ -1608,6 +1608,21 @@ button:disabled{opacity:.55;cursor:not-allowed}
 </style>
 <link rel="stylesheet" href="./financial-graphs.css">
 <link rel="stylesheet" href="./stock-watchlist.css">
+<style>
+/* Recurring bills and income */
+.tx-totals{margin:6px 0 0;font-size:.92rem}.split-rows{display:grid;gap:8px;margin:12px 0}.split-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.split-percent{display:flex;align-items:center;gap:6px}.split-percent input{width:92px}.split-total{font-weight:700;margin:8px 0}.split-total.split-ok{color:#1d6b4a}.split-warning{color:#9a3b2e;font-weight:600;margin:8px 0}@keyframes nsxGrow{from{transform:scaleX(0)}}.nsx-page-enter .progress-fill,.nsx-page-enter .account-balance-fill{transform-origin:left;animation:nsxGrow .8s cubic-bezier(.2,.8,.2,1) both}.toast-undo{background:transparent;border:1px solid #ffffff55;color:inherit;border-radius:8px;padding:4px 10px;font-weight:700;cursor:pointer}.toast-undo:hover{background:#ffffff22}.fx-volume-line{display:flex;align-items:center;gap:12px;margin:12px 0 4px;font-size:13px;font-weight:600}.fx-volume-line input{flex:1;max-width:260px}.recurring-panel{margin-bottom:18px}
+.recurring-summary{display:flex;flex-wrap:wrap;gap:6px 22px;margin:-4px 0 14px;padding:10px 12px;background:#f7f7f7;border-radius:8px;font-size:11px;color:#4d4d4d}
+.recurring-summary b{color:#080808;margin-right:5px}
+.recurring-item{display:flex;align-items:center;flex-wrap:wrap;gap:8px 11px;padding:13px 0;border-bottom:1px solid #ebebeb;min-width:0}
+.recurring-item:first-child{padding-top:2px}
+.recurring-item:last-child{border-bottom:0;padding-bottom:0}
+.recurring-item .recent-description{flex:1 1 150px;min-width:0}
+.recurring-item .recent-amount{text-align:right}
+.recurring-item.is-due .recent-amount span{color:#8f2f26;font-weight:700}
+.recurring-item .row-actions{display:flex;flex-wrap:wrap;gap:6px}
+.action-btn.post{background:#080808;color:#fff;border-color:#080808}
+@media (max-width:640px){.recurring-item .row-actions{width:100%;justify-content:flex-end}}
+</style>
 </head>
 <body>
 <section class="welcome-screen" id="welcomeScreen" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
@@ -1662,6 +1677,9 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <input id="backupFile" type="file" accept="application/json,.json" class="hidden">
 <script type="module">
 import { looksEncrypted, validateEnvelope, newKdf, deriveVaultKey, encryptLedger, decryptLedger, sameKdf } from './vault-crypto.mjs';
+import { transactionsToCsv } from './csv-export.mjs';
+import { validateSplit, cleanSplit, activeSplit, splitAmount } from './split.mjs';
+import { FREQUENCIES, parseDate, cleanRecurring, dueItems, dueCount, upcomingOccurrences, monthlySummary, postOccurrence, skipOccurrence } from './recurring.mjs';
 import { renderCashFlowGraph, renderCategoryGraph, renderTransactionGraph, renderAccountGraph, renderBudgetGraph, renderGoalGraph, renderPurchaseGraph, renderWorkspaceCountGraph, renderGuideProfileGraph, renderPriceChecksGraph, renderScenarioPanel, renderScenarioResult } from './financial-graphs-view.mjs';
 import { createStockFeed, watchlistSymbols, starterSymbols, normalizeSymbol, MAX_WATCHLIST } from './stock-watchlist.mjs';
 import { renderStockPage, renderStockQuote, renderStockSaveStatus, stockSaveStatus, stockStatusText, stockConnectionLabel, nextStockLabelChange } from './stock-watchlist-view.mjs';
@@ -1673,7 +1691,7 @@ const ACCOUNT_TYPES=['Checking','Savings','Cash','Credit','Investment','Other'];
 const PAGES={Overview:'Your money, at a glance.',Transactions:'Every recorded inflow, outflow, and transfer.',Accounts:'Manage the accounts you track.',Budgets:'Give each spending category a limit.',Goals:'Give your savings a destination.',Purchases:'Plan ahead and know what is coming.',Stocks:'Your personal stock watchlist.',Guide:'Your saved planning profile and notes.','Northstar Guide':'Your saved planning profile and notes.',Settings:'Your data and application preferences.'};
 // Null means the display-only starter list. Including this field also lets a
 // default-list workspace replace an old custom list under Firestore merge.
-const blankData=()=>({version:1,accounts:[],transactions:[],budgets:[],goals:[],purchases:[],settings:{currency:'USD',goalSounds:true,stockWatchlist:null,profile:{monthlyIncome:'',essentialBills:'',cushion:'250',payFrequency:'monthly',payDay:'',goalFocus:'',notes:''},guideMemory:null}});
+const blankData=()=>({version:1,accounts:[],transactions:[],budgets:[],goals:[],purchases:[],recurring:[],settings:{currency:'USD',goalSounds:true,stockWatchlist:null,profile:{monthlyIncome:'',essentialBills:'',cushion:'250',payFrequency:'monthly',payDay:'',goalFocus:'',notes:''},guideMemory:null}});
 const id=()=>crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1719,7 +1737,7 @@ const hasRecords=d=>{
 /* "Which copy do you keep?" is easier to answer with both sides in view. Counts only: no amounts, names or notes. */
 function describeWorkspace(d){
  const count=(items,one,many)=>{const n=Array.isArray(items)?items.length:0;return n?`${n} ${n===1?one:many}`:''};
- const parts=[count(d?.transactions,'transaction','transactions'),count(d?.accounts,'account','accounts'),count(d?.budgets,'budget','budgets'),count(d?.goals,'goal','goals'),count(d?.purchases,'planned purchase','planned purchases')].filter(Boolean);
+ const parts=[count(d?.transactions,'transaction','transactions'),count(d?.accounts,'account','accounts'),count(d?.budgets,'budget','budgets'),count(d?.goals,'goal','goals'),count(d?.purchases,'planned purchase','planned purchases'),count(d?.recurring,'recurring item','recurring items')].filter(Boolean);
  if(Array.isArray(d?.settings?.stockWatchlist))parts.push(`a custom stock list (${d.settings.stockWatchlist.length})`);
  return parts.length?parts.join(', '):hasRecords(d)?'only settings or a saved Guide profile':'no records';
 }
@@ -1752,7 +1770,7 @@ function normalizeData(input){
  // The Guide can show its legacy default buffer in the form, but a missing
  // imported buffer is not a saved value for the graph. Do not invent it.
  if(!Object.prototype.hasOwnProperty.call(sourceProfile,'cushion'))delete profile.cushion;
- return { ...b,...x,version:1,accounts:Array.isArray(x.accounts)?x.accounts:[],transactions:Array.isArray(x.transactions)?x.transactions:[],budgets:Array.isArray(x.budgets)?x.budgets:[],goals:Array.isArray(x.goals)?x.goals:[],purchases:Array.isArray(x.purchases)?x.purchases:[],settings:{...b.settings,...(x.settings||{}),profile}};
+ return { ...b,...x,version:1,accounts:Array.isArray(x.accounts)?x.accounts:[],transactions:Array.isArray(x.transactions)?x.transactions:[],budgets:Array.isArray(x.budgets)?x.budgets:[],goals:Array.isArray(x.goals)?x.goals:[],purchases:Array.isArray(x.purchases)?x.purchases:[],recurring:cleanRecurring(x.recurring),settings:{...b.settings,...(x.settings||{}),profile,split:cleanSplit((x.settings||{}).split)}};
 }
 function migrateSimpleTransactions(old){
  const d=blankData();if(!Array.isArray(old)||!old.length)return d;
@@ -1774,7 +1792,7 @@ function accountName(aid){return data.accounts.find(a=>a.id===aid)?.name||'Unkno
 function applyTransaction(accounts,tx,reverse=false){const sign=reverse?-1:1;return accounts.map(a=>{let balance;if(tx.type==='Income'&&a.id===tx.accountId)balance=Number(a.balance)+Number(tx.amount)*sign;else if(tx.type==='Expense'&&a.id===tx.accountId)balance=Number(a.balance)-Number(tx.amount)*sign;else if(tx.type==='Transfer'&&a.id===tx.accountId)balance=Number(a.balance)-Number(tx.amount)*sign;else if(tx.type==='Transfer'&&a.id===tx.toAccountId)balance=Number(a.balance)+Number(tx.amount)*sign;else return a;return{...a,balance:roundMoney(balance)}})}
 function sortedTransactions(list=data.transactions){return [...list].sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.id).localeCompare(String(a.id)))}
 function thisMonthTx(type){return data.transactions.filter(t=>typeof t.date==='string'&&t.date.startsWith(monthNow())&&(!type||t.type===type))}
-function monthSpend(category){return thisMonthTx('Expense').filter(t=>t.category===category).reduce((s,t)=>s+Number(t.amount||0),0)}
+function monthSpend(category){return roundMoney(thisMonthTx('Expense').filter(t=>t.category===category).reduce((s,t)=>s+Number(t.amount||0),0))}
 function totalBalance(){return data.accounts.reduce((s,a)=>s+Number(a.balance||0),0)}
 function reservedFunds(){
  const goalSaved=data.goals.reduce((sum,g)=>sum+Math.max(0,Number(g.saved)||0),0);
@@ -1899,7 +1917,7 @@ async function clearAllFinancialData(){
  let unlocked=false;
  try{unlocked=await verifyClearPassword()}catch(error){console.error('Clear data password verification failed.',error);showToast('Could not verify the password in this browser. Your data was not changed.');return}
  if(!unlocked)return;
- const result=await showNorthstarDialog({title:'Clear all financial data?',message:'This removes accounts, transactions, budgets, savings goals, planned purchases, your saved Guide profile and notes, and your custom stock watchlist from the active dataset.',detail:'The stock list returns to the 100 starters and any connected stock key is cleared from this tab. This can’t be undone; export a backup first if you might need these records later.',icon:'⌫',confirmText:'Clear all data',cancelText:'Keep my data',danger:true,label:'PASSWORD VERIFIED · DESTRUCTIVE ACTION'});
+ const result=await showNorthstarDialog({title:'Clear all financial data?',message:'This removes accounts, transactions, budgets, recurring items, savings goals, planned purchases, your saved Guide profile and notes, and your custom stock watchlist from the active dataset.',detail:'The stock list returns to the 100 starters and any connected stock key is cleared from this tab. This can’t be undone; export a backup first if you might need these records later.',icon:'⌫',confirmText:'Clear all data',cancelText:'Keep my data',danger:true,label:'PASSWORD VERIFIED · DESTRUCTIVE ACTION'});
  if(result===true){
   // An explicit clear must remain distinguishable from a never-edited blank
   // workspace if sync is paused; otherwise retry could silently restore cloud
@@ -1928,7 +1946,9 @@ function celebrateSavedGoal(goal,status){
   if(vault.state==='unlocked'&&vault.session===session&&vault.savedSeq>=sequence&&!vault.error&&!window.NorthstarVaultLocked&&current&&Number(current.target)>0&&Number(current.saved)>=Number(current.target))show();
  }).catch(e=>console.warn('Goal celebration was skipped.',e));
 }
-function showToast(text){const root=$('toastRoot');root.innerHTML=`<div class="toast"><span>✓</span><span>${esc(text)}</span><button data-action="dismiss-toast" aria-label="Dismiss">×</button></div>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>root.replaceChildren(),3500)}
+function showToast(text,undoLabel=''){const root=$('toastRoot');root.innerHTML=`<div class="toast"><span>✓</span><span>${esc(text)}</span>${undoLabel?`<button class="toast-undo" data-action="undo-delete">${esc(undoLabel)}</button>`:''}<button data-action="dismiss-toast" aria-label="Dismiss">×</button></div>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{root.replaceChildren();undoState=null},undoLabel?7000:3500)}
+let undoState=null;
+function undoDelete(){const u=undoState;undoState=null;if(!u)return;if(data!==u.after){showToast('Too late to undo: your records changed since.');return}data=u.before;persist();showToast('Deletion undone')}
 function setSync(text,kind=''){const el=$('syncStatus');el.textContent=text;el.title=text;el.className='sync-state'+(kind?' '+kind:'');updateStockSaveStatus()}
 /* Every paused sync keeps a code, a short reason, and a timestamp on this device.
    The header status text is width-limited on a phone, so the same record also
@@ -2155,6 +2175,7 @@ function pageHeading(title,action=''){return `<div class="page-heading"><div><di
 function emptyState(title,body,actionLabel,action){return `<div class="empty-state"><div class="empty-symbol">${ICON.target}</div><h3>${esc(title)}</h3><p>${esc(body)}</p>${actionLabel?`<button class="secondary-btn" data-action="${action}">＋ ${esc(actionLabel)}</button>`:''}</div>`}
 function metric(label,value,icon,note,tone){return `<div class="metric-card"><div class="metric-top"><span>${esc(label)}</span><span class="metric-icon ${tone}">${icon}</span></div><strong class="metric-value">${esc(value)}</strong><span class="metric-note">${esc(note)}</span></div>`}
 function render(){
+ restoreStockKey();
  $('breadcrumbTitle').textContent=page;const avatar=$('avatar'),identity=(user?.displayName||user?.email||'').trim();if(identity){avatar.textContent=identity.charAt(0).toUpperCase();avatar.classList.add('user-avatar');avatar.setAttribute('aria-label','Signed in as '+identity)}else{avatar.innerHTML=`<svg class="avatar-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgAvatarRender" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarAvatarRender" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgAvatarRender)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarAvatarRender)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg>`;avatar.classList.remove('user-avatar');avatar.setAttribute('aria-label','Northstar logo')}
  $('signInBtn').classList.toggle('hidden',!!user);$('signOutBtn').classList.toggle('hidden',!user);
  const reminderCount=getReminders().length;$('reminderCount').textContent=reminderCount;$('reminderCount').classList.toggle('hidden',!reminderCount);$('mobileDock')?.querySelector('.dock-item[data-page="Purchases"]')?.setAttribute('aria-label','Plan'+(reminderCount?' '+reminderCount+' reminder'+(reminderCount===1?'':'s'):'')+' · Purchase planner');
@@ -2227,9 +2248,14 @@ function connectStocks(e){
  e.preventDefault();if(!canEditStocks())return;
  const value=String(new FormData(e.target).get('stockApiKey')||'').trim();e.target.reset();
  if(!stockFeed.setKey(value)){showToast('Enter a valid Finnhub API key without spaces.');return}
- render();showToast('Connecting to Finnhub');
+ const remember=!!user&&cloudLoaded&&!lastSyncError&&!window.NorthstarVaultLocked;
+ if(remember){stockKeyTried=value;data={...data,settings:{...data.settings,finnhubKey:value}};persist()}
+ render();showToast(remember?'Connecting to Finnhub · key saved to your account':'Connecting to Finnhub · sign in with Google to save the key');
 }
-function disconnectStocks(){if(!canEditStocks())return;stockFeed.disconnect();render();focusStockControl('#stockApiKey');showToast('Finnhub disconnected; key and prices cleared from this tab.')}
+window.NorthstarGetIdToken=async()=>{const u=fb?.auth?.currentUser;if(!u)throw new Error('Sign in with Google to use the hosted AI.');return u.getIdToken()};
+let stockKeyTried='';
+function restoreStockKey(){try{const k=data.settings?.finnhubKey;if(typeof k!=='string'||!k||k===stockKeyTried||!user||!cloudLoaded||window.NorthstarVaultLocked||stockFeed.getState().hasKey)return;stockKeyTried=k;stockFeed.setKey(k)}catch(e){console.warn('Saved Finnhub key could not be restored.',e)}}
+function disconnectStocks(){if(!canEditStocks())return;stockFeed.disconnect();stockKeyTried='';if(data.settings?.finnhubKey){const{finnhubKey,...rest}=data.settings;data={...data,settings:rest};persist()}render();focusStockControl('#stockApiKey');showToast('Finnhub disconnected; saved key and prices cleared.')}
 function addStock(e){
  e.preventDefault();if(!canEditStocks())return;
  const symbol=normalizeSymbol(String(new FormData(e.target).get('symbol')||'')),symbols=watchlistSymbols(data.settings);
@@ -2275,6 +2301,7 @@ function renderOverview(){
  const recent=sortedTransactions().slice(0,5),reminders=getReminders().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).slice(0,3),upcoming=data.purchases.filter(p=>!['Purchased','Cancelled','Postponed'].includes(p.status)).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).slice(0,3);
  return `${pageHeading('Overview',`<button class="primary-btn" data-action="add-transaction">＋ New transaction</button>`)}
  <div class="welcome-strip"><div class="welcome-icon">↗</div><div><strong>Build your financial picture, one entry at a time.</strong><span>Add accounts and record transactions to turn your activity into useful insights.</span></div><button class="text-btn" data-action="page" data-page="Settings">Data & privacy ↗</button></div>
+ ${renderRecurringBanner()}
  <div class="metric-grid">${metric('Total tracked balance',money(totalBalance()),ICON.card,`${data.accounts.length} accounts tracked`,'navy')}${metric('Income this month',money(income),ICON.arrowDown,monthName(monthNow()),'green')}${metric('Spending this month',money(spending),ICON.arrowUp,monthName(monthNow()),'orange')}${metric('Savings rate',rate===null?'—':`${rate}%`,ICON.percent,income>0?'Based on recorded income and expenses':'Add income to calculate','purple')}</div>
  ${renderCashFlowGraph(data.transactions,monthNow(),money,esc)}
  ${renderAccountBalanceBreakdown()}
@@ -2287,7 +2314,8 @@ function renderOverview(){
 function renderTransactions(){
  const months=[...new Set(data.transactions.map(t=>typeof t.date==='string'?t.date.slice(0,7):'').filter(Boolean))].sort().reverse();
  const list=sortedTransactions().filter(t=>`${t.description} ${t.category} ${t.type} ${accountName(t.accountId)}`.toLowerCase().includes(query.toLowerCase())&&(txTypeFilter==='All'||t.type===txTypeFilter)&&(txMonthFilter==='All'||(typeof t.date==='string'&&t.date.startsWith(txMonthFilter))));
- return `${pageHeading('Transactions',`<button class="primary-btn" data-action="add-transaction">＋ Add transaction</button>`)}${renderTransactionGraph(list,money,esc)}<section class="panel"><div class="panel-head"><div><h2>Transaction history</h2><p>${list.length} matching ${list.length===1?'transaction':'transactions'} · income, expenses, and transfers</p></div><div class="inline-tools"><label class="search-box">⌕ <input id="txSearch" value="${esc(query)}" placeholder="Search activity…" aria-label="Search transactions"></label><select class="filter-select" id="txTypeFilter" aria-label="Filter type">${options(['All','Income','Expense','Transfer'],txTypeFilter)}</select><select class="filter-select" id="txMonthFilter" aria-label="Filter month">${options(['All',...months],txMonthFilter)}</select></div></div>${list.length?`<div class="table-wrap"><table class="tx-table"><thead><tr><th>Date</th><th>Transaction</th><th>Account</th><th>Type</th><th>Amount</th><th style="text-align:right">Actions</th></tr></thead><tbody>${list.map(t=>`<tr><td>${esc(fmtDate(t.date))}</td><td class="description-cell"><strong>${esc(t.description)}</strong><span>${esc(t.category)}${t.type==='Transfer'&&t.toAccountId?' · to '+esc(accountName(t.toAccountId)):''}</span></td><td>${esc(accountName(t.accountId))}</td><td><span class="type-pill ${t.type.toLowerCase()}">${esc(t.type)}</span></td><td class="${t.type==='Income'?'positive':t.type==='Expense'?'negative':''}">${t.type==='Expense'?'−':t.type==='Income'?'+':''}${esc(money(t.amount))}</td><td><div class="row-actions"><button class="action-btn" data-action="edit-transaction" data-id="${esc(t.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="transactions" data-id="${esc(t.id)}">Delete</button></div></td></tr>`).join('')}</tbody></table></div>`:emptyState('No matching transactions','Try another search or add a transaction to get started.','Add transaction','add-transaction')}</section>`;
+ const listIncome=roundMoney(list.filter(t=>t.type==='Income').reduce((n,t)=>n+t.amount,0)),listExpense=roundMoney(list.filter(t=>t.type==='Expense').reduce((n,t)=>n+t.amount,0)),listNet=roundMoney(listIncome-listExpense);
+ return `${pageHeading('Transactions',`<button class="primary-btn" data-action="add-transaction">＋ Add transaction</button>`)}${renderRecurringPanel()}${renderTransactionGraph(list,money,esc)}<section class="panel"><div class="panel-head"><div><h2>Transaction history</h2><p>${list.length} matching ${list.length===1?'transaction':'transactions'} · income, expenses, and transfers</p>${list.length?`<p class="tx-totals" data-tx-totals>Income <strong class="positive">+${esc(money(listIncome))}</strong> · Expenses <strong class="negative">−${esc(money(listExpense))}</strong> · Net <strong class="${listNet<0?'negative':'positive'}">${listNet<0?'−':''}${esc(money(Math.abs(listNet)))}</strong> <span class="muted">(transfers excluded)</span></p>`:''}</div><div class="inline-tools"><label class="search-box">⌕ <input id="txSearch" value="${esc(query)}" placeholder="Search activity…" aria-label="Search transactions"></label><select class="filter-select" id="txTypeFilter" aria-label="Filter type">${options(['All','Income','Expense','Transfer'],txTypeFilter)}</select><select class="filter-select" id="txMonthFilter" aria-label="Filter month">${options(['All',...months],txMonthFilter)}</select></div></div>${list.length?`<div class="table-wrap"><table class="tx-table"><thead><tr><th>Date</th><th>Transaction</th><th>Account</th><th>Type</th><th>Amount</th><th style="text-align:right">Actions</th></tr></thead><tbody>${list.map(t=>`<tr><td>${esc(fmtDate(t.date))}</td><td class="description-cell"><strong>${esc(t.description)}</strong><span>${esc(t.category)}${t.type==='Transfer'&&t.toAccountId?' · to '+esc(accountName(t.toAccountId)):''}</span></td><td>${esc(accountName(t.accountId))}</td><td><span class="type-pill ${t.type.toLowerCase()}">${esc(t.type)}</span></td><td class="${t.type==='Income'?'positive':t.type==='Expense'?'negative':''}">${t.type==='Expense'?'−':t.type==='Income'?'+':''}${esc(money(t.amount))}</td><td><div class="row-actions"><button class="action-btn" data-action="edit-transaction" data-id="${esc(t.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="transactions" data-id="${esc(t.id)}">Delete</button></div></td></tr>`).join('')}</tbody></table></div>`:emptyState('No matching transactions','Try another search or add a transaction to get started.','Add transaction','add-transaction')}</section>`;
 }
 function renderAccountBalanceBreakdown(){
  const accounts=data.accounts;
@@ -2301,7 +2329,75 @@ function renderAccountBalanceBreakdown(){
  return '<section class="panel account-breakdown-panel" aria-labelledby="accountBreakdownTitle"><div class="panel-head"><div><h2 id="accountBreakdownTitle">Balances by account</h2><p>Each account has its own balance and bar.</p></div><button class="text-btn" data-action="page" data-page="Accounts">Manage accounts ↗</button></div><div class="account-balance-tiles">'+rows+'</div></section>';
 }
 function renderAccounts(){return `${pageHeading('Accounts',`<button class="primary-btn" data-action="add-account">＋ Create account</button>`)}<div class="welcome-strip"><div class="welcome-icon">▣</div><div><strong>You control every starting balance.</strong><span>Create accounts you want to track manually. Northstar never assumes or imports a balance.</span></div></div>${data.accounts.length?`<div class="account-grid">${data.accounts.map(a=>`<article class="account-card"><div class="account-card-top"><div class="account-icon">${a.type==='Savings'?ICON.bank:a.type==='Credit'?ICON.card:a.type==='Investment'?ICON.trend:ICON.wallet}</div><div class="row-actions"><button class="action-btn" data-action="edit-account" data-id="${esc(a.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="accounts" data-id="${esc(a.id)}">Delete</button></div></div><div class="muted">${esc(a.type)}</div><h2>${esc(a.name)}</h2><div class="account-balance ${a.minimumBalance!=null&&a.balance<a.minimumBalance?'negative':''}">${esc(money(a.balance))}</div>${renderAccountBalanceBar(a,true)}${a.minimumBalance!=null?`<div class="minimum-note ${a.balance<a.minimumBalance?'warning-text':''}">${a.balance<a.minimumBalance?'Below your minimum balance':'Minimum balance'} · ${esc(money(a.minimumBalance))}</div>`:''}${a.protectFromSpending?`<div style="margin-top:10px"><span class="category-pill">♧ Protected (informational)</span></div>`:''}${renderAccountGraph(a,data.transactions,monthNow(),money,esc)}</article>`).join('')}<button class="add-account-card" data-action="add-account"><span>＋</span><strong>Add another account</strong><small>Checking, savings, cash, and more</small></button></div>`:emptyState('Start with your accounts','Add a checking account, savings account, cash wallet, or any balance you want to track.','Create account','add-account')}<p class="small-disclaimer">Balances are manually tracked. Protection and minimum-balance labels are reminders only; they do not block withdrawals.</p>`}
-function renderBudgets(){const list=[...data.budgets].sort((a,b)=>a.category.localeCompare(b.category));return `${pageHeading('Budgets',`<button class="primary-btn" data-action="add-budget">＋ Set a budget</button>`)}<div class="welcome-strip"><div class="welcome-icon">▤</div><div><strong>Set a limit for your spending.</strong><span>Budget progress uses recorded expenses from the current calendar month.</span></div></div>${renderBudgetGraph(list,data.transactions,monthNow(),money,esc)}${list.length?`<div class="stack">${list.map(b=>{const spent=monthSpend(b.category),pct=b.limit>0?spent/b.limit*100:0,remaining=b.limit-spent;return `<section class="panel budget-row" data-budget-id="${esc(b.id)}"><div class="budget-row-top"><div><span class="category-pill">${esc(b.category)}</span><h3>${esc(money(spent))} <small>spent of ${esc(money(b.limit))}</small></h3></div><div class="row-actions"><button class="action-btn" data-action="edit-budget" data-id="${esc(b.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="budgets" data-id="${esc(b.id)}">Delete</button></div></div><div class="progress-track"><div class="progress-fill ${pct>100?'over':''}" style="width:${Math.min(100,pct)}%"></div></div><div class="budget-foot"><span>${pct>100?`Over budget by ${esc(money(-remaining))}`:`${esc(money(Math.max(0,remaining)))} remaining`}</span><strong>${Math.round(pct)}% used</strong></div></section>`}).join('')}</div>`:emptyState('No budgets yet','Choose categories and give yourself a monthly spending limit.','Set a budget','add-budget')}<p class="small-disclaimer">This version tracks category budgets for the current month. It does not automatically connect to bank or card transactions.</p>`}
+function renderBudgets(){const list=[...data.budgets].sort((a,b)=>a.category.localeCompare(b.category));return `${pageHeading('Budgets',`<button class="primary-btn" data-action="add-budget">＋ Set a budget</button>`)}<div class="welcome-strip"><div class="welcome-icon">▤</div><div><strong>Set a limit for your spending.</strong><span>Budget progress uses recorded expenses from the current calendar month.</span></div></div>${renderBudgetGraph(list,data.transactions,monthNow(),money,esc)}${list.length?`<div class="stack">${list.map(b=>{const spent=monthSpend(b.category),pct=b.limit>0?spent/b.limit*100:0,remaining=roundMoney(b.limit-spent);return `<section class="panel budget-row" data-budget-id="${esc(b.id)}"><div class="budget-row-top"><div><span class="category-pill">${esc(b.category)}</span><h3>${esc(money(spent))} <small>spent of ${esc(money(b.limit))}</small></h3></div><div class="row-actions"><button class="action-btn" data-action="edit-budget" data-id="${esc(b.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="budgets" data-id="${esc(b.id)}">Delete</button></div></div><div class="progress-track"><div class="progress-fill ${pct>100?'over':''}" style="width:${Math.min(100,pct)}%"></div></div><div class="budget-foot"><span>${pct>100?`Over budget by ${esc(money(-remaining))}`:`${esc(money(Math.max(0,remaining)))} remaining`}</span><strong>${Math.round(pct)}% used</strong></div></section>`}).join('')}</div>`:emptyState('No budgets yet','Choose categories and give yourself a monthly spending limit.','Set a budget','add-budget')}<p class="small-disclaimer">This version tracks category budgets for the current month. It does not automatically connect to bank or card transactions.</p>`}
+/* Recurring bills and income. Read-only rendering; the only changes to records are
+   the person's own Post, Skip, Edit and Delete actions, never anything automatic. */
+function fxVolumePercent(){try{const v=JSON.parse(localStorage.getItem('northstar-fx-v1')||'{}').vol;return Math.round((typeof v==='number'&&v>=0&&v<=1?v:.55)*100)}catch(e){return 55}}
+function renderSplitPanel(){
+ const split=cleanSplit(data.settings?.split),ids=data.accounts.map(a=>a.id),byId=Object.fromEntries(split.parts.map(p=>[p.accountId,p.percent]));
+ if(data.accounts.length<2)return `<section class="panel split-panel"><div class="panel-head"><div><h2>Money split</h2><p>Automatically divide new income between your accounts.</p></div></div><p class="form-hint">Create at least two accounts first, then come back to set up a split.</p></section>`;
+ const paused=split.enabled&&validateSplit(split.parts,ids);
+ const total=Math.round(split.parts.reduce((n,p)=>n+p.percent*100,0))/100;
+ return `<section class="panel split-panel"><div class="panel-head"><div><h2>Money split</h2><p>Automatically divide new income between the accounts you choose. You are asked before anything is split.</p></div></div><form id="splitForm" novalidate><label class="checkbox-line"><input id="splitEnabled" type="checkbox" ${split.enabled?'checked':''}> Ask me to split new income</label>${paused?`<p class="split-warning" role="alert">Your split is paused: ${esc(paused)}</p>`:''}<div class="split-rows">${data.accounts.map(a=>`<div class="split-row" data-account-id="${esc(a.id)}"><label class="checkbox-line"><input type="checkbox" class="split-pick" ${byId[a.id]!=null?'checked':''}> ${esc(a.name)}</label><label class="split-percent"><input class="split-input" type="number" min="0.01" max="100" step="0.01" inputmode="decimal" value="${byId[a.id]!=null?esc(byId[a.id]):''}" aria-label="Percent for ${esc(a.name)}"> %</label></div>`).join('')}</div><p id="splitTotal" class="split-total" aria-live="polite">Total: ${total}% of 100%</p><p id="splitError" class="split-warning hidden" role="alert"></p><button class="primary-btn" type="submit">Save split</button><p class="form-hint">Applies only when you add new income. Edits, expenses and transfers are never split.</p></form></section>`;
+}
+function splitFormParts(form){return [...form.querySelectorAll('.split-row')].filter(r=>r.querySelector('.split-pick')?.checked).map(r=>({accountId:r.dataset.accountId,percent:Number(r.querySelector('.split-input').value)}))}
+function saveSplit(e){
+ e.preventDefault();const form=e.target,parts=splitFormParts(form),enabled=form.querySelector('#splitEnabled').checked,err=$('splitError');
+ const problem=parts.length||enabled?validateSplit(parts,data.accounts.map(a=>a.id)):'';
+ if(problem){err.textContent=problem;err.classList.remove('hidden');return}
+ err.classList.add('hidden');data={...data,settings:{...data.settings,split:cleanSplit({enabled,parts})}};persist();showToast(enabled?'Money split saved':'Money split saved (turned off)');render();
+}
+document.addEventListener('input',e=>{const form=e.target?.closest?.('#splitForm');if(!form)return;const total=splitFormParts(form).reduce((n,p)=>n+Math.round((Number.isFinite(p.percent)?p.percent:0)*100),0)/100,out=$('splitTotal');if(out){out.textContent=`Total: ${total}% of 100%`;out.classList.toggle('split-ok',total===100);$('splitError')?.classList.add('hidden')}});
+async function startModalSubmit(e){
+ e.preventDefault();const form=e.target;
+ if(modalState?.kind==='transaction'&&!modalState.id&&!modalState.splitChoice){
+  const fd=new FormData(form),amount=Number(fd.get('amount')),parts=activeSplit(data.settings?.split,data.accounts.map(a=>a.id));
+  if(fd.get('type')==='Income'&&parts&&Number.isFinite(amount)&&amount>0&&amount<=1000000000){
+   const pieces=splitAmount(amount,parts),lines=parts.map((p,i)=>`${accountName(p.accountId)} ${p.percent}% = ${money(pieces[i])}`).join(' · ');
+   const choice=await showNorthstarDialog({title:'Split this income?',message:`Your Settings say to split new income: ${lines}.`,detail:'Split replaces the account you picked in the form. Don’t split saves it as one transaction. Edit split leaves this form without saving.',icon:'⇆',label:'MONEY SPLIT',choices:[{value:'split',label:'Split',style:'primary'},{value:'whole',label:'Don’t split',style:'secondary'},{value:'edit',label:'Edit split',style:'secondary'}]});
+   if(!modalState||modalState.kind!=='transaction')return;
+   if(choice==='edit'){modalState=null;navigate('Settings');return}
+   if(choice!=='split'&&choice!=='whole')return;
+   modalState.splitChoice=choice;
+  }
+ }
+ try{submitModal(e)}finally{if(modalState)delete modalState.splitChoice}
+}
+function renderRecurringBanner(){
+ const n=dueItems(data.recurring,today()).length;
+ if(!n)return '';
+ return `<div class="welcome-strip recurring-banner" role="status"><div class="welcome-icon">↻</div><div><strong>${n} recurring ${n===1?'item is':'items are'} due.</strong><span>Review and post ${n===1?'it':'them'} to keep your balances and budgets current.</span></div><button class="text-btn" data-action="page" data-page="Transactions">Review ↗</button></div>`;
+}
+function renderRecurringPanel(){
+ const list=cleanRecurring(data.recurring),t=today(),sorted=[...list].sort((a,b)=>a.nextDate.localeCompare(b.nextDate)||a.description.localeCompare(b.description));
+ const month=monthlySummary(list),soon=upcomingOccurrences(list,t,30),soonOut=roundMoney(soon.filter(o=>o.item.type==='Expense').reduce((s,o)=>s+o.item.amount,0)),soonIn=roundMoney(soon.filter(o=>o.item.type==='Income').reduce((s,o)=>s+o.item.amount,0));
+ const rows=sorted.map(r=>{
+  const due=r.nextDate<=t,missed=due?dueCount(r,t):0;
+  const when=due?(missed>1?`${missed} due · since ${fmtDate(r.nextDate)}`:r.nextDate===t?'Due today':`Overdue · ${fmtDate(r.nextDate)}`):`Next ${fmtDate(r.nextDate)}`;
+  return `<div class="recurring-item${due?' is-due':''}"><div class="tx-icon ${r.type.toLowerCase()}">${r.type==='Income'?ICON.arrowDown:ICON.arrowUp}</div><div class="recent-description"><strong>${esc(r.description)}</strong><span>${esc(r.category)} · ${esc(accountName(r.accountId))} · ${esc(r.frequency)}</span></div><div class="recent-amount"><strong class="${r.type==='Income'?'positive':'negative'}">${r.type==='Income'?'+':'−'}${esc(money(r.amount))}</strong><span>${esc(when)}</span></div><div class="row-actions">${due?`<button class="action-btn post" data-action="post-recurring" data-id="${esc(r.id)}" aria-label="Post ${esc(r.description)}">Post</button><button class="action-btn" data-action="skip-recurring" data-id="${esc(r.id)}" aria-label="Skip ${esc(r.description)}">Skip</button>`:''}<button class="action-btn" data-action="edit-recurring" data-id="${esc(r.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="recurring" data-id="${esc(r.id)}">Delete</button></div></div>`;
+ }).join('');
+ const summary=list.length?`<div class="recurring-summary"><span><b>Typical month</b> +${esc(money(month.income))} in · −${esc(money(month.expenses))} out · net ${month.net<0?'−':'+'}${esc(money(Math.abs(month.net)))}</span><span><b>Next 30 days</b> ${soon.length} scheduled · −${esc(money(soonOut))} bills · +${esc(money(soonIn))} income</span></div>`:'';
+ return `<section class="panel recurring-panel"><div class="panel-head"><div><h2>Recurring bills &amp; income</h2><p>Things you expect to repeat. Nothing posts on its own, you confirm each one.</p></div><button class="secondary-btn" data-action="add-recurring">＋ Add recurring</button></div>${list.length?`${summary}<div class="recurring-list">${rows}</div>`:emptyState('No recurring items yet','Add rent, subscriptions or your paycheck to see what is due and what a typical month looks like.','Add recurring','add-recurring')}</section>`;
+}
+function postRecurring(itemId){
+ const item=(data.recurring||[]).find(r=>r.id===itemId);
+ if(!item){showToast('This recurring item could not be found.');return}
+ if(!data.accounts.some(a=>a.id===item.accountId)){showToast('The account for this item no longer exists. Edit the item to choose another account.');return}
+ let result;try{result=postOccurrence(item,today())}catch(error){showToast(error.message);return}
+ const tx={id:id(),...result.transaction};
+ data={...data,accounts:applyTransaction(data.accounts,tx),transactions:[tx,...data.transactions],recurring:data.recurring.map(r=>r.id===itemId?result.item:r)};
+ const status=persist();render();
+ if(status!==false)showToast(status==='pending'?'Posted · saving the protected device copy…':`Posted ${item.description} · next ${fmtDate(result.item.nextDate)}`);
+}
+function skipRecurring(itemId){
+ const item=(data.recurring||[]).find(r=>r.id===itemId);
+ if(!item){showToast('This recurring item could not be found.');return}
+ if(item.nextDate>today()){showToast('This item is not due yet.');return}
+ let moved;try{moved=skipOccurrence(item)}catch(error){showToast(error.message);return}
+ data={...data,recurring:data.recurring.map(r=>r.id===itemId?moved:r)};
+ const status=persist();render();
+ if(status!==false)showToast(status==='pending'?'Skipped · saving the protected device copy…':`Skipped · next ${fmtDate(moved.nextDate)}`);
+}
 function renderGoals(){return `${pageHeading('Goals',`<button class="primary-btn" data-action="add-goal">＋ Create savings goal</button>`)}<div class="welcome-strip"><div class="welcome-icon">◎</div><div><strong>Give your savings a destination.</strong><span>Update the amount saved as you make progress toward each goal.</span></div></div>${renderGoalGraph(data.goals,money,esc)}${data.goals.length?`<div class="goal-grid">${data.goals.map(g=>{const p=g.target>0?Math.min(100,g.saved/g.target*100):0,complete=p>=100;return `<article class="goal-card goal-card-journey ${complete?'goal-complete':''}" data-goal-id="${esc(g.id)}"><div class="goal-card-top"><div class="goal-icon">${complete?ICON.check:ICON.target}</div><div class="row-actions">${complete?'<span class="goal-achieved-badge">★ Goal reached</span>':""}<button class="action-btn" data-action="edit-goal" data-id="${esc(g.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="goals" data-id="${esc(g.id)}">Delete</button></div></div><h3>${esc(g.name)}</h3><p class="muted">${g.dueDate?'Target date · '+esc(fmtDate(g.dueDate)):'No target date set'}</p><div class="goal-numbers"><strong>${esc(money(g.saved))}</strong><span>of ${esc(money(g.target))}</span></div><div class="progress-track goal-progress-track" role="progressbar" aria-label="${esc(g.name)} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(p)}"><div class="progress-fill ${complete?"goal-progress-complete":""}" style="width:${p}%"></div><span class="goal-progress-marker" style="--goal-progress:${p}%" aria-hidden="true">✦</span></div><div class="budget-foot"><span>${complete?"A milestone worth celebrating":esc(money(Math.max(0,g.target-g.saved))+" to go")}</span><strong>${Math.round(p)}%</strong></div><button class="text-btn" data-action="edit-goal" data-id="${esc(g.id)}">${complete?"Update goal ↗":"Add to this goal ↗"}</button></article>`}).join('')}</div>`:emptyState('No savings goals yet','Create an emergency fund, trip, new PC, or another goal and track your progress.','Create savings goal','add-goal')}${renderScenarioPanel(data.goals,esc)}`}
 function renderPurchaseCard(p){const priority=['High','Medium','Low'].includes(p.priority)?p.priority:'Medium';const pct=p.price>0?Math.min(100,(p.saved||0)/p.price*100):0;const days=reminderDaysLeft(p);return `<article class="purchase-card"><div class="purchase-card-head"><span class="priority ${esc(priority.toLowerCase())}">${esc(priority)} priority</span><div class="row-actions"><button class="action-btn" data-action="edit-purchase" data-id="${esc(p.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="purchases" data-id="${esc(p.id)}">Delete</button></div></div><h3>${esc(p.name)}</h3><p class="muted">${esc(p.category)} · ${esc(accountName(p.accountId))}</p><div class="purchase-price">${esc(money(p.price))}</div>${renderPurchasePriceTools(p)}<div class="purchase-meta"><span>Target date</span><strong>${esc(fmtDate(p.date))}</strong></div><div class="purchase-meta"><span>Saved so far</span><strong>${esc(money(p.saved||0))}</strong></div><div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div><div class="budget-foot"><span>${Math.round(pct)}% saved</span><strong>${esc(money(Math.max(0,p.price-(p.saved||0))))} left</strong></div><form class='purchase-allocation-form' data-purchase-id='${esc(p.id)}'><label class='purchase-allocation-label'>Amount allocated<input name='allocatedAmount' type='number' min='0' max='${esc(['Purchased','Cancelled'].includes(p.status)?p.price:maxPurchaseAllocation(p.accountId,p.id))}' step='0.01' required inputmode='decimal' value='${esc((Number(p.saved)||0).toFixed(2))}'></label><button class='secondary-btn small' type='submit'>Update allocation</button><p>Set the amount saved for this purchase directly on its card.</p></form>${p.date&&Number.isFinite(days)&&['Planning','Saving','Ready'].includes(p.status)?`<div class="purchase-date-note">${days<0?`${Math.abs(days)} days overdue`:days===0?'Target date is today':`${days} days until target`}${getReminders().includes(p)?' · Reminder due':''}</div>`:''}${p.notes?`<div class="purchase-notes is-collapsed" data-notes-preview>${esc(p.notes)}</div><button class="purchase-notes-toggle" type="button" data-action="toggle-purchase-notes" aria-expanded="false">Expand description</button>`:''}<div class="purchase-actions"><select aria-label="Purchase status" data-action="purchase-status" data-id="${esc(p.id)}">${options(['Planning','Saving','Ready','Purchased','Postponed','Cancelled'],p.status)}</select>${p.status!=='Purchased'?`<button class="bought-btn" data-action="purchase-bought" data-id="${esc(p.id)}">Bought</button>`:''}</div></article>`}
 function sortPurchaseItems(a,b){const da=/^\d{4}-\d{2}-\d{2}$/.test(String(a.date||''))?String(a.date):'9999-12-31';const db=/^\d{4}-\d{2}-\d{2}$/.test(String(b.date||''))?String(b.date):'9999-12-31';return da.localeCompare(db)||(Number(a.price)||0)-(Number(b.price)||0)||String(a.name||'').localeCompare(String(b.name||''))}
@@ -2457,15 +2553,15 @@ function renderSyncIssuePanel(){
  if(!user&&!issue)return '';
  return `<section class="panel" id="syncDiagnosticsPanel"><div class="panel-head"><div><h2>Sync diagnostics</h2><p>Every paused sync keeps a code, a reason, and a time on this device.</p></div><span class="category-pill">${issue?esc(issue.code):'No issue recorded'}</span></div>${syncNeedsChoice(issue)?'<p class="form-hint sync-choice-note" role="note"><strong>Sync is waiting for your choice.</strong> Two copies of your data differ, and Northstar will not pick one for you. Nothing has been changed or overwritten. Answer in the bar at the bottom of the screen, or tap Choose which data to keep to bring it back. Until you choose, everything you add here, including your stock list, is saved on this device only. Not sure which to keep? Tap Export backup on this page first.</p>':''}${issue?`<div class="sync-detail-grid"><div class="sync-detail-row"><span>Code</span><span><code>${esc(issue.code)}</code></span></div><div class="sync-detail-row"><span>Stage</span><span>${esc(issue.stage)}</span></div><div class="sync-detail-row"><span>Reason</span><span>${esc(issue.message)}</span></div><div class="sync-detail-row"><span>Recorded</span><span>${esc(syncIssueWhen(issue))}</span></div><div class="sync-detail-row"><span>Workspace</span><span>${esc(issue.mode||syncWorkspaceMode())}</span></div><div class="sync-detail-row"><span>Connection</span><span>${issue.online===false?'Offline when recorded':'Online'}</span></div><div class="sync-detail-row"><span>Cloud copy</span><span>${cloudLoaded?'Loaded from Firestore':'Not loaded'}</span></div><div class="sync-detail-row"><span>Project</span><span>${esc(firebaseConfig.projectId)}</span></div><div class="sync-detail-row"><span>Database</span><span>${esc(fb?.db?._databaseId?.database||'(default)')}</span></div>${cloudCheck?`<div class="sync-detail-row"><span>Last check</span><span>${cloudCheck.ok?'Read access confirmed':'Failed'} · ${esc(syncIssueShortWhen(cloudCheck))}${cloudCheck.code?` · <code>${esc(cloudCheck.code)}</code>`:''}</span></div>`:''}</div>`:`<p class="form-hint" style="margin:0">No cloud sync problem is recorded on this device. ${user?'Use Check cloud access to test Firestore directly; a failed load or save records its code here and in the notice under the header.':'Sign in with Google to enable cloud sync.'}</p>`}<div class="form-actions-top" style="margin-top:14px">${issue?'<button type="button" class="secondary-btn small" data-action="sync-details">Sync details</button>':''}${user?'<button type="button" class="secondary-btn small" data-action="check-cloud-access">Check cloud access</button>':''}${user?`<button type="button" class="primary-btn small" data-action="${syncNeedsChoice(issue)?'choose-sync-data':'retry-sync'}">${syncNeedsChoice(issue)?'Choose which data to keep':'Retry cloud sync'}</button>`:''}</div><p class="form-hint" style="margin-top:10px">Codes come from Firestore or Google sign-in. northstar/conflict means two copies differ: either this device and your account hold different data, or the cloud copy changed after this device loaded it. Nothing is overwritten until you choose which to keep. northstar/offline means this device could not reach Firestore; your changes stay here and sync retries when the connection returns.</p></section>`;
 }
-function renderSettings(){const counts=[['Accounts',data.accounts.length],['Transactions',data.transactions.length],['Budgets',data.budgets.length],['Goals',data.goals.length],['Purchases',data.purchases.length]];return `${pageHeading('Settings')}<div class="settings-layout"><section class="panel"><div class="panel-head"><div><h2>Cloud sync & account</h2><p>Optional Google sign-in for this device and your other devices.</p></div><span class="category-pill">${user?(cloudLoaded&&!lastSyncError?'Cloud active':'Sync needs attention'):'Local only'}</span></div><div class="setting-action"><div><strong>${user?esc(user.displayName||user.email||'Google account'):'Connect Google'}</strong><p>${user?(cloudLoaded&&!lastSyncError?'Your finance data loaded from Firestore and cloud saves are enabled.':'Google sign-in succeeded, but Northstar has not confirmed a successful cloud sync. Your changes stay in this browser until the cloud copy is confirmed. Sync diagnostics below shows the code, and Check cloud access tests Firestore directly.'):'Your entries stay in this browser until you connect Google and sync them.'}</p></div>${user?`${(!cloudLoaded||lastSyncError)?(syncNeedsChoice()?'<button class="primary-btn" data-action="choose-sync-data">Choose which data to keep</button>':'<button class="primary-btn" data-action="retry-sync">Retry cloud sync</button>'):''}<button class="secondary-btn" data-action="signout">Sign out</button>`:'<button class="primary-btn" data-action="signin">Connect Google</button>'}</div>${lastSyncError?`<p class="sync-issue-line">Cloud sync is paused with <code>${esc(firebaseErrorCode(lastSyncError))}</code>. <button type="button" class="text-btn" data-action="sync-details">See sync details</button></p>`:''}<div class="privacy-note"><span>♧</span><span>Only sign in on a device you trust. Cloud access is intended to be restricted to your own user ID by Firestore security rules. Use fictional data until you confirm your rules are published and tested.</span></div></section>
+function renderSettings(){const counts=[['Accounts',data.accounts.length],['Transactions',data.transactions.length],['Budgets',data.budgets.length],['Goals',data.goals.length],['Purchases',data.purchases.length],['Recurring',(data.recurring||[]).length]];return `${pageHeading('Settings')}<div class="settings-layout"><section class="panel"><div class="panel-head"><div><h2>Cloud sync & account</h2><p>Optional Google sign-in for this device and your other devices.</p></div><span class="category-pill">${user?(cloudLoaded&&!lastSyncError?'Cloud active':'Sync needs attention'):'Local only'}</span></div><div class="setting-action"><div><strong>${user?esc(user.displayName||user.email||'Google account'):'Connect Google'}</strong><p>${user?(cloudLoaded&&!lastSyncError?'Your finance data loaded from Firestore and cloud saves are enabled.':'Google sign-in succeeded, but Northstar has not confirmed a successful cloud sync. Your changes stay in this browser until the cloud copy is confirmed. Sync diagnostics below shows the code, and Check cloud access tests Firestore directly.'):'Your entries stay in this browser until you connect Google and sync them.'}</p></div>${user?`${(!cloudLoaded||lastSyncError)?(syncNeedsChoice()?'<button class="primary-btn" data-action="choose-sync-data">Choose which data to keep</button>':'<button class="primary-btn" data-action="retry-sync">Retry cloud sync</button>'):''}<button class="secondary-btn" data-action="signout">Sign out</button>`:'<button class="primary-btn" data-action="signin">Connect Google</button>'}</div>${lastSyncError?`<p class="sync-issue-line">Cloud sync is paused with <code>${esc(firebaseErrorCode(lastSyncError))}</code>. <button type="button" class="text-btn" data-action="sync-details">See sync details</button></p>`:''}<div class="privacy-note"><span>♧</span><span>Only sign in on a device you trust. Cloud access is intended to be restricted to your own user ID by Firestore security rules. Use fictional data until you confirm your rules are published and tested.</span></div></section>
 ${renderSyncIssuePanel()}
 ${renderVaultPanel()}
 <section class="panel"><div class="panel-head"><div><h2>Saved Guide profile</h2><p>Your previous Guide profile and saved note are still available.</p></div></div><div class="setting-action"><div><strong>Northstar Guide</strong><p>Review or edit your saved planning preferences and graph. The Guide is a local rules-based planner.</p></div><button class="secondary-btn" data-action="page" data-page="Guide">Open saved Guide ↗</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Preferences</h2><p>Personalize how your numbers are displayed.</p></div></div><label class="field-label" style="max-width:360px">Display currency<select id="currencySelect">${options(['USD','CAD','GBP','EUR','AUD','NZD','JPY'],data.settings.currency||'USD')}</select></label><p class="form-hint">Changing currency changes display formatting only. Northstar does not perform exchange-rate conversion.</p></section>
-<section class="panel"><div class="panel-head"><div><h2>Backup & restore</h2><p>Keep a private backup before making major changes.</p></div></div><div class="setting-action"><div><strong>Export backup</strong><p>${vault.state==='unlocked'?'Download an encrypted JSON backup of this workspace. Keep your passphrase safe.':'Download a readable, unencrypted JSON backup. Store it privately.'}</p></div><button class="secondary-btn" data-action="export">↓ Export backup</button></div><div class="setting-action"><div><strong>Restore backup</strong><p>Replace the current data with a plaintext or encrypted Northstar JSON backup.</p></div><button class="secondary-btn" data-action="import">↑ Choose file</button></div>${renderWorkspaceCountGraph(counts,esc)}</section>
-<section class="panel"><div class="panel-head"><div><h2>Data management</h2><p>Clear this Northstar dataset if you need a fresh start.</p></div></div><div class="setting-action"><div><strong>Clear all financial data</strong><p>This deletes accounts, transactions, budgets, goals, purchase plans, saved Guide information, and your custom stock list from the active dataset. Export a backup first if you may need the information.</p></div><button class="danger-btn" data-action="clear-data">Clear data</button></div></section>
+<section class="panel"><div class="panel-head"><div><h2>Backup & restore</h2><p>Keep a private backup before making major changes.</p></div></div><div class="setting-action"><div><strong>Export backup</strong><p>${vault.state==='unlocked'?'Download an encrypted JSON backup of this workspace. Keep your passphrase safe.':'Download a readable, unencrypted JSON backup. Store it privately.'}</p></div><button class="secondary-btn" data-action="export">↓ Export backup</button></div><div class="setting-action"><div><strong>Export transactions (CSV)</strong><p>Download a readable spreadsheet file of your recorded transactions. It is not encrypted, even in a protected workspace.</p></div><button class="secondary-btn" data-action="export-csv">↓ Export CSV</button></div><div class="setting-action"><div><strong>Restore backup</strong><p>Replace the current data with a plaintext or encrypted Northstar JSON backup.</p></div><button class="secondary-btn" data-action="import">↑ Choose file</button></div>${renderWorkspaceCountGraph(counts,esc)}</section>
+<section class="panel"><div class="panel-head"><div><h2>Data management</h2><p>Clear this Northstar dataset if you need a fresh start.</p></div></div><div class="setting-action"><div><strong>Clear all financial data</strong><p>This deletes accounts, transactions, budgets, recurring items, goals, purchase plans, saved Guide information, and your custom stock list from the active dataset. Export a backup first if you may need the information.</p></div><button class="danger-btn" data-action="clear-data">Clear data</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Your Northstar experience</h2><p>Revisit the welcome screen and compass animation any time.</p></div></div><div class="setting-action"><div><strong>Welcome screen</strong><p>See the Northstar introduction and animated compass again.</p></div><button class="secondary-btn" data-action="welcome-again">Replay welcome ↗</button></div></section>
-<section class="panel"><div class="panel-head"><div><h2>Sound & celebrations</h2><p>Celebrate a savings milestone with a short chime and animation.</p></div></div><label class="checkbox-line"><input id="goalSoundsToggle" type="checkbox" ${data.settings.goalSounds!==false?"checked":""}> Play goal-completion sounds</label><p class="form-hint">Sound plays only when you reach a goal after using the app. You can turn it off here.</p></section>
+<section class="panel"><div class="panel-head"><div><h2>Sound & celebrations</h2><p>Celebrate a savings milestone with a short chime and animation.</p></div></div><label class="checkbox-line"><input id="goalSoundsToggle" type="checkbox" ${data.settings.goalSounds!==false?"checked":""}> Play goal-completion sounds</label><p class="form-hint">Sound plays only when you reach a goal after using the app. You can turn it off here.</p><label class="fx-volume-line" for="fxVolume"><span>App sound volume</span><input id="fxVolume" type="range" min="0" max="100" step="5" value="${fxVolumePercent()}" aria-label="App sound volume"><output id="fxVolumeOut">${fxVolumePercent()}%</output></label><p class="form-hint">Taps, saves, income coins and deletes each have their own soft sound. The speaker in the top bar mutes everything.</p></section>${renderSplitPanel()}
 <section class="panel"><div class="panel-head"><div><h2>About Northstar</h2><p>What this app does — and does not do.</p></div><span class="category-pill">Major update</span></div><div class="setting-action"><div><strong>What's new</strong><p>Completed expense tiles, optional passphrase protection, and safer sync. Protection is off by default.</p></div><a class="secondary-btn small" href="https://github.com/CorbinPlayz/personal-finance/blob/main/MAJOR-UPDATE.md" target="_blank" rel="noopener noreferrer" aria-label="Read the major update on GitHub, opens in a new tab" style="text-decoration:none">Read update ↗</a></div><p class="muted" style="font-size:12px;line-height:1.7;margin:0">Northstar is a manual personal finance tracker. It does not connect to bank accounts, process payments, or provide financial advice. Data is readable unless passphrase protection is explicitly enabled. Protection covers the active workspace, not every older copy or an unlocked device. Do not commit financial records or private credentials to GitHub. Publish and test the Firestore rules for cloud access.</p></section></div>`}
 function openModal(kind,item=null){modalState={kind,id:item?.id||null,initial:item?JSON.parse(JSON.stringify(item)):{},baselineSnapshot:null};renderModal();setTimeout(()=>{const f=$('modalForm');f?.querySelector('input:not([type=checkbox]),select,textarea')?.focus()},0)}
 function modalFormSnapshot(form=$('modalForm')){if(!form)return '';return JSON.stringify(Array.from(form.elements).filter(el=>el.name&&!el.disabled).map(el=>[el.name,(el.type==='checkbox'||el.type==='radio')?(el.checked?el.value:''):el.value]))}
@@ -2478,6 +2574,7 @@ function renderModal(){const root=$('modalRoot');if(!modalState){root.innerHTML=
  if(kind==='transaction'){title=edit?'Edit transaction':'Add transaction';submit=edit?'Save changes':'Save transaction';body=`<div class="field-grid">${field('Description','description','text',v.description||'','maxlength="120" required placeholder="Paycheck, groceries, rent…"')}${field('Amount','amount','number',v.amount??'','min="0.01" max="1000000000" step="0.01" required placeholder="0.00"')}${select('Type','type',options(['Income','Expense','Transfer'],v.type||'Expense'),v.type||'Expense','id="modalTxType"')}${select('Category','category',categoryOptions(v.category||(v.type==='Income'?'Income':'Other'),v.type==='Expense'),v.category||'Other')}${select('Account','accountId',accountOptions(v.accountId),v.accountId||'','required')}${field('Date','date','date',v.date||today(),'required')}</div><div id="transferExtra" class="${v.type==='Transfer'?'':'hidden'}">${select('Transfer to','toAccountId',accountOptions(v.toAccountId,v.accountId),v.toAccountId||'')}</div><p class="form-hint">Income adds to the selected account. Expenses subtract from it. Transfers move the same amount between accounts.</p>`}
  else if(kind==='account'){title=edit?'Edit account':'Create account';submit=edit?'Save changes':'Create account';body=`<div class="field-grid">${field('Account name','name','text',v.name||'','required maxlength="80" placeholder="Everyday checking"')}${select('Account type','type',options(ACCOUNT_TYPES,v.type||'Checking'),v.type||'Checking')}${field('Current tracked balance','balance','number',v.balance??'0','step="0.01" required')}${field('Minimum balance alert (optional)','minimumBalance','number',v.minimumBalance??'','step="0.01" placeholder="No minimum"')}</div><label class="checkbox-line"><input name="protectFromSpending" type="checkbox" ${v.protectFromSpending?'checked':''}> Mark as protected (informational reminder only)</label><p class="form-hint">New accounts start at the balance you enter. Existing transactions are not replayed when you edit an account's current balance.</p>`}
  else if(kind==='budget'){title=edit?'Edit budget':'Set a budget';submit=edit?'Save changes':'Save budget';body=`${select('Expense category','category',categoryOptions(v.category,true),v.category||'Housing','required')}${field('Monthly limit','limit','number',v.limit??'','min="0.01" step="0.01" required placeholder="500.00"')}<p class="form-hint">One budget per category. Progress is based on this calendar month's recorded expenses.</p>`}
+ else if(kind==='recurring'){title=edit?'Edit recurring item':'Add recurring item';submit=edit?'Save changes':'Save recurring item';const rType=v.type||'Expense';body=`<div class="field-grid">${field('Description','description','text',v.description||'','maxlength="120" required placeholder="Rent, paycheck, streaming…"')}${field('Amount','amount','number',v.amount??'','min="0.01" max="1000000000" step="0.01" required placeholder="0.00"')}${select('Type','type',options(['Expense','Income'],rType),rType,'id="modalTxType"')}${select('Category','category',categoryOptions(v.category||(rType==='Income'?'Income':'Other'),rType==='Expense'),v.category||'Other')}${select('Account','accountId',accountOptions(v.accountId),v.accountId||'','required')}${select('Repeats','frequency',options(FREQUENCIES,v.frequency||'Monthly'),v.frequency||'Monthly')}${field('Next due date','nextDate','date',v.nextDate||today(),'required')}</div><p class="form-hint">Northstar never posts these on its own. When one is due you will see a Post button that records it as a normal transaction, or Skip to move to the next date without recording anything.</p>`}
  else if(kind==='goal'){title=edit?'Edit savings goal':'Create savings goal';submit=edit?'Save changes':'Create goal';body=`${field('Goal name','name','text',v.name||'','required maxlength="100" placeholder="Emergency fund"')}<div class="field-grid">${field('Target amount','target','number',v.target??'','min="0.01" step="0.01" required')}${field('Amount saved so far','saved','number',v.saved??'0','min="0" step="0.01" required')}${field('Target date (optional)','dueDate','date',v.dueDate||'','')}</div><p class="form-hint">Update the saved amount whenever you add to or use the money reserved for this goal.</p>`}
  else if(kind==='purchase'){title=edit?'Edit planned purchase':'Plan a future purchase';submit=edit?'Save changes':'Save purchase';body=`${field('Purchase name','name','text',v.name||'','required maxlength="100" placeholder="New laptop"')}<div class="field-grid">${field('Price','price','number',v.price??'','min="0.01" step="0.01" required')}${field('Target purchase date','date','date',v.date||today(),'required')}${select('Priority','priority',options(['Low','Medium','High'],v.priority||'Medium'),v.priority||'Medium')}${select('Category','category',categoryOptions(v.category,true),v.category||'Other')}</div>${select('Funding account','accountId',accountOptions(v.accountId),v.accountId||'','required')}<div class="field-grid">${field('Already set aside','saved','number',v.saved??'0','min="0" step="0.01" required')}${select('Status','status',options(['Planning','Saving','Ready','Purchased','Postponed','Cancelled'],v.status||'Planning'),v.status||'Planning')}</div><div class="field-label">Remind me<div class="reminder-options">${[[30,'30 days before'],[7,'7 days before'],[1,'1 day before'],[0,'On the day']].map(([n,label])=>`<label class="checkbox-line"><input type="checkbox" name="reminderDays" value="${n}" ${(Array.isArray(v.reminderDays)?v.reminderDays:[30,7,1,0]).includes(n)?'checked':''}>${label}</label>`).join('')}</div></div><label class="field-label">Notes (optional)<textarea rows="2" maxlength="1000" name="notes" placeholder="Links, details, or things to compare">${esc(v.notes||'')}</textarea></label><p class="form-hint">Reminders are checked while the dashboard is open. Notifications while it is closed are not configured.</p>`}
  root.innerHTML=`<div class="modal-backdrop" data-action="backdrop-close"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><div><div class="eyebrow">NORTHSTAR</div><h2 id="modalTitle">${esc(title)}</h2></div><button class="icon-btn" data-action="close-modal" aria-label="Close dialog">×</button></div><form id="modalForm" novalidate><div id="modalError" class="form-error hidden" role="alert"></div>${body}<div class="modal-actions"><button type="button" class="secondary-btn" data-action="close-modal">Cancel</button><button type="submit" class="primary-btn">✓ ${esc(submit)}</button></div></form></section></div>`;
@@ -2487,19 +2584,22 @@ function formError(message){const e=$('modalError');e.textContent=message;e.clas
 /* Save validated form data, preserving linked IDs and price history on edits.
    If a linked expense is reclassified, keep the link so Bought fails safely
    rather than silently creating another expense. */
-function submitModal(e){e.preventDefault();const form=e.target;if(!modalState||!form||form.id!=='modalForm')return;const fd=new FormData(form),v=Object.fromEntries(fd.entries()),kind=modalState.kind,oldId=modalState.id;let next={...data};
- const section={transaction:'transactions',account:'accounts',budget:'budgets',goal:'goals',purchase:'purchases'}[kind];
+function submitModal(e){e.preventDefault();let splitMade=0;const form=e.target;if(!modalState||!form||form.id!=='modalForm')return;const fd=new FormData(form),v=Object.fromEntries(fd.entries()),kind=modalState.kind,oldId=modalState.id;let next={...data};
+ const section={transaction:'transactions',account:'accounts',budget:'budgets',goal:'goals',purchase:'purchases',recurring:'recurring'}[kind];
  const priorBudget=kind==='budget'?data.budgets.find(b=>b.id===oldId||(!oldId&&b.category===v.category)):null;
  if(oldId&&section&&!data[section].some(item=>item.id===oldId)){formError('This record no longer exists. Close this form and review your current records.');return}
  const num=(key)=>Number(v[key]);const validMoney=(n,min=0.01)=>Number.isFinite(n)&&n>=min;
  if(kind==='transaction'){
-  const amount=num('amount');if(!v.description?.trim()||!v.accountId||!validMoney(amount)||!v.date){formError('Enter a description, account, date, and a positive amount.');return}if(!next.accounts.some(a=>a.id===v.accountId)){formError('Create or select a valid account first.');return}if(v.type==='Transfer'&&(!v.toAccountId||v.toAccountId===v.accountId||!next.accounts.some(a=>a.id===v.toAccountId))){formError('Choose a different destination account for the transfer.');return}
+  const amount=num('amount');if(!v.description?.trim()||!v.accountId||!validMoney(amount)||!v.date){formError('Enter a description, account, date, and a positive amount.');return}if(amount>1000000000){formError('Enter an amount of 1,000,000,000 or less.');return}if(!next.accounts.some(a=>a.id===v.accountId)){formError('Create or select a valid account first.');return}if(v.type==='Transfer'&&(!v.toAccountId||v.toAccountId===v.accountId||!next.accounts.some(a=>a.id===v.toAccountId))){formError('Choose a different destination account for the transfer.');return}
   let accounts=next.accounts,transactions=next.transactions;const old=oldId?transactions.find(t=>t.id===oldId):null;if(oldId){if(old)accounts=applyTransaction(accounts,old,true);transactions=transactions.filter(t=>t.id!==oldId)}
-  const tx={...(old||{}),id:oldId||id(),description:v.description.trim(),amount:Math.round(amount*100)/100,type:v.type||'Expense',category:v.category||(v.type==='Income'?'Income':'Other'),date:v.date,accountId:v.accountId,...(v.type==='Transfer'?{toAccountId:v.toAccountId}:{})};if(tx.type!=='Transfer')delete tx.toAccountId;accounts=applyTransaction(accounts,tx);next={...next,accounts,transactions:[tx,...transactions]};
+  const tx={...(old||{}),id:oldId||id(),description:v.description.trim(),amount:Math.round(amount*100)/100,type:v.type||'Expense',category:v.category||(v.type==='Income'?'Income':'Other'),date:v.date,accountId:v.accountId,...(v.type==='Transfer'?{toAccountId:v.toAccountId}:{})};if(tx.type!=='Transfer')delete tx.toAccountId;let made=[tx];if(modalState.splitChoice==='split'&&!oldId&&tx.type==='Income'){const parts=activeSplit(next.settings?.split,next.accounts.map(a=>a.id));if(!parts){formError('Your money split is no longer valid. Check Settings.');return}const pieces=splitAmount(tx.amount,parts);made=parts.map((p,i)=>({...tx,id:id(),accountId:p.accountId,amount:pieces[i],description:`${tx.description} (${p.percent}% split)`})).filter(t=>t.amount>0);splitMade=made.length}made.forEach(t=>{accounts=applyTransaction(accounts,t)});next={...next,accounts,transactions:[...made,...transactions]};
  }else if(kind==='account'){
   const balance=num('balance');if(!v.name?.trim()||v.balance==null||String(v.balance).trim()===''||!Number.isFinite(balance)){formError('Enter an account name and valid current balance.');return}const min=v.minimumBalance===''?undefined:Number(v.minimumBalance);if(min!==undefined&&!Number.isFinite(min)){formError('Enter a valid minimum balance or leave it blank.');return}const item={id:oldId||id(),name:v.name.trim(),type:v.type||'Checking',balance:roundMoney(balance),minimumBalance:min===undefined?undefined:roundMoney(min),protectFromSpending:fd.has('protectFromSpending')};next={...next,accounts:oldId?next.accounts.map(a=>a.id===oldId?item:a):[...next.accounts,item]};
  }else if(kind==='budget'){
   const limit=num('limit');if(!v.category||!validMoney(limit)){formError('Choose a category and enter a positive monthly limit.');return}const item={id:oldId||id(),category:v.category,limit:Math.round(limit*100)/100};next={...next,budgets:[...next.budgets.filter(b=>b.category!==v.category&&b.id!==oldId),item]};
+ }else if(kind==='recurring'){
+  const amount=num('amount');if(!v.description?.trim()||!v.accountId||!validMoney(amount)||!parseDate(v.nextDate)||!FREQUENCIES.includes(v.frequency)||!['Income','Expense'].includes(v.type)){formError('Enter a description, account, positive amount, type, how often it repeats, and a valid next due date.');return}if(amount>1000000000){formError('Enter an amount of 1,000,000,000 or less.');return}if(!next.accounts.some(a=>a.id===v.accountId)){formError('Create or select a valid account first.');return}
+  const prior=oldId?(next.recurring||[]).find(r=>r.id===oldId):null,item={...(prior||{}),id:oldId||id(),description:v.description.trim(),amount:roundMoney(amount),type:v.type,category:v.category||(v.type==='Income'?'Income':'Other'),accountId:v.accountId,frequency:v.frequency,nextDate:v.nextDate,anchorDay:prior&&prior.nextDate===v.nextDate&&prior.frequency===v.frequency&&Number.isInteger(prior.anchorDay)?prior.anchorDay:parseDate(v.nextDate).d};next={...next,recurring:oldId?(next.recurring||[]).map(r=>r.id===oldId?item:r):[...(next.recurring||[]),item]};
  }else if(kind==='goal'){
   const target=num('target'),saved=num('saved');if(!v.name?.trim()||!validMoney(target)||v.saved==null||String(v.saved).trim()===''||!Number.isFinite(saved)||saved<0){formError('Enter a name, positive target, and non-negative saved amount.');return}const item={id:oldId||id(),name:v.name.trim(),target:Math.round(target*100)/100,saved:Math.round(saved*100)/100,dueDate:v.dueDate||undefined};next={...next,goals:oldId?next.goals.map(g=>g.id===oldId?item:g):[...next.goals,item]};
  }else if(kind==='purchase'){
@@ -2510,12 +2610,12 @@ function submitModal(e){e.preventDefault();const form=e.target;if(!modalState||!
  const budgetMotionBefore=kind==='transaction'?data.budgets.map(b=>({id:b.id,limit:Number(b.limit)||0,spent:monthSpend(b.category),category:b.category})):[];
  data=next;const saveStatus=persist();modalState=null;render();
  if(saveStatus!==false){
-  showToast(saveStatus==='pending'?'Changes applied · saving the protected device copy…':kind==='transaction'?(oldId?'Transaction updated':'Transaction saved'):kind==='account'?(oldId?'Account updated':'Account created'):kind==='budget'?'Budget saved':kind==='goal'?(oldId?'Goal updated':'Goal created'):(oldId?'Purchase updated':'Purchase planned'));
-  try{globalThis.NorthstarMotion?.formSaved({kind,before:kind==='goal'?priorGoal:priorBudget,after:kind==='goal'?newGoal:kind==='budget'?newBudget:kind==='transaction'?next.transactions[0]:null,oldId,confirmed:saveStatus!=='pending',spentBefore:kind==='budget'&&priorBudget?monthSpend(priorBudget.category):0,spentAfter:kind==='budget'?monthSpend(v.category):0,budgetChanges:budgetMotionBefore.map(b=>({...b,after:monthSpend(b.category)}))})}catch(e){console.warn('Presentation animation was skipped.',e)}
+  showToast(saveStatus==='pending'?'Changes applied · saving the protected device copy…':kind==='transaction'?(oldId?'Transaction updated':splitMade>1?`Income split across ${splitMade} accounts`:'Transaction saved'):kind==='account'?(oldId?'Account updated':'Account created'):kind==='budget'?'Budget saved':kind==='recurring'?(oldId?'Recurring item updated':'Recurring item saved'):kind==='goal'?(oldId?'Goal updated':'Goal created'):(oldId?'Purchase updated':'Purchase planned'));
+  try{if(kind!=='recurring')globalThis.NorthstarMotion?.formSaved({kind,before:kind==='goal'?priorGoal:priorBudget,after:kind==='goal'?newGoal:kind==='budget'?newBudget:kind==='transaction'?next.transactions[0]:null,oldId,confirmed:saveStatus!=='pending',spentBefore:kind==='budget'&&priorBudget?monthSpend(priorBudget.category):0,spentAfter:kind==='budget'?monthSpend(v.category):0,budgetChanges:budgetMotionBefore.map(b=>({...b,after:monthSpend(b.category)}))})}catch(e){console.warn('Presentation animation was skipped.',e)}
  }
  if(reachedNow)celebrateSavedGoal(newGoal,saveStatus);
 }
-async function deleteItem(section,itemId){if(section==='accounts'){if(data.transactions.some(t=>t.accountId===itemId||t.toAccountId===itemId)||data.purchases.some(p=>p.accountId===itemId)){showToast('This account is used by transactions or purchases. Reassign those items first.');return}}if(await showNorthstarDialog({title:'Delete this item?',message:'This item will be removed from your Northstar records.',detail:'This action can’t be undone. The change will be saved to your current dataset.',icon:'⌫',confirmText:'Delete item',cancelText:'Keep item',danger:true,label:'CONFIRM DELETION'})!==true)return;let next={...data};if(section==='transactions'){const t=next.transactions.find(x=>x.id===itemId);if(t)next.accounts=applyTransaction(next.accounts,t,true);next.transactions=next.transactions.filter(x=>x.id!==itemId)}else next[section]=next[section].filter(x=>x.id!==itemId);data=next;persist();showToast('Item deleted')}
+async function deleteItem(section,itemId){if(section==='accounts'){if(data.transactions.some(t=>t.accountId===itemId||t.toAccountId===itemId)||data.purchases.some(p=>p.accountId===itemId)||(data.recurring||[]).some(r=>r.accountId===itemId)){showToast('This account is used by transactions, purchases or recurring items. Reassign those items first.');return}}if(await showNorthstarDialog({title:'Delete this item?',message:'This item will be removed from your Northstar records.',detail:'This action can’t be undone. The change will be saved to your current dataset.',icon:'⌫',confirmText:'Delete item',cancelText:'Keep item',danger:true,label:'CONFIRM DELETION'})!==true)return;let next={...data};if(section==='transactions'){const t=next.transactions.find(x=>x.id===itemId);if(t)next.accounts=applyTransaction(next.accounts,t,true);next.transactions=next.transactions.filter(x=>x.id!==itemId)}else next[section]=next[section].filter(x=>x.id!==itemId);undoState={before:data,after:next};data=next;persist();showToast('Item deleted','Undo')}
 function trapDialogFocus(root,onCancel){
  const handler=e=>{
   if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onCancel();return}
@@ -2552,6 +2652,19 @@ async function exportBackup(){
   a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
   showToast(vault.state==='unlocked'?'Encrypted backup exported':'Unencrypted backup exported');
  }catch(error){console.error('Northstar backup export failed.',error);showToast('Could not export the backup. Your data was not changed.')}
+}
+/* Read-only: lists recorded transactions as a readable CSV. Never changes the ledger.
+   The file is not encrypted even in a protected workspace, so always confirm first. */
+async function exportTransactionsCsv(){
+ try{
+  if(!data.transactions.length){showToast('There are no transactions to export yet.');return}
+  const note=vault.state==='unlocked'?'Your workspace is passphrase-protected, but this CSV file is not encrypted.':'Passphrase protection is not enabled for this workspace.';
+  const ok=await showNorthstarDialog({title:'Export transactions as CSV?',message:'This CSV file lists your transactions in readable form.',detail:note+' Keep the file somewhere private.',icon:'↓',confirmText:'Export CSV',cancelText:'Cancel',label:'PLAINTEXT EXPORT'});
+  if(ok!==true)return;
+  const blob=new Blob(['﻿',transactionsToCsv(data.transactions,data.accounts)],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=`northstar-transactions-${today()}.csv`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  showToast('Transactions exported as CSV');
+ }catch(error){console.error('Northstar CSV export failed.',error);showToast('Could not export the CSV. Your data was not changed.')}
 }
 function validateImport(input){if(!input||typeof input!=='object'||Array.isArray(input))throw new Error('This is not a valid Northstar backup.');if(!Array.isArray(input.accounts)&&!Array.isArray(input.transactions)&&!Array.isArray(input.data?.accounts)&&!Array.isArray(input.data?.transactions))throw new Error('This file does not contain Northstar finance data.');const x=normalizeData(input);if(!Array.isArray(x.accounts)||!Array.isArray(x.transactions)||!Array.isArray(x.budgets)||!Array.isArray(x.goals)||!Array.isArray(x.purchases))throw new Error('Backup is missing one or more sections.');if(!x.accounts.every(a=>typeof a.id==='string'&&typeof a.name==='string'&&Number.isFinite(Number(a.balance))))throw new Error('One or more accounts have invalid data.');if(!x.transactions.every(t=>typeof t.id==='string'&&Number.isFinite(Number(t.amount))&&Number(t.amount)>0&&['Income','Expense','Transfer'].includes(t.type)))throw new Error('One or more transactions have invalid data.');return x}
 async function importBackup(file){
@@ -2711,7 +2824,7 @@ function trapWelcomeTab(e){
  }
  return false;
 }
-function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'choose-sync-data':chooseSyncData();break;case'answer-sync-choice':answerSyncChoice(b.dataset.value);break;case'minimize-sync-choice':minimizeSyncChoice();break;case'expand-sync-choice':expandSyncChoice();break;case'check-cloud-access':checkCloudAccess();break;case'sync-details':showSyncDetailsDialog();break;case'dismiss-sync-issue':syncIssueDismissed=true;renderSyncIssueBanner();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
+function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-recurring':openModal('recurring');break;case'edit-recurring':{const r=(data.recurring||[]).find(t=>t.id===itemId);if(r)openModal('recurring',r);else showToast('This recurring item could not be found.');break}case'post-recurring':postRecurring(itemId);break;case'skip-recurring':skipRecurring(itemId);break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'export-csv':exportTransactionsCsv();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'choose-sync-data':chooseSyncData();break;case'answer-sync-choice':answerSyncChoice(b.dataset.value);break;case'minimize-sync-choice':minimizeSyncChoice();break;case'expand-sync-choice':expandSyncChoice();break;case'check-cloud-access':checkCloudAccess();break;case'sync-details':showSyncDetailsDialog();break;case'dismiss-sync-issue':syncIssueDismissed=true;renderSyncIssueBanner();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();undoState=null;break;case'undo-delete':undoDelete();break;}}
 document.addEventListener('keydown',e=>{if(trapWelcomeTab(e))return;const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&setDockMore(false,true)){e.preventDefault();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
 document.addEventListener('click',e=>{
  const option=e.target.closest('[data-confirm-index]');
@@ -2720,7 +2833,7 @@ document.addEventListener('click',e=>{
 });
 window.addEventListener('beforeunload',e=>{if(modalHasUnsavedChanges()||(vault.state==='unlocked'&&(vault.editSeq!==vault.savedSeq||(cloudLoaded&&$('syncStatus')?.textContent.startsWith('Saving'))))){e.preventDefault();e.returnValue=''}});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;const action=b.dataset.action;if(b.tagName==='SELECT'||b.tagName==='INPUT')return;if(action==='backdrop-close'&&e.target!==b)return;e.preventDefault();openByAction(action,b)});
-document.addEventListener('submit',e=>{if(e.target?.id==='modalForm')submitModal(e);else if(e.target?.id==='guideProfileForm')saveGuideProfile(e);else if(e.target?.id==='guideAskForm')answerGuide(e);else if(e.target?.id==='stockConnectForm')connectStocks(e);else if(e.target?.id==='stockAddForm')addStock(e);else if(e.target?.classList?.contains('price-check-form'))savePriceCheck(e);else if(e.target?.classList?.contains('purchase-allocation-form'))savePurchaseAllocation(e)});
+document.addEventListener('submit',e=>{if(e.target?.id==='modalForm')startModalSubmit(e);else if(e.target?.id==='splitForm')saveSplit(e);else if(e.target?.id==='guideProfileForm')saveGuideProfile(e);else if(e.target?.id==='guideAskForm')answerGuide(e);else if(e.target?.id==='stockConnectForm')connectStocks(e);else if(e.target?.id==='stockAddForm')addStock(e);else if(e.target?.classList?.contains('price-check-form'))savePriceCheck(e);else if(e.target?.classList?.contains('purchase-allocation-form'))savePurchaseAllocation(e)});
 document.addEventListener('input',e=>{if(e.target?.id==='txSearch'){query=e.target.value;const pos=e.target.selectionStart;render();const next=$('txSearch');next?.focus();next?.setSelectionRange(pos,pos)}else if(e.target?.id==='purchaseCompletedSearch')filterCompletedPurchases(e.target.value);else if(e.target?.id==='stockSearch'){stockQuery=e.target.value;filterStocks(stockQuery)}});
 document.addEventListener('change',e=>{if(e.target?.id==='goalSoundsToggle'){data={...data,settings:{...data.settings,goalSounds:e.target.checked}};persist();showToast(e.target.checked?'Goal sounds enabled':'Goal sounds muted')}if(e.target?.id==='txTypeFilter'){txTypeFilter=e.target.value;render()}if(e.target?.id==='txMonthFilter'){txMonthFilter=e.target.value;render()}if(e.target?.id==='currencySelect'){data={...data,settings:{...data.settings,currency:e.target.value}};persist();showToast('Display currency updated')}if(e.target?.id==='backupFile'){importBackup(e.target.files?.[0])}if(e.target?.dataset?.action==='purchase-status'){setPurchaseStatus(e.target.dataset.id,e.target.value)}});
 /* Scenario inputs are transient. They never alter the ledger or persist data. */
@@ -2812,7 +2925,10 @@ function askVaultSetup(){
   setTimeout(()=>input.focus(),20);
  });
 }
+const PASSPHRASE_SETUP_AVAILABLE=false;
 async function enableVault(){
+ /* Passphrase protection is switched off in the app; full removal is planned for the next update. */
+ if(!PASSPHRASE_SETUP_AVAILABLE){showToast('Passphrase protection is no longer available.');return}
  if(vault.state!=='off'||!user||!fb||!cloudLoaded||lastSyncError){showToast('Connect Google and resolve cloud sync before enabling protection.');return}
  if(!window.isSecureContext||!crypto?.subtle||!navigator.locks?.request){showToast('Passphrase protection requires HTTPS, Web Crypto, and device-lock support in a modern browser.');return}
  const uid=user.uid,epoch=cloudEpoch;
@@ -2916,6 +3032,8 @@ async function lockProtectedWorkspace(){
 }
 function renderVaultPanel(){
  const active=vault.state==='unlocked';
+ /* Passphrase protection can no longer be turned on. The panel only appears for a workspace that is already protected, so it can still be unlocked, backed up and left. */
+ if(!active)return '';
  const cloud=active&&cloudLoaded&&user?.uid===vault.uid&&!lastSyncError;
  const localProblem=active&&(vault.error||vault.editSeq!==vault.savedSeq);
  return `<section class="panel"><div class="panel-head"><div><h2>Passphrase protection</h2><p>Optional encryption for the active workspace.</p></div><span class="category-pill">${active?'Enabled':'Not enabled'}</span></div>${active?`<div class="setting-action"><div><strong class="vault-status${localProblem?' vault-status-error':''}">${localProblem?'Device save needs attention':'Protected device copy'}</strong><p>${cloud?'The latest confirmed cloud document is encrypted.':!user?'Connect the original Google account to sync this protected workspace.':user.uid!==vault.uid?'Sign in with the Google account that owns this protected workspace.':'Cloud protection is not currently confirmed; use Retry cloud sync when ready.'}</p></div><button class="secondary-btn" data-action="lock-vault">Lock workspace</button></div>${localProblem?'<p class="vault-error" role="alert">Changes are not safely saved on this device. Export an encrypted backup before leaving.</p>':''}${user?.uid===vault.uid&&!cloudLoaded?'<div class="setting-action"><div><strong>Cloud protection paused</strong><p>If the cloud still contains plaintext, you must explicitly choose whether to encrypt it.</p></div><button class="secondary-btn" data-action="protect-cloud">Review cloud copy</button></div>':''}`:`<div class="setting-action"><div><strong>Encrypt this workspace</strong><p>Set a passphrase to protect this browser copy and the current Google cloud document. Requires a successful cloud connection.</p></div><button class="secondary-btn" data-action="enable-vault" ${(!user||!cloudLoaded||lastSyncError)?'disabled':''}>Set up protection</button></div>`}<div class="vault-warning">A lost passphrase cannot be recovered. Older backups, other devices, browser copies, and provider backups may still contain plaintext. Protection does not secure an unlocked device or malicious code. Publish and test the updated Firestore rules.</div></section>`;
@@ -3483,7 +3601,9 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     close: function () { noise({ dur: 0.18, gain: 0.07, f: 2600, f2: 420 }); },
     success: function () { tone({ f: 523.25, dur: 0.5, gain: 0.11 }); tone({ f: 783.99, dur: 0.6, gain: 0.09, delay: 0.09 }); tone({ f: 1046.5, dur: 0.5, gain: 0.055, delay: 0.18 }); },
     purchase: function () { tone({ f: 660, dur: 0.09, gain: 0.12, type: 'triangle' }); tone({ f: 990, dur: 0.13, gain: 0.09, type: 'triangle', delay: 0.09 }); },
-    error: function () { tone({ f: 130, f2: 70, dur: 0.22, gain: 0.14, type: 'sawtooth' }); },
+    error: function () { tone({ f: 196, f2: 110, dur: 0.24, gain: 0.1, type: 'triangle' }); noise({ dur: 0.14, gain: 0.035, type: 'lowpass', f: 700, f2: 200 }); },
+    coin: function () { tone({ f: 1318.5, dur: 0.12, gain: 0.09, type: 'triangle' }); tone({ f: 1760, dur: 0.38, gain: 0.08, type: 'triangle', delay: 0.07 }); tone({ f: 2637, dur: 0.3, gain: 0.025, delay: 0.09 }); },
+    undo: function () { tone({ f: 440, f2: 660, dur: 0.14, gain: 0.08, type: 'triangle' }); },
     needle: function () { noise({ dur: 0.55, gain: 0.09, f: 900, f2: 170, type: 'lowpass' }); tone({ f: 88, f2: 54, dur: 0.42, gain: 0.09 }); },
     setMuted: function (m) {
       fx.muted = !!m; save();
@@ -3519,11 +3639,31 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     if (p) return Sound.tap();
     if (a === 'purchase-bought' || a === 'purchase-status') return Sound.purchase();
     if (a === 'delete-item' || a === 'signout') return Sound.error();
+    if (a === 'undo-delete') return Sound.undo();
+    if (a === 'post-recurring') return Sound.coin();
     if (a === 'close-modal' || a === 'close-menu' || a === 'backdrop-close') return Sound.close();
     if (a === 'add-transaction' || a === 'add-account' || a === 'add-goal' || a === 'add-purchase' ||
         a === 'edit-goal' || a === 'edit-account' || a === 'edit-transaction' || a === 'edit-budget' || a === 'edit-purchase') return Sound.tap();
     return Sound.tick();
   }, true);
+
+  /* remember if the transaction being saved is income, so its toast gets the coin sound */
+  var lastTxType = '';
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (!f || f.id !== 'modalForm') return;
+    var t = f.querySelector('#modalTxType, [name="type"]');
+    lastTxType = t && t.value === 'Income' ? 'Income' : '';
+  }, true);
+  document.addEventListener('input', function (e) {
+    if (!e.target || e.target.id !== 'fxVolume') return;
+    fx.vol = Math.max(0, Math.min(1, Number(e.target.value) / 100)); save();
+    if (master) master.gain.value = fx.muted ? 0 : fx.vol;
+    var out = document.getElementById('fxVolumeOut'); if (out) out.textContent = Math.round(fx.vol * 100) + '%';
+  });
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'fxVolume') Sound.success();
+  });
 
   /* chime when the app celebrates something (toast text) */
   (function watchToasts() {
@@ -3534,11 +3674,44 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         [].forEach.call(m.addedNodes, function (n) {
           if (!n.classList || !n.classList.contains('toast')) return;
           var t = (n.textContent || '').toLowerCase();
-          if (/bought|complete|saved|added|created|updated|restored/.test(t)) Sound.success();
+          if (/deletion undone/.test(t)) return;
+          if (lastTxType === 'Income' && /saved|added|split/.test(t)) { lastTxType = ''; Sound.coin(); }
+          else if (/bought|complete|saved|added|created|updated|restored/.test(t)) Sound.success();
           else if (/error|failed|invalid|could not|couldn't/.test(t)) Sound.error();
         });
       });
     }).observe(body, { childList: true });
+  })();
+
+  /* ---------------- page-change motion: numbers count up, bars grow ---------------- */
+  (function pageMotion() {
+    var content = document.getElementById('content');
+    if (!content || reduce) return;
+    var lastKey = null, enterTimer = 0;
+    var SIMPLE = /^([^\d\-−]*)(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)([^\d]*)$/;
+    function countUp(el) {
+      var original = el.textContent.trim(), m = SIMPLE.exec(original);
+      if (!m) return;
+      var target = parseFloat(m[2].replace(/,/g, ''));
+      if (!isFinite(target) || target === 0) return;
+      var decimals = (m[2].split('.')[1] || '').length, start = performance.now(), dur = 650;
+      el.setAttribute('aria-label', original);
+      (function step(now) {
+        if (!el.isConnected) return;
+        var t = Math.min(1, (now - start) / dur), eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = t >= 1 ? original : m[1] + (target * eased).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + m[3];
+        if (t < 1) requestAnimationFrame(step); else el.removeAttribute('aria-label');
+      })(start);
+    }
+    new MutationObserver(function () {
+      var h = content.querySelector('h1'), key = h ? h.textContent : '';
+      if (!key || key === lastKey) return;
+      lastKey = key;
+      content.classList.add('nsx-page-enter');
+      clearTimeout(enterTimer);
+      enterTimer = setTimeout(function () { content.classList.remove('nsx-page-enter'); }, 1000);
+      [].forEach.call(content.querySelectorAll('.metric-value'), countUp);
+    }).observe(content, { childList: true });
   })();
 
   /* ---------------- sound toggle in the topbar ---------------- */
@@ -4114,7 +4287,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
       return {
         name: g.name || 'Untitled goal', target: num(g.target), saved: num(g.saved),
         pct: num(g.target) > 0 ? (num(g.saved) / num(g.target)) * 100 : 0,
-        remaining: Math.max(0, num(g.target) - num(g.saved))
+        remaining: Math.max(0, num(g.target) - num(g.saved)), dueDate: g.dueDate || ''
       };
     });
 
@@ -4172,6 +4345,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   /* ---------------- connections: bring your own key ---------------- */
   var CONN_KEY = 'northstar-jarvis-conn-v1';
   var PROVIDERS = {
+    northstar: { label: 'Northstar hosted AI (free, no key)', model: 'glm-4.7-flash', url: 'https://northstar-finance-ai.camc-cf76.workers.dev/', help: 'runs on your Cloudflare account; sign in with Google' },
     gemini: { label: 'Google Gemini', model: 'gemini-2.5-flash-lite', url: 'https://generativelanguage.googleapis.com/v1beta/models/', help: 'aistudio.google.com' },
     openai: { label: 'OpenAI', model: 'gpt-4o-mini', url: 'https://api.openai.com/v1/chat/completions', help: 'platform.openai.com' },
     anthropic: { label: 'Anthropic', model: 'claude-haiku-4-5', url: 'https://api.anthropic.com/v1/messages', help: 'console.anthropic.com' },
@@ -4179,7 +4353,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     openrouter: { label: 'OpenRouter', model: 'google/gemma-4-31b-it:free', url: 'https://openrouter.ai/api/v1/chat/completions', help: 'openrouter.ai/keys' },
     custom: { label: 'Custom (OpenAI-compatible)', model: '', url: '', help: 'your own endpoint' }
   };
-  var CONN_DEFAULT = { provider: 'gemini', model: 'gemini-2.5-flash-lite', key: '', base: '', remember: false, includeTx: false, enabled: false };
+  var CONN_DEFAULT = { provider: 'northstar', model: 'glm-4.7-flash', key: 'hosted', base: '', remember: false, includeTx: false, enabled: true, hostedOff: false };
   var connStorageWarning = false;
   var conn = loadConn();
   var history = [];
@@ -4196,6 +4370,8 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     if (connStorageWarning) c.enabled = false;
     var retired = { gemini: 'gemini-2.0-flash', anthropic: 'claude-3-5-haiku-latest', groq: 'llama-3.3-70b-versatile', openrouter: 'meta-llama/llama-3.3-70b-instruct:free' };
     if (retired[c.provider] === c.model) c.model = PROVIDERS[c.provider].model;
+    // Nothing was ever set up (no key, not switched on): use the free hosted AI so no key is needed.
+    if (raw && !c.key && !c.enabled && !c.hostedOff && !connStorageWarning) { c.provider = 'northstar'; c.model = PROVIDERS.northstar.model; c.key = 'hosted'; c.enabled = true; }
     return c;
   }
   function paintConnStorageWarning() {
@@ -4228,6 +4404,15 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   }
 
   function round(n) { return Math.round((num(n) + Number.EPSILON) * 100) / 100; }
+  function isoToday() { var t = new Date(); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); }
+  function monthsLeftUntil(dateText) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateText || ''));
+    if (!m) return null;
+    var end = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])), now = new Date(), start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (end.getMonth() !== Number(m[2]) - 1 || end <= start) return null;
+    var months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + (end.getDate() > start.getDate() ? 1 : 0);
+    return months >= 1 && months <= 120 ? months : null;
+  }
   function brief(s, opts) {
     opts = opts || {};
     if (!s || !s.cur) s = snapshot();
@@ -4255,15 +4440,38 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         return { category: b.category, limit: round(b.limit), spent: round(b.spent), pct: Math.round(b.pct) };
       }),
       goals: s.goals.slice(0, 6).map(function (g) {
-        return { name: g.name, target: round(g.target), saved: round(g.saved), pct: Math.round(g.pct) };
+        var item = { name: g.name, target: round(g.target), saved: round(g.saved), pct: Math.round(g.pct) };
+        var left = monthsLeftUntil(g.dueDate);
+        if (g.dueDate) { item.dueDate = g.dueDate; if (left !== null) { item.monthsLeft = left; item.neededPerMonth = round(Math.max(0, num(g.target) - num(g.saved)) / left); } }
+        return item;
       }),
       plannedPurchases: s.purchases.slice(0, 6).map(function (p) {
-        return { name: p.name, price: round(p.price), saved: round(p.saved), priority: p.priority };
+        var plan = { name: p.name, price: round(p.price), saved: round(p.saved), priority: p.priority };
+        if (p.date) { plan.targetDate = p.date; var pl = monthsLeftUntil(p.date); if (pl !== null) { plan.monthsLeft = pl; plan.neededPerMonth = round(Math.max(0, num(p.price) - num(p.saved)) / pl); } }
+        return plan;
       }),
       daysLeftInMonth: s.daysLeft,
       projectedSpend: round(s.projected)
     };
+    var rec = Array.isArray(d.recurring) ? d.recurring : [];
+    if (rec.length) {
+      var todayIso = isoToday(), monthly = { income: 0, expenses: 0 };
+      rec.forEach(function (r) {
+        var m = r.frequency === 'Weekly' ? num(r.amount) * 52 / 12 : r.frequency === 'Yearly' ? num(r.amount) / 12 : num(r.amount);
+        if (r.type === 'Income') monthly.income += m; else monthly.expenses += m;
+      });
+      out.recurring = {
+        count: rec.length, dueNow: rec.filter(function (r) { return r.nextDate && r.nextDate <= todayIso; }).length,
+        typicalMonthlyIncome: round(monthly.income), typicalMonthlyBills: round(monthly.expenses),
+        note: 'Recurring items are reminders; they only become transactions when the user posts them.'
+      };
+    }
+    var split = d.settings && d.settings.split;
+    if (split && split.enabled && Array.isArray(split.parts) && split.parts.length) out.incomeSplitEnabled = true;
     if (opts.includeTx) {
+      out.accountList = (d.accounts || []).slice(0, 12).map(function (a) { return { name: String(a.name || '').slice(0, 30), type: a.type, balance: round(a.balance), minimumBalance: round(a.minimumBalance) }; });
+      if (rec.length) out.recurringItems = rec.slice(0, 12).map(function (r) { return { description: String(r.description || '').slice(0, 30), type: r.type, amount: round(r.amount), frequency: r.frequency, nextDate: r.nextDate }; });
+      if (out.incomeSplitEnabled) out.incomeSplit = split.parts.map(function (p) { var a = (d.accounts || []).filter(function (x) { return x.id === p.accountId; })[0]; return { account: a ? String(a.name).slice(0, 30) : 'unknown', percent: p.percent }; });
       out.recentTransactions = (d.transactions || []).slice().sort(function (a, b) {
         return String(b.date || '').localeCompare(String(a.date || ''));
       }).slice(0, 8).map(function (t) {
@@ -4287,6 +4495,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
       '- If the brief lacks what you need, say exactly what is missing.\n' +
       '- Be concise: under 90 words unless asked for depth. No markdown headings, no bullet spam.\n' +
       '- Do the arithmetic you can do from the brief, and show the number.\n' +
+      '- Goals and plans may include dueDate, monthsLeft and neededPerMonth: use them to say whether the person is on track. Recurring bills and income are reminders until posted.\n' +
       '- Never treat combined tracked accounts as spendable cash. Ask for a specific funding account and note that minimums, purchase allocations, savings and future bills are not all in this brief.\n' +
       '- Never present regulated financial advice as certainty; be direct and practical anyway.\n' +
       '- Amounts are in ' + ((s.d && s.d.settings && s.d.settings.currency) || 'USD') + '.\n\n' +
@@ -4343,6 +4552,21 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     var maxTok = opts.maxTokens || 420;
 
     try {
+      if (conn.provider === 'northstar') {
+        var getToken = window.NorthstarGetIdToken;
+        if (typeof getToken !== 'function') throw new Error('Sign in with Google to use the hosted AI.');
+        var idToken = await getToken();
+        var nres = await fetch(PROVIDERS.northstar.url, {
+          method: 'POST', signal: ctrl.signal,
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+          body: JSON.stringify({ message: String(userText).slice(0, 2000), context: String(sys).slice(0, 6000) })
+        });
+        var nj = await nres.json().catch(function () { return null; });
+        if (!nres.ok) { var nerr = new Error((nj && nj.error) || ('Hosted AI error (' + nres.status + ')')); nerr.status = nres.status; throw nerr; }
+        var ntext = String(nj && nj.answer || '').trim();
+        if (!ntext) throw new Error('Empty response from the hosted AI');
+        return ntext;
+      }
       if (conn.provider === 'gemini') {
         var gurl = PROVIDERS.gemini.url + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key);
         var contents = turns.map(function (m) {
@@ -5064,6 +5288,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         var wasDefault = !conn.model || conn.model === (PROVIDERS[conn.provider] || {}).model;
         conn.provider = next; cloudVerified = false;
         if (wasDefault) conn.model = (PROVIDERS[next] || {}).model || '';
+        if (next === 'northstar') conn.key = 'hosted'; else if (conn.key === 'hosted') conn.key = '';
         saveConn(); paintSheet(); refreshStatus();
       });
       ['#nsjKey', '#nsjModel', '#nsjBase'].forEach(function (sel) {
@@ -5136,7 +5361,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         box.hidden = false;
       });
       panel.querySelector('#nsjClear').addEventListener('click', function () {
-        cancelConnectionTest(); conn.key = ''; conn.enabled = false; cloudVerified = false;
+        cancelConnectionTest(); conn.key = ''; conn.enabled = false; conn.hostedOff = true; cloudVerified = false;
         var cleared = saveConn(); paintSheet(); refreshStatus();
         setConnStatus(cleared ? '' : 'err', cleared ? 'Key cleared' : 'Key cleared in memory only — check the storage warning');
       });
@@ -5644,7 +5869,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     systemPrompt: systemPrompt,
     conn: function () { return Object.assign({}, conn); },
     setConn: function (patch) { cancelConnectionTest(); Object.assign(conn, patch || {}); cloudVerified = false; saveConn(); },
-    clearConn: function () { cancelConnectionTest(); conn.key = ''; conn.enabled = false; cloudVerified = false; saveConn(); },
+    clearConn: function () { cancelConnectionTest(); conn.key = ''; conn.enabled = false; conn.hostedOff = true; cloudVerified = false; saveConn(); },
     setWorkspaceBlocked: setWorkspaceBlocked,
     resetWorkspace: resetWorkspace,
     callCloud: function (text, opts) { return callCloud(text, [], snapshot(), opts); },

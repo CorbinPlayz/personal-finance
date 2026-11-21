@@ -1,6 +1,6 @@
 # Northstar hosted AI backend
 
-This folder contains an **optional** hosted open-model endpoint for Northstar. When deployed, the Worker runs on Cloudflare; your PC does not need to stay on. The GitHub Pages app is **not currently wired to call this Worker**; deploying it alone does not connect it to the site.
+This folder contains an **optional** hosted open-model endpoint for Northstar. When deployed, the Worker runs on Cloudflare; your PC does not need to stay on. The Northstar app can call this Worker: pick **Northstar hosted AI** in Jarvis's connection settings (no API key; you must be signed in with Google). It was deployed to `https://northstar-finance-ai.camc-cf76.workers.dev/`.
 
 The [major update overview](../MAJOR-UPDATE.md) explains the completed purchase tiles and optional passphrase protection. Protection is off by default and applies to the active workspace; it does not automatically protect information sent to an AI provider or older copies. Review its privacy and testing limits before relying on it.
 

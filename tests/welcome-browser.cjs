@@ -34,7 +34,7 @@ const server = http.createServer((req, res) => {
     return res.end(fs.readFileSync(path.join(root, 'index.html')));
   }
   const filename = pathname.replace('/personal-finance/', '');
-  if (pathname.startsWith('/personal-finance/') && ['vault-crypto.mjs', 'finance-graphs.mjs', 'financial-graphs-view.mjs', 'financial-graphs.css', 'stock-watchlist.mjs', 'stock-watchlist-view.mjs', 'stock-watchlist.css'].includes(filename)) {
+  if (pathname.startsWith('/personal-finance/') && ['vault-crypto.mjs', 'csv-export.mjs', 'split.mjs', 'recurring.mjs', 'finance-graphs.mjs', 'financial-graphs-view.mjs', 'financial-graphs.css', 'stock-watchlist.mjs', 'stock-watchlist-view.mjs', 'stock-watchlist.css'].includes(filename)) {
     res.writeHead(200, { 'Content-Type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'application/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
     return res.end(fs.readFileSync(path.join(root, filename)));
   }

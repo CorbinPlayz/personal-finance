@@ -4,6 +4,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { cleanRecurring } from '../recurring.mjs';
+import { cleanSplit } from '../split.mjs';
 import { renderCashFlowGraph, renderCategoryGraph, renderTransactionGraph, renderAccountGraph,
   renderBudgetGraph, renderGoalGraph, renderPurchaseGraph, renderWorkspaceCountGraph, renderGuideProfileGraph, renderPriceChecksGraph, renderScenarioPanel, renderScenarioResult } from '../financial-graphs-view.mjs';
 
@@ -140,7 +142,7 @@ test('normalization preserves an absent imported buffer without changing the Gui
     assert.ok(first >= 0 && last > first);
     return html.slice(first, last);
   };
-  const context = vm.createContext({ blankData: () => ({ settings: { profile: { monthlyIncome: '', essentialBills: '', cushion: '250' } } }) });
+  const context = vm.createContext({ cleanRecurring, cleanSplit, blankData: () => ({ settings: { profile: { monthlyIncome: '', essentialBills: '', cushion: '250' } } }) });
   vm.runInContext(`${between('function normalizeData(input){', 'function migrateSimpleTransactions(')}\n${between('function getGuideProfile(){', 'function safePriceHistory(')}`, context);
   const source = { accounts: [], settings: { profile: { monthlyIncome: '2000', essentialBills: '1200' } } };
   const before = JSON.stringify(source);
@@ -181,4 +183,26 @@ test('scenario controls and output are explicit, escaped, and do not change goal
   assert.match(renderScenarioResult(goal, ['', ''], money, esc), /Enter a monthly amount/);
   assert.match(renderScenarioResult(goal, ['-1', ''], money, esc), /non-negative/);
   assert.equal(JSON.stringify(goal), before);
+});
+
+test('scenario result marks the goal end date on the chart', () => {
+  const today = new Date(2026, 10, 20);
+  const goal = { id: 'g', name: 'Trip', saved: 100, target: 400, dueDate: '2027-04-20' };
+  const html = renderScenarioResult(goal, ['50', ''], money, esc, today);
+  assert.match(html, /--columns:5/);
+  assert.match(html, /★ 5 mo/);
+  assert.match(html, /data-end-date-summary/);
+  assert.match(html, /your end date/);
+  assert.match(renderScenarioResult({ ...goal, dueDate: '' }, ['50', ''], money, esc, today), /--columns:4/);
+});
+
+test('purchase plan graph shows the target date, days left and a monthly pace', () => {
+  const today = new Date(2026, 10, 20);
+  const plan = { id: 'p', name: 'Laptop', status: 'Saving', priority: 'High', price: 1200, saved: 200, date: '2027-02-20' };
+  const html = renderPurchaseGraph([plan], new Set(), money, esc, today);
+  assert.match(html, /data-target-note/);
+  assert.match(html, /target Feb 20, 2027 \(92 days left\)/);
+  assert.match(html, /about .*333\.33.* \/ month/);
+  assert.match(renderPurchaseGraph([{ ...plan, date: '2026-11-01' }], new Set(), money, esc, today), /passed 19 days ago/);
+  assert.doesNotMatch(renderPurchaseGraph([{ ...plan, date: '' }], new Set(), money, esc, today), /data-target-note/);
 });

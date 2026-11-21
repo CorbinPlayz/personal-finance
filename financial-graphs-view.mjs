@@ -1,5 +1,5 @@
 /* Accessible, presentation-only HTML for the local financial graph models. */
-import { graphAmount, graphTotal, graphDifference, monthlyGraph, categoryGraph, transactionGraph, priceChecksGraph, goalScenarioGraph } from './finance-graphs.mjs';
+import { graphAmount, graphTotal, graphDifference, monthlyGraph, categoryGraph, transactionGraph, priceChecksGraph, goalScenarioGraph, monthsUntil } from './finance-graphs.mjs';
 
 const palette = ['#278365', '#b75a49', '#5577b7', '#8b6aa9', '#94722b', '#687e82'];
 const clamp = value => Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
@@ -101,7 +101,21 @@ export function renderGoalGraph(goals, money, esc) {
   }).join('')}</div><div class="ns-graph-foot"><span>${goals.length > shown.length ? `Showing ${shown.length} of ${goals.length} goals; all are listed below. ` : ''}Rings cap at 100%. Goal amounts are not account balances.</span></div></section>`;
 }
 
-export function renderPurchaseGraph(purchases, completedIds, money, esc) {
+function targetNote(dateText, remaining, money, esc, today) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateText || ''));
+  if (!match) return '';
+  const end = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (end.getMonth() !== Number(match[2]) - 1) return '';
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const days = Math.round((end - start) / 86400000);
+  const label = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (days < 0) return ` · <span data-target-note class="ns-target-late">target date ${esc(label)} passed ${-days} ${days === -1 ? 'day' : 'days'} ago</span>`;
+  const months = monthsUntil(dateText, today);
+  const pace = remaining > 0 && months ? ` · about ${amount(remaining / months, money, esc)} / month to get there` : '';
+  return ` · <span data-target-note>target ${esc(label)} (${days === 0 ? 'today' : `${days} ${days === 1 ? 'day' : 'days'}`} left)${pace}</span>`;
+}
+
+export function renderPurchaseGraph(purchases, completedIds, money, esc, today = new Date()) {
   const completed = completedIds && typeof completedIds.has === 'function' ? completedIds : new Set();
   const plans = (Array.isArray(purchases) ? purchases : []).filter(item => item && ['Planning', 'Saving', 'Ready'].includes(item.status) && !completed.has(item.id));
   if (!plans.length) return '';
@@ -109,7 +123,7 @@ export function renderPurchaseGraph(purchases, completedIds, money, esc) {
   return `<section class="ns-graph" data-graph-key="purchase-map">${header('Your purchase plans', 'Funding progress', 'Saved amounts for planning, saving, and ready plans.', 'Open plans')}<div class="ns-list-bars">${shown.map(plan => {
     const saved = graphAmount(plan.saved), price = graphAmount(plan.price), valid = saved !== null && price !== null && price > 0;
     const actual = valid ? saved / price * 100 : 0, pct = clamp(actual);
-    return `<div class="ns-list-row"><div class="ns-list-label"><span>${esc(plan.name || 'Untitled plan')}</span><strong>${valid ? `${amount(saved, money, esc)} / ${amount(price, money, esc)}` : 'Add a valid price and saved amount'}</strong></div><div class="ns-list-track" aria-hidden="true"><span class="ns-list-fill" style="width:${pct}%"></span></div><div class="ns-list-caption">${valid ? `${percent(actual)} set aside · ${amount(Math.max(0, graphDifference(price, saved)), money, esc)} remaining` : 'No progress can be calculated.'}</div></div>`;
+    return `<div class="ns-list-row"><div class="ns-list-label"><span>${esc(plan.name || 'Untitled plan')}</span><strong>${valid ? `${amount(saved, money, esc)} / ${amount(price, money, esc)}` : 'Add a valid price and saved amount'}</strong></div><div class="ns-list-track" aria-hidden="true"><span class="ns-list-fill" style="width:${pct}%"></span></div><div class="ns-list-caption">${valid ? `${percent(actual)} set aside · ${amount(Math.max(0, graphDifference(price, saved)), money, esc)} remaining${targetNote(plan.date, Math.max(0, graphDifference(price, saved)), money, esc, today)}` : 'No progress can be calculated.'}</div></div>`;
   }).join('')}</div><div class="ns-graph-foot"><span>${plans.length > shown.length ? `Showing ${shown.length} of ${plans.length} open plans. ` : ''}Postponed, cancelled, purchased, and expense-linked plans are excluded. Bars cap at 100%; amounts are not bank-verified funds.</span></div></section>`;
 }
 
@@ -154,15 +168,17 @@ export function renderScenarioPanel(goals, esc) {
   return `<section class="ns-graph" data-graph-key="goal-scenarios" id="nsGoalScenarios">${header('Make it tangible', 'Try a savings scenario', 'Compare two amounts without changing your records.', 'What if?')}<div class="ns-scenario-controls"><label for="nsScenarioGoal"><span>Goal</span><select id="nsScenarioGoal">${options}</select></label><label for="nsScenarioA"><span>Scenario A <small>Monthly contribution</small></span><input id="nsScenarioA" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Enter amount"></label><label for="nsScenarioB"><span>Scenario B <small>Monthly contribution</small></span><input id="nsScenarioB" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Enter amount"></label></div><div class="ns-scenario-result" id="nsScenarioResult" aria-live="polite">${empty('A clearer view of what is possible', 'Enter a monthly amount above to preview a scenario.')}</div><div class="ns-graph-foot"><span>Illustrative only: assumes the entered amount is added every month, with no interest or fees. It does not check your accounts or move money. Inputs are not saved.</span></div></section>`;
 }
 
-export function renderScenarioResult(goal, inputs, money, esc) {
-  const model = goalScenarioGraph(goal, inputs);
+export function renderScenarioResult(goal, inputs, money, esc, today = new Date()) {
+  const model = goalScenarioGraph(goal, inputs, today);
+  const periodLabel = period => period === 0 ? 'Now' : `${period} mo`;
+  const isDue = period => model.dueMonths === period;
   if (model.error) return `<p class="ns-scenario-error">${esc(model.error)}</p>`;
   if (!model.scenarios.length) return empty('A clearer view of what is possible', 'Enter a monthly amount above to preview a scenario.');
   const max = Math.max(model.target, ...model.scenarios.flatMap(scenario => scenario.points.map(point => point.amount)));
   const target = clamp(model.target / max * 100);
-  const bars = model.periods.map((period, index) => `<div class="ns-flow-column">${model.scenarios.map(scenario => `<span class="ns-flow-bar ${scenario.label === 'A' ? 'is-a' : 'is-b'}" style="height:${clamp(scenario.points[index].amount / max * 100)}%"></span>`).join('')}</div>`).join('');
+  const bars = model.periods.map((period, index) => `<div class="ns-flow-column${isDue(period) ? ' is-end-date' : ''}">${model.scenarios.map(scenario => `<span class="ns-flow-bar ${scenario.label === 'A' ? 'is-a' : 'is-b'}" style="height:${clamp(scenario.points[index].amount / max * 100)}%"></span>`).join('')}</div>`).join('');
   const legend = model.scenarios.map(scenario => `<span><i class="ns-legend-dot" style="--dot:${scenario.label === 'A' ? '#254d46' : '#6575a9'}" aria-hidden="true"></i>Scenario ${scenario.label} · ${amount(scenario.monthly, money, esc)} / month</span>`).join('');
-  const summary = model.scenarios.map(scenario => `<span>After 12 months, ${scenario.label}: <strong>${amount(scenario.points[3].amount, money, esc)}</strong></span>`).join('');
-  const table = `<details class="ns-graph-details"><summary>View exact scenario values</summary><table><caption class="ns-sr-only">Projected goal amounts for each scenario</caption><thead><tr><th scope="col">Time</th>${model.scenarios.map(scenario => `<th scope="col">Scenario ${scenario.label}</th>`).join('')}</tr></thead><tbody>${model.periods.map((period, index) => `<tr><th scope="row">${period ? `${period} months` : 'Now'}</th>${model.scenarios.map(scenario => `<td>${amount(scenario.points[index].amount, money, esc)}</td>`).join('')}</tr>`).join('')}</tbody></table></details>`;
-  return `<div class="ns-graph-legend">${legend}</div><div class="ns-flow-area"><div class="ns-flow-axis" aria-hidden="true"><span>${amount(max, money, esc)}</span><span>${amount(max / 2, money, esc)}</span><span>${amount(0, money, esc)}</span></div><div class="ns-flow-main" style="--columns:4"><div class="ns-flow-plot" aria-hidden="true"><div class="ns-scenario-target" style="--target:${target}%"><span>Goal target</span></div><div class="ns-flow-columns">${bars}</div></div><div class="ns-flow-months" aria-hidden="true"><span>Now</span><span>3 mo</span><span>6 mo</span><span>12 mo</span></div></div></div><div class="ns-scenario-summary">${summary}<span>Goal target: <strong>${amount(model.target, money, esc)}</strong></span></div><div class="ns-graph-foot">${table}</div>`;
+  const summary = model.scenarios.map(scenario => `<span>After 12 months, ${scenario.label}: <strong>${amount(scenario.points.find(point => point.months === 12).amount, money, esc)}</strong></span>`).join('') + (model.dueMonths ? model.scenarios.map(scenario => { const reached = scenario.points.find(point => point.months === model.dueMonths).amount; return `<span data-end-date-summary>By your end date (${model.dueMonths} mo), ${scenario.label}: <strong>${amount(reached, money, esc)}</strong> ${reached >= model.target ? '· reaches the goal' : '· ' + amount(model.target - reached, money, esc) + ' short'}</span>`; }).join('') : '');
+  const table = `<details class="ns-graph-details"><summary>View exact scenario values</summary><table><caption class="ns-sr-only">Projected goal amounts for each scenario</caption><thead><tr><th scope="col">Time</th>${model.scenarios.map(scenario => `<th scope="col">Scenario ${scenario.label}</th>`).join('')}</tr></thead><tbody>${model.periods.map((period, index) => `<tr><th scope="row">${period ? `${period} months` : 'Now'}${isDue(period) ? ' (your end date)' : ''}</th>${model.scenarios.map(scenario => `<td>${amount(scenario.points[index].amount, money, esc)}</td>`).join('')}</tr>`).join('')}</tbody></table></details>`;
+  return `<div class="ns-graph-legend">${legend}</div><div class="ns-flow-area"><div class="ns-flow-axis" aria-hidden="true"><span>${amount(max, money, esc)}</span><span>${amount(max / 2, money, esc)}</span><span>${amount(0, money, esc)}</span></div><div class="ns-flow-main" style="--columns:${model.periods.length}"><div class="ns-flow-plot" aria-hidden="true"><div class="ns-scenario-target" style="--target:${target}%"><span>Goal target</span></div><div class="ns-flow-columns">${bars}</div></div><div class="ns-flow-months" aria-hidden="true">${model.periods.map(period => `<span${isDue(period) ? ' class="is-end-date"' : ''}>${isDue(period) ? '★ ' : ''}${periodLabel(period)}</span>`).join('')}</div></div></div><div class="ns-scenario-summary">${summary}<span>Goal target: <strong>${amount(model.target, money, esc)}</strong></span></div><div class="ns-graph-foot">${table}</div>`;
 }
