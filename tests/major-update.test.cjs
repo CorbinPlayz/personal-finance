@@ -46,7 +46,7 @@ test('Settings renders the major-update link with safe external-link attributes'
     renderSyncIssuePanel: () => '',
     renderSyncChoiceCard: () => '', syncChoiceReady: () => false, syncNeedsChoice: () => false,
     renderWorkspaceCountGraph,
-    options: () => '',
+    options: () => '', fxVolumePercent: () => 55,
     esc: value => String(value),
   });
   vm.runInContext(section('function renderSettings(){', '\nfunction openModal('), context);

@@ -1604,7 +1604,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <link rel="stylesheet" href="./stock-watchlist.css">
 <style>
 /* Recurring bills and income */
-.tx-totals{margin:6px 0 0;font-size:.92rem}.recurring-panel{margin-bottom:18px}
+.tx-totals{margin:6px 0 0;font-size:.92rem}@keyframes nsxGrow{from{transform:scaleX(0)}}.nsx-page-enter .progress-fill,.nsx-page-enter .account-balance-fill{transform-origin:left;animation:nsxGrow .8s cubic-bezier(.2,.8,.2,1) both}.toast-undo{background:transparent;border:1px solid #ffffff55;color:inherit;border-radius:8px;padding:4px 10px;font-weight:700;cursor:pointer}.toast-undo:hover{background:#ffffff22}.fx-volume-line{display:flex;align-items:center;gap:12px;margin:12px 0 4px;font-size:13px;font-weight:600}.fx-volume-line input{flex:1;max-width:260px}.recurring-panel{margin-bottom:18px}
 .recurring-summary{display:flex;flex-wrap:wrap;gap:6px 22px;margin:-4px 0 14px;padding:10px 12px;background:#f7f7f7;border-radius:8px;font-size:11px;color:#4d4d4d}
 .recurring-summary b{color:#080808;margin-right:5px}
 .recurring-item{display:flex;align-items:center;flex-wrap:wrap;gap:8px 11px;padding:13px 0;border-bottom:1px solid #ebebeb;min-width:0}
@@ -1941,7 +1941,9 @@ function celebrateSavedGoal(goal,status){
   if(vault.state==='unlocked'&&vault.session===session&&vault.savedSeq>=sequence&&!vault.error&&!window.NorthstarVaultLocked&&current&&Number(current.target)>0&&Number(current.saved)>=Number(current.target))show();
  }).catch(e=>console.warn('Goal celebration was skipped.',e));
 }
-function showToast(text){const root=$('toastRoot');root.innerHTML=`<div class="toast"><span>✓</span><span>${esc(text)}</span><button data-action="dismiss-toast" aria-label="Dismiss">×</button></div>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>root.replaceChildren(),3500)}
+function showToast(text,undoLabel=''){const root=$('toastRoot');root.innerHTML=`<div class="toast"><span>✓</span><span>${esc(text)}</span>${undoLabel?`<button class="toast-undo" data-action="undo-delete">${esc(undoLabel)}</button>`:''}<button data-action="dismiss-toast" aria-label="Dismiss">×</button></div>`;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{root.replaceChildren();undoState=null},undoLabel?7000:3500)}
+let undoState=null;
+function undoDelete(){const u=undoState;undoState=null;if(!u)return;if(data!==u.after){showToast('Too late to undo: your records changed since.');return}data=u.before;persist();showToast('Deletion undone')}
 function setSync(text,kind=''){const el=$('syncStatus');el.textContent=text;el.title=text;el.className='sync-state'+(kind?' '+kind:'');updateStockSaveStatus()}
 /* Every paused sync keeps a code, a short reason, and a timestamp on this device.
    The header status text is width-limited on a phone, so the same record also
@@ -2286,6 +2288,7 @@ function renderAccounts(){return `${pageHeading('Accounts',`<button class="prima
 function renderBudgets(){const list=[...data.budgets].sort((a,b)=>a.category.localeCompare(b.category));return `${pageHeading('Budgets',`<button class="primary-btn" data-action="add-budget">＋ Set a budget</button>`)}<div class="welcome-strip"><div class="welcome-icon">▤</div><div><strong>Set a limit for your spending.</strong><span>Budget progress uses recorded expenses from the current calendar month.</span></div></div>${renderBudgetGraph(list,data.transactions,monthNow(),money,esc)}${list.length?`<div class="stack">${list.map(b=>{const spent=monthSpend(b.category),pct=b.limit>0?spent/b.limit*100:0,remaining=roundMoney(b.limit-spent);return `<section class="panel budget-row" data-budget-id="${esc(b.id)}"><div class="budget-row-top"><div><span class="category-pill">${esc(b.category)}</span><h3>${esc(money(spent))} <small>spent of ${esc(money(b.limit))}</small></h3></div><div class="row-actions"><button class="action-btn" data-action="edit-budget" data-id="${esc(b.id)}">Edit</button><button class="action-btn delete" data-action="delete-item" data-section="budgets" data-id="${esc(b.id)}">Delete</button></div></div><div class="progress-track"><div class="progress-fill ${pct>100?'over':''}" style="width:${Math.min(100,pct)}%"></div></div><div class="budget-foot"><span>${pct>100?`Over budget by ${esc(money(-remaining))}`:`${esc(money(Math.max(0,remaining)))} remaining`}</span><strong>${Math.round(pct)}% used</strong></div></section>`}).join('')}</div>`:emptyState('No budgets yet','Choose categories and give yourself a monthly spending limit.','Set a budget','add-budget')}<p class="small-disclaimer">This version tracks category budgets for the current month. It does not automatically connect to bank or card transactions.</p>`}
 /* Recurring bills and income. Read-only rendering; the only changes to records are
    the person's own Post, Skip, Edit and Delete actions, never anything automatic. */
+function fxVolumePercent(){try{const v=JSON.parse(localStorage.getItem('northstar-fx-v1')||'{}').vol;return Math.round((typeof v==='number'&&v>=0&&v<=1?v:.55)*100)}catch(e){return 55}}
 function renderRecurringBanner(){
  const n=dueItems(data.recurring,today()).length;
  if(!n)return '';
@@ -2484,7 +2487,7 @@ ${renderVaultPanel()}
 <section class="panel"><div class="panel-head"><div><h2>Backup & restore</h2><p>Keep a private backup before making major changes.</p></div></div><div class="setting-action"><div><strong>Export backup</strong><p>${vault.state==='unlocked'?'Download an encrypted JSON backup of this workspace. Keep your passphrase safe.':'Download a readable, unencrypted JSON backup. Store it privately.'}</p></div><button class="secondary-btn" data-action="export">↓ Export backup</button></div><div class="setting-action"><div><strong>Export transactions (CSV)</strong><p>Download a readable spreadsheet file of your recorded transactions. It is not encrypted, even in a protected workspace.</p></div><button class="secondary-btn" data-action="export-csv">↓ Export CSV</button></div><div class="setting-action"><div><strong>Restore backup</strong><p>Replace the current data with a plaintext or encrypted Northstar JSON backup.</p></div><button class="secondary-btn" data-action="import">↑ Choose file</button></div>${renderWorkspaceCountGraph(counts,esc)}</section>
 <section class="panel"><div class="panel-head"><div><h2>Data management</h2><p>Clear this Northstar dataset if you need a fresh start.</p></div></div><div class="setting-action"><div><strong>Clear all financial data</strong><p>This deletes accounts, transactions, budgets, recurring items, goals, purchase plans, saved Guide information, and your custom stock list from the active dataset. Export a backup first if you may need the information.</p></div><button class="danger-btn" data-action="clear-data">Clear data</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Your Northstar experience</h2><p>Revisit the welcome screen and compass animation any time.</p></div></div><div class="setting-action"><div><strong>Welcome screen</strong><p>See the Northstar introduction and animated compass again.</p></div><button class="secondary-btn" data-action="welcome-again">Replay welcome ↗</button></div></section>
-<section class="panel"><div class="panel-head"><div><h2>Sound & celebrations</h2><p>Celebrate a savings milestone with a short chime and animation.</p></div></div><label class="checkbox-line"><input id="goalSoundsToggle" type="checkbox" ${data.settings.goalSounds!==false?"checked":""}> Play goal-completion sounds</label><p class="form-hint">Sound plays only when you reach a goal after using the app. You can turn it off here.</p></section>
+<section class="panel"><div class="panel-head"><div><h2>Sound & celebrations</h2><p>Celebrate a savings milestone with a short chime and animation.</p></div></div><label class="checkbox-line"><input id="goalSoundsToggle" type="checkbox" ${data.settings.goalSounds!==false?"checked":""}> Play goal-completion sounds</label><p class="form-hint">Sound plays only when you reach a goal after using the app. You can turn it off here.</p><label class="fx-volume-line" for="fxVolume"><span>App sound volume</span><input id="fxVolume" type="range" min="0" max="100" step="5" value="${fxVolumePercent()}" aria-label="App sound volume"><output id="fxVolumeOut">${fxVolumePercent()}%</output></label><p class="form-hint">Taps, saves, income coins and deletes each have their own soft sound. The speaker in the top bar mutes everything.</p></section>
 <section class="panel"><div class="panel-head"><div><h2>About Northstar</h2><p>What this app does — and does not do.</p></div><span class="category-pill">Major update</span></div><div class="setting-action"><div><strong>What's new</strong><p>Completed expense tiles, optional passphrase protection, and safer sync. Protection is off by default.</p></div><a class="secondary-btn small" href="https://github.com/CorbinPlayz/personal-finance/blob/main/MAJOR-UPDATE.md" target="_blank" rel="noopener noreferrer" aria-label="Read the major update on GitHub, opens in a new tab" style="text-decoration:none">Read update ↗</a></div><p class="muted" style="font-size:12px;line-height:1.7;margin:0">Northstar is a manual personal finance tracker. It does not connect to bank accounts, process payments, or provide financial advice. Data is readable unless passphrase protection is explicitly enabled. Protection covers the active workspace, not every older copy or an unlocked device. Do not commit financial records or private credentials to GitHub. Publish and test the Firestore rules for cloud access.</p></section></div>`}
 function openModal(kind,item=null){modalState={kind,id:item?.id||null,initial:item?JSON.parse(JSON.stringify(item)):{},baselineSnapshot:null};renderModal();setTimeout(()=>{const f=$('modalForm');f?.querySelector('input:not([type=checkbox]),select,textarea')?.focus()},0)}
 function modalFormSnapshot(form=$('modalForm')){if(!form)return '';return JSON.stringify(Array.from(form.elements).filter(el=>el.name&&!el.disabled).map(el=>[el.name,(el.type==='checkbox'||el.type==='radio')?(el.checked?el.value:''):el.value]))}
@@ -2538,7 +2541,7 @@ function submitModal(e){e.preventDefault();const form=e.target;if(!modalState||!
  }
  if(reachedNow)celebrateSavedGoal(newGoal,saveStatus);
 }
-async function deleteItem(section,itemId){if(section==='accounts'){if(data.transactions.some(t=>t.accountId===itemId||t.toAccountId===itemId)||data.purchases.some(p=>p.accountId===itemId)||(data.recurring||[]).some(r=>r.accountId===itemId)){showToast('This account is used by transactions, purchases or recurring items. Reassign those items first.');return}}if(await showNorthstarDialog({title:'Delete this item?',message:'This item will be removed from your Northstar records.',detail:'This action can’t be undone. The change will be saved to your current dataset.',icon:'⌫',confirmText:'Delete item',cancelText:'Keep item',danger:true,label:'CONFIRM DELETION'})!==true)return;let next={...data};if(section==='transactions'){const t=next.transactions.find(x=>x.id===itemId);if(t)next.accounts=applyTransaction(next.accounts,t,true);next.transactions=next.transactions.filter(x=>x.id!==itemId)}else next[section]=next[section].filter(x=>x.id!==itemId);data=next;persist();showToast('Item deleted')}
+async function deleteItem(section,itemId){if(section==='accounts'){if(data.transactions.some(t=>t.accountId===itemId||t.toAccountId===itemId)||data.purchases.some(p=>p.accountId===itemId)||(data.recurring||[]).some(r=>r.accountId===itemId)){showToast('This account is used by transactions, purchases or recurring items. Reassign those items first.');return}}if(await showNorthstarDialog({title:'Delete this item?',message:'This item will be removed from your Northstar records.',detail:'This action can’t be undone. The change will be saved to your current dataset.',icon:'⌫',confirmText:'Delete item',cancelText:'Keep item',danger:true,label:'CONFIRM DELETION'})!==true)return;let next={...data};if(section==='transactions'){const t=next.transactions.find(x=>x.id===itemId);if(t)next.accounts=applyTransaction(next.accounts,t,true);next.transactions=next.transactions.filter(x=>x.id!==itemId)}else next[section]=next[section].filter(x=>x.id!==itemId);undoState={before:data,after:next};data=next;persist();showToast('Item deleted','Undo')}
 function trapDialogFocus(root,onCancel){
  const handler=e=>{
   if(e.key==='Escape'){e.preventDefault();e.stopPropagation();onCancel();return}
@@ -2747,7 +2750,7 @@ function trapWelcomeTab(e){
  }
  return false;
 }
-function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-recurring':openModal('recurring');break;case'edit-recurring':{const r=(data.recurring||[]).find(t=>t.id===itemId);if(r)openModal('recurring',r);else showToast('This recurring item could not be found.');break}case'post-recurring':postRecurring(itemId);break;case'skip-recurring':skipRecurring(itemId);break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'export-csv':exportTransactionsCsv();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'choose-sync-data':chooseSyncData();break;case'answer-sync-choice':answerSyncChoice(b.dataset.value);break;case'check-cloud-access':checkCloudAccess();break;case'sync-details':showSyncDetailsDialog();break;case'dismiss-sync-issue':syncIssueDismissed=true;renderSyncIssueBanner();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();break;}}
+function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-recurring':openModal('recurring');break;case'edit-recurring':{const r=(data.recurring||[]).find(t=>t.id===itemId);if(r)openModal('recurring',r);else showToast('This recurring item could not be found.');break}case'post-recurring':postRecurring(itemId);break;case'skip-recurring':skipRecurring(itemId);break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'export-csv':exportTransactionsCsv();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'choose-sync-data':chooseSyncData();break;case'answer-sync-choice':answerSyncChoice(b.dataset.value);break;case'check-cloud-access':checkCloudAccess();break;case'sync-details':showSyncDetailsDialog();break;case'dismiss-sync-issue':syncIssueDismissed=true;renderSyncIssueBanner();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();undoState=null;break;case'undo-delete':undoDelete();break;}}
 document.addEventListener('keydown',e=>{if(trapWelcomeTab(e))return;const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&setDockMore(false,true)){e.preventDefault();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
 document.addEventListener('click',e=>{
  const option=e.target.closest('[data-confirm-index]');
@@ -3519,7 +3522,9 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     close: function () { noise({ dur: 0.18, gain: 0.07, f: 2600, f2: 420 }); },
     success: function () { tone({ f: 523.25, dur: 0.5, gain: 0.11 }); tone({ f: 783.99, dur: 0.6, gain: 0.09, delay: 0.09 }); tone({ f: 1046.5, dur: 0.5, gain: 0.055, delay: 0.18 }); },
     purchase: function () { tone({ f: 660, dur: 0.09, gain: 0.12, type: 'triangle' }); tone({ f: 990, dur: 0.13, gain: 0.09, type: 'triangle', delay: 0.09 }); },
-    error: function () { tone({ f: 130, f2: 70, dur: 0.22, gain: 0.14, type: 'sawtooth' }); },
+    error: function () { tone({ f: 196, f2: 110, dur: 0.24, gain: 0.1, type: 'triangle' }); noise({ dur: 0.14, gain: 0.035, type: 'lowpass', f: 700, f2: 200 }); },
+    coin: function () { tone({ f: 1318.5, dur: 0.12, gain: 0.09, type: 'triangle' }); tone({ f: 1760, dur: 0.38, gain: 0.08, type: 'triangle', delay: 0.07 }); tone({ f: 2637, dur: 0.3, gain: 0.025, delay: 0.09 }); },
+    undo: function () { tone({ f: 440, f2: 660, dur: 0.14, gain: 0.08, type: 'triangle' }); },
     needle: function () { noise({ dur: 0.55, gain: 0.09, f: 900, f2: 170, type: 'lowpass' }); tone({ f: 88, f2: 54, dur: 0.42, gain: 0.09 }); },
     setMuted: function (m) {
       fx.muted = !!m; save();
@@ -3555,11 +3560,31 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     if (p) return Sound.tap();
     if (a === 'purchase-bought' || a === 'purchase-status') return Sound.purchase();
     if (a === 'delete-item' || a === 'signout') return Sound.error();
+    if (a === 'undo-delete') return Sound.undo();
+    if (a === 'post-recurring') return Sound.coin();
     if (a === 'close-modal' || a === 'close-menu' || a === 'backdrop-close') return Sound.close();
     if (a === 'add-transaction' || a === 'add-account' || a === 'add-goal' || a === 'add-purchase' ||
         a === 'edit-goal' || a === 'edit-account' || a === 'edit-transaction' || a === 'edit-budget' || a === 'edit-purchase') return Sound.tap();
     return Sound.tick();
   }, true);
+
+  /* remember if the transaction being saved is income, so its toast gets the coin sound */
+  var lastTxType = '';
+  document.addEventListener('submit', function (e) {
+    var f = e.target;
+    if (!f || f.id !== 'modalForm') return;
+    var t = f.querySelector('#modalTxType, [name="type"]');
+    lastTxType = t && t.value === 'Income' ? 'Income' : '';
+  }, true);
+  document.addEventListener('input', function (e) {
+    if (!e.target || e.target.id !== 'fxVolume') return;
+    fx.vol = Math.max(0, Math.min(1, Number(e.target.value) / 100)); save();
+    if (master) master.gain.value = fx.muted ? 0 : fx.vol;
+    var out = document.getElementById('fxVolumeOut'); if (out) out.textContent = Math.round(fx.vol * 100) + '%';
+  });
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'fxVolume') Sound.success();
+  });
 
   /* chime when the app celebrates something (toast text) */
   (function watchToasts() {
@@ -3570,11 +3595,44 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         [].forEach.call(m.addedNodes, function (n) {
           if (!n.classList || !n.classList.contains('toast')) return;
           var t = (n.textContent || '').toLowerCase();
-          if (/bought|complete|saved|added|created|updated|restored/.test(t)) Sound.success();
+          if (/deletion undone/.test(t)) return;
+          if (lastTxType === 'Income' && /saved|added/.test(t)) { lastTxType = ''; Sound.coin(); }
+          else if (/bought|complete|saved|added|created|updated|restored/.test(t)) Sound.success();
           else if (/error|failed|invalid|could not|couldn't/.test(t)) Sound.error();
         });
       });
     }).observe(body, { childList: true });
+  })();
+
+  /* ---------------- page-change motion: numbers count up, bars grow ---------------- */
+  (function pageMotion() {
+    var content = document.getElementById('content');
+    if (!content || reduce) return;
+    var lastKey = null, enterTimer = 0;
+    var SIMPLE = /^([^\d\-−]*)(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)([^\d]*)$/;
+    function countUp(el) {
+      var original = el.textContent.trim(), m = SIMPLE.exec(original);
+      if (!m) return;
+      var target = parseFloat(m[2].replace(/,/g, ''));
+      if (!isFinite(target) || target === 0) return;
+      var decimals = (m[2].split('.')[1] || '').length, start = performance.now(), dur = 650;
+      el.setAttribute('aria-label', original);
+      (function step(now) {
+        if (!el.isConnected) return;
+        var t = Math.min(1, (now - start) / dur), eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = t >= 1 ? original : m[1] + (target * eased).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + m[3];
+        if (t < 1) requestAnimationFrame(step); else el.removeAttribute('aria-label');
+      })(start);
+    }
+    new MutationObserver(function () {
+      var h = content.querySelector('h1'), key = h ? h.textContent : '';
+      if (!key || key === lastKey) return;
+      lastKey = key;
+      content.classList.add('nsx-page-enter');
+      clearTimeout(enterTimer);
+      enterTimer = setTimeout(function () { content.classList.remove('nsx-page-enter'); }, 1000);
+      [].forEach.call(content.querySelectorAll('.metric-value'), countUp);
+    }).observe(content, { childList: true });
   })();
 
   /* ---------------- sound toggle in the topbar ---------------- */

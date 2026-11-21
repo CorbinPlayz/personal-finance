@@ -128,3 +128,12 @@ test('Settings offers the CSV export and the app dispatches it', () => {
   assert.match(moduleScript, /data-action="export-csv"/); assert.match(moduleScript, /case'export-csv':exportTransactionsCsv\(\);break;/);
   assert.match(moduleScript, /import \{ transactionsToCsv \} from '\.\/csv-export\.mjs';/);
 });
+
+test('undo after delete only restores when nothing else changed, and sounds are wired', () => {
+  const html = require('node:fs').readFileSync(__dirname + '/../index.html', 'utf8');
+  assert.match(html, /undoState=\{before:data,after:next\}/);
+  assert.match(html, /if\(data!==u\.after\)\{showToast\('Too late to undo/);
+  assert.match(html, /case'undo-delete':undoDelete\(\)/);
+  assert.match(html, /coin: function/);
+  assert.match(html, /id="fxVolume"/);
+});
