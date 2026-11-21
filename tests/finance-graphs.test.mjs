@@ -1,7 +1,7 @@
 // Run with: node --test tests/finance-graphs.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { graphAmount, graphTotal, graphDifference, graphMonthFromDate, graphMonths, monthlyGraph, categoryGraph, transactionGraph, priceChecksGraph, goalScenarioGraph } from '../finance-graphs.mjs';
+import { graphAmount, graphTotal, graphDifference, graphMonthFromDate, graphMonths, monthlyGraph, categoryGraph, transactionGraph, priceChecksGraph, goalScenarioGraph, monthsUntil } from '../finance-graphs.mjs';
 
 const record = (type, amount, date, extras = {}) => ({ type, amount, date, accountId: 'spending', ...extras });
 
@@ -118,4 +118,19 @@ test('what-if goals calculate explicitly entered monthly amounts without saving 
   assert.match(goalScenarioGraph(goal, ['-1', '']).error, /non-negative/i);
   assert.match(goalScenarioGraph(goal, ['999999999999999', '']).error, /valid/i);
   assert.match(goalScenarioGraph({ target: 0, saved: 0 }, ['2', '']).error, /positive target/i);
+});
+
+test('goal scenario adds the goal end date as its own point', () => {
+  const today = new Date(2026, 10, 20);
+  assert.equal(monthsUntil('2027-05-20', today), 6);
+  assert.equal(monthsUntil('2027-05-21', today), 7);
+  assert.equal(monthsUntil('2026-11-20', today), null);
+  assert.equal(monthsUntil('2026-02-30', today), null);
+  assert.equal(monthsUntil('2040-01-01', today), null);
+  const goal = { saved: 100, target: 1000, dueDate: '2027-09-20' };
+  const result = goalScenarioGraph(goal, ['50', ''], today);
+  assert.deepEqual(result.periods, [0, 3, 6, 10, 12]);
+  assert.equal(result.dueMonths, 10);
+  assert.equal(result.scenarios[0].points.find(p => p.months === 10).amount, 600);
+  assert.deepEqual(goalScenarioGraph({ saved: 0, target: 10 }, ['1', ''], today).periods, [0, 3, 6, 12]);
 });

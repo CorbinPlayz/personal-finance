@@ -183,3 +183,14 @@ test('scenario controls and output are explicit, escaped, and do not change goal
   assert.match(renderScenarioResult(goal, ['-1', ''], money, esc), /non-negative/);
   assert.equal(JSON.stringify(goal), before);
 });
+
+test('scenario result marks the goal end date on the chart', () => {
+  const today = new Date(2026, 10, 20);
+  const goal = { id: 'g', name: 'Trip', saved: 100, target: 400, dueDate: '2027-04-20' };
+  const html = renderScenarioResult(goal, ['50', ''], money, esc, today);
+  assert.match(html, /--columns:5/);
+  assert.match(html, /★ 5 mo/);
+  assert.match(html, /data-end-date-summary/);
+  assert.match(html, /your end date/);
+  assert.match(renderScenarioResult({ ...goal, dueDate: '' }, ['50', ''], money, esc, today), /--columns:4/);
+});

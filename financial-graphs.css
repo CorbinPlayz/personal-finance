@@ -161,3 +161,5 @@
 @media(prefers-reduced-transparency:reduce) {
   .ns-graph,.ns-mix-item,.ns-goal-orbit,.ns-graph-empty { background:#fff; }
 }
+.ns-flow-months .is-end-date { color:#254d46; font-weight:800; }
+.ns-flow-column.is-end-date { background:rgba(37,77,70,.08); border-radius:6px; box-shadow:inset 0 0 0 1px rgba(37,77,70,.28); }

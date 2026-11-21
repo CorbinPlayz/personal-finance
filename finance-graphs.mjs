@@ -163,19 +163,33 @@ export function priceChecksGraph(history, count = 6) {
 }
 
 /* Explicit what-if inputs only: no saved data, interest or bank activity is assumed. */
-export function goalScenarioGraph(goal, inputs) {
+/* Whole months from today until a YYYY-MM-DD end date, rounded up. Null when missing, past, or over 10 years. */
+export function monthsUntil(dateText, today = new Date()) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateText || ''));
+  if (!match) return null;
+  const [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const end = new Date(y, m - 1, d);
+  if (end.getFullYear() !== y || end.getMonth() !== m - 1 || end.getDate() !== d) return null;
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  if (end <= start) return null;
+  const months = (y - start.getFullYear()) * 12 + (m - 1 - start.getMonth()) + (d > start.getDate() ? 1 : 0);
+  return months >= 1 && months <= 120 ? months : null;
+}
+
+export function goalScenarioGraph(goal, inputs, today = new Date()) {
   const saved = cents(goal?.saved), target = cents(goal?.target);
   if (saved === null || target === null || target === 0) return { error: 'This goal needs a positive target and a non-negative saved amount.', scenarios: [] };
-  const periods = [0, 3, 6, 12], scenarios = [];
+  const dueMonths = monthsUntil(goal?.dueDate, today);
+  const periods = [...new Set([0, 3, 6, 12, ...(dueMonths ? [dueMonths] : [])])].sort((a, b) => a - b), scenarios = [];
   for (let index = 0; index < 2; index++) {
     const raw = inputs?.[index];
     if (raw === '' || raw === null || raw === undefined) continue;
     const contribution = cents(raw);
-    if (contribution === null || contribution > Math.floor((MAX_CENTS - saved) / 12)) {
+    if (contribution === null || contribution > Math.floor((MAX_CENTS - saved) / Math.max(12, ...periods))) {
       return { error: 'Enter a valid, non-negative monthly amount.', scenarios: [] };
     }
     scenarios.push({ label: index === 0 ? 'A' : 'B', monthly: contribution / 100,
       points: periods.map(months => ({ months, amount: (saved + contribution * months) / 100 })) });
   }
-  return { error: '', saved: saved / 100, target: target / 100, periods, scenarios };
+  return { error: '', saved: saved / 100, target: target / 100, periods, dueMonths, scenarios };
 }
