@@ -204,7 +204,7 @@ test('connection storage handles failed access and conflicting copies without si
   const getLocal = local.getItem;
   local.getItem = name => { if (name === key) throw new Error('blocked'); return getLocal(name); };
   const blocked = harness(fixture(), { local, session });
-  assert.equal(blocked.api.conn().key, 'session-only', 'session is still read when local storage is blocked');
+  assert.equal(blocked.api.conn().key, 'hosted', 'an old key is replaced by the hosted AI');
   assert.equal(blocked.api.conn().enabled, false, 'unreadable copies do not re-enable cloud');
 
   const first = memoryStorage({ [key]: JSON.stringify({ key: 'old-key', enabled: true, remember: true }) });
@@ -215,6 +215,6 @@ test('connection storage handles failed access and conflicting copies without si
   assert.equal(first.getItem(key), null);
   assert.equal(JSON.parse(second.getItem(key)).key, 'replacement');
   conflict.api.clearConn();
-  assert.equal(JSON.parse(second.getItem(key)).key, '');
+  assert.equal(JSON.parse(second.getItem(key)).enabled, false);
   assert.equal(conflict.api.conn().enabled, false);
 });

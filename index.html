@@ -4345,17 +4345,12 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   /* ---------------- connections: bring your own key ---------------- */
   var CONN_KEY = 'northstar-jarvis-conn-v1';
   var PROVIDERS = {
-    northstar: { label: 'Northstar hosted AI (free, no key)', model: 'glm-4.7-flash', url: 'https://northstar-finance-ai.camc-cf76.workers.dev/', help: 'runs on your Cloudflare account; sign in with Google' },
-    gemini: { label: 'Google Gemini', model: 'gemini-2.5-flash-lite', url: 'https://generativelanguage.googleapis.com/v1beta/models/', help: 'aistudio.google.com' },
-    openai: { label: 'OpenAI', model: 'gpt-4o-mini', url: 'https://api.openai.com/v1/chat/completions', help: 'platform.openai.com' },
-    anthropic: { label: 'Anthropic', model: 'claude-haiku-4-5', url: 'https://api.anthropic.com/v1/messages', help: 'console.anthropic.com' },
-    groq: { label: 'Groq', model: 'openai/gpt-oss-120b', url: 'https://api.groq.com/openai/v1/chat/completions', help: 'console.groq.com' },
-    openrouter: { label: 'OpenRouter', model: 'google/gemma-4-31b-it:free', url: 'https://openrouter.ai/api/v1/chat/completions', help: 'openrouter.ai/keys' },
-    custom: { label: 'Custom (OpenAI-compatible)', model: '', url: '', help: 'your own endpoint' }
+    northstar: { label: 'Northstar hosted AI', model: 'glm-4.7-flash', url: 'https://northstar-finance-ai.camc-cf76.workers.dev/', help: 'free, runs on your Cloudflare account; needs Google sign-in' }
   };
-  var CONN_DEFAULT = { provider: 'northstar', model: 'glm-4.7-flash', key: 'hosted', base: '', remember: false, includeTx: false, enabled: true, hostedOff: false };
+  var CONN_DEFAULT = { provider: 'northstar', model: 'glm-4.7-flash', key: 'hosted', base: '', remember: true, includeTx: false, enabled: true };
   var connStorageWarning = false;
   var conn = loadConn();
+  if (conn.migrated) { delete conn.migrated; try { saveConn(); } catch (e) {} }
   var history = [];
   var cloudVerified = false;
 
@@ -4368,10 +4363,10 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     if (raw) { try { Object.assign(c, JSON.parse(raw)); } catch (e) { connStorageWarning = true; } }
     // Conflicting or unreadable copies must not silently re-enable an old connection.
     if (connStorageWarning) c.enabled = false;
-    var retired = { gemini: 'gemini-2.0-flash', anthropic: 'claude-3-5-haiku-latest', groq: 'llama-3.3-70b-versatile', openrouter: 'meta-llama/llama-3.3-70b-instruct:free' };
-    if (retired[c.provider] === c.model) c.model = PROVIDERS[c.provider].model;
-    // Not switched on (never set up, or an old key-based setup left off): use the free hosted AI so no key is needed.
-    if (raw && !c.enabled && !c.hostedOff && !connStorageWarning && (!c.key || c.provider !== 'northstar')) { c.provider = 'northstar'; c.model = PROVIDERS.northstar.model; c.key = 'hosted'; c.enabled = true; }
+    // Other AI services were removed. An old key-based setup is replaced by the free hosted AI and its key is dropped.
+    var legacy = !!raw && (c.provider !== 'northstar' || (c.key && c.key !== 'hosted'));
+    c.provider = 'northstar'; c.model = PROVIDERS.northstar.model; c.key = 'hosted'; c.base = ''; c.remember = true;
+    if (legacy) { c.enabled = !connStorageWarning; c.migrated = true; delete c.hostedOff; }
     return c;
   }
   function paintConnStorageWarning() {
@@ -4399,7 +4394,6 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   function providerLabel(id) { return (PROVIDERS[id] || PROVIDERS.custom).label; }
   function connReady() {
     if (!conn.enabled || !conn.key || !conn.model) return false;
-    if (conn.provider === 'custom' && !conn.base) return false;
     return true;
   }
 
@@ -4510,30 +4504,6 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     return message.length > 600 ? message.slice(0, 320) + ' … ' + message.slice(-260) : message;
   }
 
-  function providerError(status, body, provider) {
-    body = body || {};
-    var detail = body.error && (body.error.message || body.error) || body.message || '';
-    var meta = body.error && body.error.metadata || body.metadata || {};
-    var raw = meta.raw || '';
-    if (raw && typeof raw !== 'string') raw = JSON.stringify(raw);
-    var upstream = meta.provider_name || meta.provider || '';
-    if (typeof detail === 'object') detail = JSON.stringify(detail);
-    if ((status === 401 || status === 403) && !detail) detail = 'Authentication rejected — check that the key belongs to this provider';
-    if (status === 404) detail = (detail ? detail + ' · ' : '') + 'model or endpoint not found — check the model ID and provider';
-    var message = providerLabel(provider) + ' HTTP ' + status + (upstream ? ' · upstream ' + upstream : '') + (detail ? ': ' + detail : '');
-    if (raw && String(raw) !== String(detail)) message += ' · ' + String(raw);
-    var err = new Error(message || (providerLabel(provider) + ' HTTP ' + status));
-    err.status = status; err.provider = provider; err.upstream = upstream;
-    return err;
-  }
-
-  function extractGemini(j) {
-    var cand = j && j.candidates && j.candidates[0];
-    var parts = cand && cand.content && cand.content.parts;
-    if (!parts) return '';
-    return parts.map(function (p) { return p.text || ''; }).join('').trim();
-  }
-
   async function callCloudOnce(userText, pastTurns, s, opts) {
     opts = opts || {};
     if (workspaceBlocked() || !s || !s.ok) throw new Error('Unlock and finish loading the active workspace before using a cloud provider.');
@@ -4541,7 +4511,6 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     var model = String(conn.model || '').trim();
     if (!key) throw new Error('No API key saved');
     if (!model) throw new Error('No model set');
-    if (conn.provider === 'custom' && !String(conn.base || '').trim()) throw new Error('Set a base URL for the custom provider');
     if (!conn.provider || !PROVIDERS[conn.provider]) throw new Error('Pick a provider');
     var sys = systemPrompt(s);
     var turns = (pastTurns || []).slice(-6);
@@ -4567,72 +4536,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         if (!ntext) throw new Error('Empty response from the hosted AI');
         return ntext;
       }
-      if (conn.provider === 'gemini') {
-        var gurl = PROVIDERS.gemini.url + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key);
-        var contents = turns.map(function (m) {
-          return { role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] };
-        }).concat([{ role: 'user', parts: [{ text: userText }] }]);
-        var gres = await fetch(gurl, {
-          method: 'POST', signal: ctrl.signal,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: sys }] },
-            contents: contents,
-            generationConfig: { maxOutputTokens: maxTok, temperature: 0.75 }
-          })
-        });
-        var gj = await gres.json().catch(function () { return null; });
-        if (!gres.ok) throw providerError(gres.status, gj, 'gemini');
-        var gtext = extractGemini(gj);
-        if (!gtext) throw new Error('Empty response from Gemini');
-        return gtext;
-      }
-
-      if (conn.provider === 'anthropic') {
-        var ares = await fetch(PROVIDERS.anthropic.url, {
-          method: 'POST', signal: ctrl.signal,
-          headers: {
-            'content-type': 'application/json',
-            'x-api-key': key,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true'
-          },
-          body: JSON.stringify({
-            model: model, max_tokens: maxTok, system: sys,
-            messages: turns.concat([{ role: 'user', content: userText }])
-          })
-        });
-        var aj = await ares.json().catch(function () { return null; });
-        if (!ares.ok) throw providerError(ares.status, aj, 'anthropic');
-        var atext = (aj && aj.content ? aj.content.filter(function (c) { return c.type === 'text'; }).map(function (c) { return c.text; }).join('') : '').trim();
-        if (!atext) throw new Error('Empty response from Anthropic');
-        return atext;
-      }
-
-      /* OpenAI-compatible: openai, groq, openrouter, custom */
-      var url = conn.provider === 'custom'
-        ? String(conn.base || '').replace(/\/+$/, '') + '/chat/completions'
-        : PROVIDERS[conn.provider].url;
-      var headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key };
-      if (conn.provider === 'openrouter') {
-        headers['HTTP-Referer'] = location.origin;
-        headers['X-Title'] = 'Northstar';
-      }
-      var ores = await fetch(url, {
-        method: 'POST', signal: ctrl.signal, headers: headers,
-        body: JSON.stringify({
-          model: model,
-          messages: [{ role: 'system', content: sys }].concat(turns).concat([{ role: 'user', content: userText }]),
-          max_tokens: maxTok,
-          temperature: 0.75
-        })
-      });
-      var oj = await ores.json().catch(function () { return null; });
-      if (!ores.ok) throw providerError(ores.status, oj, conn.provider);
-      var otext = oj && oj.choices && oj.choices[0] && oj.choices[0].message && oj.choices[0].message.content;
-      otext = String(otext || '').trim();
-      if (!otext) throw new Error('Empty response from provider');
-      return otext;
+      throw new Error('Unsupported assistant connection');
     } finally {
       clearTimeout(timer);
       if (externalSignal) externalSignal.removeEventListener('abort', abortRequest);
@@ -5155,22 +5059,16 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
       '<div class="nsj-busy" id="nsjBusy" aria-live="polite"></div>' +
       '<div class="nsj-footnote" id="nsjFootnote">Assistant answers run locally</div>' +
       '<div class="nsj-sheet" id="nsjSheet" aria-hidden="true">' +
-        '<div class="nsj-sheet-head"><b>CONNECTIONS</b><span>bring your own key</span><button type="button" class="nsj-close" id="nsjSheetClose" aria-label="Close connections">' + icon('<path d="M6 6l12 12M18 6 6 18"/>') + '</button></div>' +
+        '<div class="nsj-sheet-head"><b>SMART ANSWERS</b><span>free, no key</span><button type="button" class="nsj-close" id="nsjSheetClose" aria-label="Close settings">' + icon('<path d="M6 6l12 12M18 6 6 18"/>') + '</button></div>' +
         '<div class="nsj-sheet-body">' +
-          '<div class="nsj-row"><div class="nsj-row-text"><b>Cloud brain</b><small>Off: local rules engine. On: questions go to your provider.</small></div><button type="button" class="nsj-switch" id="nsjEnabled" role="switch" aria-checked="false" aria-label="Enable cloud brain"></button></div>' +
-          '<div class="nsj-field"><label for="nsjProvider">Provider</label><select id="nsjProvider">' + providerOptions() + '</select></div>' +
-          '<div class="nsj-field"><label for="nsjKey">API key</label><input id="nsjKey" type="password" placeholder="paste your key here" autocomplete="off" spellcheck="false"><div class="nsj-hint">Stored in this browser, separate from workspace protection. Sent to your chosen provider when used; not included in finance backups.</div></div>' +
-          '<div class="nsj-field"><label for="nsjModel">Model</label><input id="nsjModel" type="text" placeholder="model id" autocomplete="off" spellcheck="false"></div>' +
-          '<div class="nsj-field" id="nsjBaseWrap" hidden><label for="nsjBase">Base URL</label><input id="nsjBase" type="text" placeholder="https://your-endpoint/v1" autocomplete="off" spellcheck="false"></div>' +
-          '<div class="nsj-row"><div class="nsj-row-text"><b>Remember key</b><small>Off: cleared when this tab closes.</small></div><button type="button" class="nsj-switch" id="nsjRemember" role="switch" aria-checked="false" aria-label="Remember key"></button></div>' +
-          '<div class="nsj-row"><div class="nsj-row-text"><b>Include transactions</b><small>Sends up to 8 recent entries, including dates, amounts, categories and descriptions.</small></div><button type="button" class="nsj-switch" id="nsjTx" role="switch" aria-checked="false" aria-label="Include transactions"></button></div>' +
-          '<div class="nsj-actions"><button type="button" class="nsj-mini primary" id="nsjSave">Save &amp; test</button><button type="button" class="nsj-mini" id="nsjPreview">Preview payload</button><button type="button" class="nsj-mini danger" id="nsjClear">Clear key</button></div>' +
-          '<div class="nsj-hint">Save &amp; test sends your key and finance summary to the selected provider. A successful test turns Cloud brain on; preview the payload first if you wish.</div>' +
-          '<div class="nsj-status-line" id="nsjConnStatus"><i></i><span>Not connected</span></div>' +
-          '<div class="nsj-hint nsj-storage-warning" id="nsjStorageWarning" role="alert" hidden>Connection storage is unavailable, inconsistent, or could not be updated. Your key may not persist, or an older key may remain. Check browser storage settings; back up your finance data before clearing site data.</div>' +
+          '<div class="nsj-row"><div class="nsj-row-text"><b>Smart answers</b><small>On: your questions and a summary of your finances go to Northstar’s free hosted AI. Needs Google sign-in. Off: built-in answers only.</small></div><button type="button" class="nsj-switch" id="nsjEnabled" role="switch" aria-checked="false" aria-label="Smart answers"></button></div>' +
+          '<div class="nsj-row"><div class="nsj-row-text"><b>Share account names and recent transactions</b><small>Lets the AI see account balances, bills and your last 8 entries.</small></div><button type="button" class="nsj-switch" id="nsjTx" role="switch" aria-checked="false" aria-label="Share account names and recent transactions"></button></div>' +
+          '<div class="nsj-actions"><button type="button" class="nsj-mini primary" id="nsjSave">Check connection</button><button type="button" class="nsj-mini" id="nsjPreview">See what is sent</button></div>' +
+          '<div class="nsj-status-line" id="nsjConnStatus"><i></i><span>Checking…</span></div>' +
+          '<div class="nsj-hint nsj-storage-warning" id="nsjStorageWarning" role="alert" hidden>This browser could not save the setting. It may reset when you reload.</div>' +
           '<pre class="nsj-preview" id="nsjPreviewBox" hidden></pre>' +
-          '<div class="nsj-hint">Providers include <b>Gemini</b> (AI Studio), <b>Groq</b>, and <b>OpenRouter</b>. Check current pricing and limits before connecting.</div>' +
         '</div>' +
+      '</div>';
       '</div>';
 
 
@@ -5230,11 +5128,6 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
 
 
     /* ---------------- connections wiring ---------------- */
-    function providerOptions() {
-      return Object.keys(PROVIDERS).map(function (k) {
-        return '<option value="' + k + '">' + PROVIDERS[k].label + '</option>';
-      }).join('');
-    }
     function setSwitch(el, on) { if (el) el.setAttribute('aria-checked', String(!!on)); }
     function getSwitch(el) { return el && el.getAttribute('aria-checked') === 'true'; }
     function setConnStatus(kind, text) {
@@ -5244,20 +5137,12 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
       el.querySelector('span').textContent = text;
     }
     function paintSheet() {
-      var sel = panel.querySelector('#nsjProvider');
-      if (!sel) return;
-      sel.value = conn.provider;
-      var keyEl = panel.querySelector('#nsjKey');
-      if (keyEl && document.activeElement !== keyEl) keyEl.value = conn.key || '';
-      panel.querySelector('#nsjModel').value = conn.model || '';
-      panel.querySelector('#nsjBase').value = conn.base || '';
-      panel.querySelector('#nsjBaseWrap').hidden = conn.provider !== 'custom';
+      if (!panel.querySelector('#nsjEnabled')) return;
       setSwitch(panel.querySelector('#nsjEnabled'), conn.enabled);
-      setSwitch(panel.querySelector('#nsjRemember'), conn.remember);
       setSwitch(panel.querySelector('#nsjTx'), conn.includeTx);
       setConnStatus(connReady() && cloudVerified ? 'ok' : '', connReady()
-        ? (cloudVerified ? 'Connected · ' : 'Cloud on · unverified · ') + providerLabel(conn.provider) + ' · ' + (conn.model || 'no model')
-        : (conn.key ? 'Key entered — switch Cloud brain on' : 'Not connected'));
+        ? (cloudVerified ? 'Connected' : 'On, not checked yet') + ' · free hosted AI'
+        : 'Off · using built-in answers');
       paintConnStorageWarning();
     }
 
@@ -5282,60 +5167,25 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         if (sheet.classList.contains('open')) showSheet(false);
         else toggle(false);
       }, true);
-      panel.querySelector('#nsjProvider').addEventListener('change', function (e) {
-        cancelConnectionTest();
-        var next = e.target.value;
-        var wasDefault = !conn.model || conn.model === (PROVIDERS[conn.provider] || {}).model;
-        conn.provider = next; cloudVerified = false;
-        if (wasDefault) conn.model = (PROVIDERS[next] || {}).model || '';
-        if (next === 'northstar') conn.key = 'hosted'; else if (conn.key === 'hosted') conn.key = '';
-        saveConn(); paintSheet(); refreshStatus();
-      });
-      ['#nsjKey', '#nsjModel', '#nsjBase'].forEach(function (sel) {
-        var field = panel.querySelector(sel);
-        var sync = function (e) {
-          cancelConnectionTest();
-          if (sel === '#nsjKey') conn.key = e.target.value.trim();
-          if (sel === '#nsjModel') conn.model = e.target.value.trim();
-          if (sel === '#nsjBase') conn.base = e.target.value.trim();
-          cloudVerified = false;
-          saveConn(); refreshStatus();
-        };
-        field.addEventListener('input', sync);
-        field.addEventListener('change', sync);
-      });
       panel.querySelector('#nsjEnabled').addEventListener('click', function () {
         cancelConnectionTest();
         conn.enabled = !conn.enabled;
-        if (conn.enabled && !conn.key) {
-          conn.enabled = false;
-          setConnStatus('err', 'Add a key first');
-          saveConn(); paintSheet();
-          setConnStatus('err', 'Add a key first');
-          return;
-        }
         saveConn(); paintSheet(); refreshStatus();
-      });
-      panel.querySelector('#nsjRemember').addEventListener('click', function () {
-        cancelConnectionTest(); conn.remember = !conn.remember; saveConn(); paintSheet();
       });
       panel.querySelector('#nsjTx').addEventListener('click', function () {
         cancelConnectionTest(); conn.includeTx = !conn.includeTx; saveConn(); paintSheet();
       });
       panel.querySelector('#nsjSave').addEventListener('click', function () {
         cancelConnectionTest();
-        conn.key = panel.querySelector('#nsjKey').value.trim();
-        conn.model = panel.querySelector('#nsjModel').value.trim();
-        conn.base = panel.querySelector('#nsjBase').value.trim();
         saveConn();
         cloudVerified = false;
         var controller = new AbortController(), generation = testGeneration;
         testController = controller; panel.querySelector('#nsjSave').disabled = true;
-        setConnStatus('', 'Testing connection…');
+        setConnStatus('', 'Checking…');
         testConnection({ signal: controller.signal }).then(function () {
           if (generation !== testGeneration || controller.signal.aborted || workspaceBlocked()) return;
           conn.enabled = true; cloudVerified = true; saveConn();
-          setConnStatus('ok', 'Connected · ' + providerLabel(conn.provider) + ' · ' + conn.model);
+          setConnStatus('ok', 'Connected · free hosted AI');
           refreshStatus(); paintSheet();
         }).catch(function (err) {
           if (generation !== testGeneration || controller.signal.aborted || workspaceBlocked()) return;
@@ -5360,11 +5210,6 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         box.textContent = JSON.stringify(payload, null, 2);
         box.hidden = false;
       });
-      panel.querySelector('#nsjClear').addEventListener('click', function () {
-        cancelConnectionTest(); conn.key = ''; conn.enabled = false; conn.hostedOff = true; cloudVerified = false;
-        var cleared = saveConn(); paintSheet(); refreshStatus();
-        setConnStatus(cleared ? '' : 'err', cleared ? 'Key cleared' : 'Key cleared in memory only — check the storage warning');
-      });
     }
 
     refreshStatus();
@@ -5376,11 +5221,11 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     if (!el) return;
     var s = snapshot();
     var base = s.ok ? s.accounts.length + ' acct · ' + s.txCount + ' tx' : 'No ledger found';
-    el.textContent = (connReady() ? 'Cloud ' + (cloudVerified ? 'connected' : 'on · unverified') + ' · ' + providerLabel(conn.provider) + ' · ' + conn.model + ' · ' : 'Local · ') + base;
+    el.textContent = (connReady() ? 'Smart AI ' + (cloudVerified ? 'connected' : 'on') + ' · ' : 'Built-in answers · ') + base;
     var fn = panel.querySelector('#nsjFootnote');
     if (fn) fn.textContent = connReady()
-      ? (cloudVerified ? 'Cloud reply verified · ' : 'Cloud is on but has not yet succeeded · ') + providerLabel(conn.provider) + ' · key sent to provider when used'
-      : 'Assistant answers run locally';
+      ? (cloudVerified ? 'Smart answers are working · free hosted AI' : 'Smart answers are on · free hosted AI (sign in with Google)')
+      : 'Smart answers are off · using built-in answers';
   }
 
   function addMsg(text, who) {
@@ -5869,7 +5714,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     systemPrompt: systemPrompt,
     conn: function () { return Object.assign({}, conn); },
     setConn: function (patch) { cancelConnectionTest(); Object.assign(conn, patch || {}); cloudVerified = false; saveConn(); },
-    clearConn: function () { cancelConnectionTest(); conn.key = ''; conn.enabled = false; conn.hostedOff = true; cloudVerified = false; saveConn(); },
+    clearConn: function () { cancelConnectionTest(); conn.enabled = false; cloudVerified = false; saveConn(); },
     setWorkspaceBlocked: setWorkspaceBlocked,
     resetWorkspace: resetWorkspace,
     callCloud: function (text, opts) { return callCloud(text, [], snapshot(), opts); },
