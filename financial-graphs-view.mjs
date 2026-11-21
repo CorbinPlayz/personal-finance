@@ -1,5 +1,5 @@
 /* Accessible, presentation-only HTML for the local financial graph models. */
-import { graphAmount, graphTotal, graphDifference, monthlyGraph, categoryGraph, transactionGraph, priceChecksGraph, goalScenarioGraph } from './finance-graphs.mjs';
+import { graphAmount, graphTotal, graphDifference, monthlyGraph, categoryGraph, transactionGraph, priceChecksGraph, goalScenarioGraph, monthsUntil } from './finance-graphs.mjs';
 
 const palette = ['#278365', '#b75a49', '#5577b7', '#8b6aa9', '#94722b', '#687e82'];
 const clamp = value => Math.max(0, Math.min(100, Number.isFinite(value) ? value : 0));
@@ -101,7 +101,21 @@ export function renderGoalGraph(goals, money, esc) {
   }).join('')}</div><div class="ns-graph-foot"><span>${goals.length > shown.length ? `Showing ${shown.length} of ${goals.length} goals; all are listed below. ` : ''}Rings cap at 100%. Goal amounts are not account balances.</span></div></section>`;
 }
 
-export function renderPurchaseGraph(purchases, completedIds, money, esc) {
+function targetNote(dateText, remaining, money, esc, today) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateText || ''));
+  if (!match) return '';
+  const end = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  if (end.getMonth() !== Number(match[2]) - 1) return '';
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const days = Math.round((end - start) / 86400000);
+  const label = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  if (days < 0) return ` · <span data-target-note class="ns-target-late">target date ${esc(label)} passed ${-days} ${days === -1 ? 'day' : 'days'} ago</span>`;
+  const months = monthsUntil(dateText, today);
+  const pace = remaining > 0 && months ? ` · about ${amount(remaining / months, money, esc)} / month to get there` : '';
+  return ` · <span data-target-note>target ${esc(label)} (${days === 0 ? 'today' : `${days} ${days === 1 ? 'day' : 'days'}`} left)${pace}</span>`;
+}
+
+export function renderPurchaseGraph(purchases, completedIds, money, esc, today = new Date()) {
   const completed = completedIds && typeof completedIds.has === 'function' ? completedIds : new Set();
   const plans = (Array.isArray(purchases) ? purchases : []).filter(item => item && ['Planning', 'Saving', 'Ready'].includes(item.status) && !completed.has(item.id));
   if (!plans.length) return '';
@@ -109,7 +123,7 @@ export function renderPurchaseGraph(purchases, completedIds, money, esc) {
   return `<section class="ns-graph" data-graph-key="purchase-map">${header('Your purchase plans', 'Funding progress', 'Saved amounts for planning, saving, and ready plans.', 'Open plans')}<div class="ns-list-bars">${shown.map(plan => {
     const saved = graphAmount(plan.saved), price = graphAmount(plan.price), valid = saved !== null && price !== null && price > 0;
     const actual = valid ? saved / price * 100 : 0, pct = clamp(actual);
-    return `<div class="ns-list-row"><div class="ns-list-label"><span>${esc(plan.name || 'Untitled plan')}</span><strong>${valid ? `${amount(saved, money, esc)} / ${amount(price, money, esc)}` : 'Add a valid price and saved amount'}</strong></div><div class="ns-list-track" aria-hidden="true"><span class="ns-list-fill" style="width:${pct}%"></span></div><div class="ns-list-caption">${valid ? `${percent(actual)} set aside · ${amount(Math.max(0, graphDifference(price, saved)), money, esc)} remaining` : 'No progress can be calculated.'}</div></div>`;
+    return `<div class="ns-list-row"><div class="ns-list-label"><span>${esc(plan.name || 'Untitled plan')}</span><strong>${valid ? `${amount(saved, money, esc)} / ${amount(price, money, esc)}` : 'Add a valid price and saved amount'}</strong></div><div class="ns-list-track" aria-hidden="true"><span class="ns-list-fill" style="width:${pct}%"></span></div><div class="ns-list-caption">${valid ? `${percent(actual)} set aside · ${amount(Math.max(0, graphDifference(price, saved)), money, esc)} remaining${targetNote(plan.date, Math.max(0, graphDifference(price, saved)), money, esc, today)}` : 'No progress can be calculated.'}</div></div>`;
   }).join('')}</div><div class="ns-graph-foot"><span>${plans.length > shown.length ? `Showing ${shown.length} of ${plans.length} open plans. ` : ''}Postponed, cancelled, purchased, and expense-linked plans are excluded. Bars cap at 100%; amounts are not bank-verified funds.</span></div></section>`;
 }
 

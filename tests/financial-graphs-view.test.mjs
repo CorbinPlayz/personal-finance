@@ -194,3 +194,14 @@ test('scenario result marks the goal end date on the chart', () => {
   assert.match(html, /your end date/);
   assert.match(renderScenarioResult({ ...goal, dueDate: '' }, ['50', ''], money, esc, today), /--columns:4/);
 });
+
+test('purchase plan graph shows the target date, days left and a monthly pace', () => {
+  const today = new Date(2026, 10, 20);
+  const plan = { id: 'p', name: 'Laptop', status: 'Saving', priority: 'High', price: 1200, saved: 200, date: '2027-02-20' };
+  const html = renderPurchaseGraph([plan], new Set(), money, esc, today);
+  assert.match(html, /data-target-note/);
+  assert.match(html, /target Feb 20, 2027 \(92 days left\)/);
+  assert.match(html, /about .*333\.33.* \/ month/);
+  assert.match(renderPurchaseGraph([{ ...plan, date: '2026-11-01' }], new Set(), money, esc, today), /passed 19 days ago/);
+  assert.doesNotMatch(renderPurchaseGraph([{ ...plan, date: '' }], new Set(), money, esc, today), /data-target-note/);
+});
