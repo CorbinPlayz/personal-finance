@@ -164,14 +164,10 @@ test('passphrase protection cannot be turned on', () => {
   assert.match(html, /if\(!active\)return '';/);
 });
 
-test('Jarvis uses the hosted AI by default, unless the user disconnected it', () => {
+test('Jarvis only offers the free hosted AI, on by default, with no key fields', () => {
   const html = require('node:fs').readFileSync(__dirname + '/../index.html', 'utf8');
-  assert.match(html, /var CONN_DEFAULT = \{ provider: 'northstar'[^}]*key: 'hosted'[^}]*enabled: true, hostedOff: false \}/);
-  assert.match(html, /!c\.hostedOff/);
-  assert.equal((html.match(/conn\.hostedOff = true/g) || []).length, 2);
-});
-
-test('an old switched-off key setup is moved to the hosted AI, but a deliberate hosted off stays off', () => {
-  const html = require('node:fs').readFileSync(__dirname + '/../index.html', 'utf8');
-  assert.match(html, /if \(raw && !c\.enabled && !c\.hostedOff && !connStorageWarning && \(!c\.key \|\| c\.provider !== 'northstar'\)\)/);
+  assert.match(html, /var CONN_DEFAULT = \{ provider: 'northstar'[^}]*key: 'hosted'[^}]*enabled: true \}/);
+  assert.match(html, /var legacy = !!raw && \(c\.provider !== 'northstar'/);
+  for (const gone of ['gemini', 'Gemini', 'groq', 'openrouter', 'api.openai.com', 'api.anthropic.com', 'id="nsjKey"', 'id="nsjProvider"', 'id="nsjClear"']) assert.ok(!html.includes(gone), gone + ' should be removed');
+  assert.match(html, /<b>SMART ANSWERS<\/b>/);
 });

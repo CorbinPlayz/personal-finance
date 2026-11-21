@@ -73,15 +73,15 @@ test('assistant status distinguishes local answers from a provider request', () 
   });
   vm.runInContext(section('  function refreshStatus() {', '\n  function addMsg('), context);
   context.refreshStatus();
-  assert.equal(footnote.textContent, 'Assistant answers run locally');
+  assert.match(footnote.textContent, /Smart answers are off/);
   context.connReady = () => true;
   context.refreshStatus();
-  assert.match(footnote.textContent, /Cloud is on but has not yet succeeded/);
-  assert.match(footnote.textContent, /key sent to provider when used/);
+  assert.match(footnote.textContent, /Smart answers are on/);
+  assert.match(footnote.textContent, /sign in with Google/);
   context.cloudVerified = true;
   context.refreshStatus();
-  assert.match(footnote.textContent, /Cloud reply verified/);
-  assert.match(html, /separate from workspace protection/);
+  assert.match(footnote.textContent, /Smart answers are working/);
+  assert.match(html, /Needs Google sign-in/);
   assert.doesNotMatch(html, /nothing leaves this device|BYOK key stays in this browser/);
 });
 
