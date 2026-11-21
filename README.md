@@ -122,3 +122,6 @@ Northstar stores a signed-in user's data at:
 `users/{signed-in-user-uid}/northstar/financeData`
 
 The Firebase configuration inside `index.html` is public web-app configuration, not admin credentials. Never place service-account credentials or private API keys in a browser app. Authentication and properly published Firestore rules remain necessary even when passphrase protection is enabled.
+
+- **Money split**: in Settings, tick the accounts and percents (must total 100) that new income is divided across. Adding income asks Split / Don't split / Edit split first; pieces always add up to the exact amount (`split.mjs`).
+- **Undo after delete**, richer sounds with a volume slider, count-up and grow-in page motion, a goal end date on the savings scenario chart, and target date, days left and monthly pace on the Plan graph.

@@ -137,3 +137,13 @@ test('undo after delete only restores when nothing else changed, and sounds are 
   assert.match(html, /coin: function/);
   assert.match(html, /id="fxVolume"/);
 });
+
+test('money split is wired: asks first, only for new income, and is blocked unless it adds to 100', () => {
+  const html = require('node:fs').readFileSync(__dirname + '/../index.html', 'utf8');
+  assert.match(html, /import \{ validateSplit, cleanSplit, activeSplit, splitAmount \} from '\.\/split\.mjs'/);
+  assert.match(html, /if\(modalState\?\.kind==='transaction'&&!modalState\.id&&!modalState\.splitChoice\)/);
+  assert.match(html, /fd\.get\('type'\)==='Income'&&parts/);
+  assert.match(html, /modalState\.splitChoice==='split'&&!oldId&&tx\.type==='Income'/);
+  assert.match(html, /if\(problem\)\{err\.textContent=problem/);
+  assert.match(html, /value:'split'[\s\S]*value:'whole'[\s\S]*value:'edit'/);
+});

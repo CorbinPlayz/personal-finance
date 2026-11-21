@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { cleanRecurring } from '../recurring.mjs';
+import { cleanSplit } from '../split.mjs';
 import { renderCashFlowGraph, renderCategoryGraph, renderTransactionGraph, renderAccountGraph,
   renderBudgetGraph, renderGoalGraph, renderPurchaseGraph, renderWorkspaceCountGraph, renderGuideProfileGraph, renderPriceChecksGraph, renderScenarioPanel, renderScenarioResult } from '../financial-graphs-view.mjs';
 
@@ -141,7 +142,7 @@ test('normalization preserves an absent imported buffer without changing the Gui
     assert.ok(first >= 0 && last > first);
     return html.slice(first, last);
   };
-  const context = vm.createContext({ cleanRecurring, blankData: () => ({ settings: { profile: { monthlyIncome: '', essentialBills: '', cushion: '250' } } }) });
+  const context = vm.createContext({ cleanRecurring, cleanSplit, blankData: () => ({ settings: { profile: { monthlyIncome: '', essentialBills: '', cushion: '250' } } }) });
   vm.runInContext(`${between('function normalizeData(input){', 'function migrateSimpleTransactions(')}\n${between('function getGuideProfile(){', 'function safePriceHistory(')}`, context);
   const source = { accounts: [], settings: { profile: { monthlyIncome: '2000', essentialBills: '1200' } } };
   const before = JSON.stringify(source);
