@@ -156,3 +156,10 @@ test('Jarvis can use the hosted Cloudflare AI with a Firebase token and a richer
   assert.match(html, /neededPerMonth/);
   assert.match(html, /typicalMonthlyBills/);
 });
+
+test('passphrase protection cannot be turned on', () => {
+  const html = require('node:fs').readFileSync(__dirname + '/../index.html', 'utf8');
+  assert.match(html, /const PASSPHRASE_SETUP_AVAILABLE=false;/);
+  assert.match(html, /if\(!PASSPHRASE_SETUP_AVAILABLE\)\{showToast\('Passphrase protection is no longer available\.'\);return\}/);
+  assert.match(html, /if\(!active\)return '';/);
+});

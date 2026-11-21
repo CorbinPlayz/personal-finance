@@ -2888,7 +2888,10 @@ function askVaultSetup(){
   setTimeout(()=>input.focus(),20);
  });
 }
+const PASSPHRASE_SETUP_AVAILABLE=false;
 async function enableVault(){
+ /* Passphrase protection is switched off in the app; full removal is planned for the next update. */
+ if(!PASSPHRASE_SETUP_AVAILABLE){showToast('Passphrase protection is no longer available.');return}
  if(vault.state!=='off'||!user||!fb||!cloudLoaded||lastSyncError){showToast('Connect Google and resolve cloud sync before enabling protection.');return}
  if(!window.isSecureContext||!crypto?.subtle||!navigator.locks?.request){showToast('Passphrase protection requires HTTPS, Web Crypto, and device-lock support in a modern browser.');return}
  const uid=user.uid,epoch=cloudEpoch;
