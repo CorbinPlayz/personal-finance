@@ -147,3 +147,12 @@ test('money split is wired: asks first, only for new income, and is blocked unle
   assert.match(html, /if\(problem\)\{err\.textContent=problem/);
   assert.match(html, /value:'split'[\s\S]*value:'whole'[\s\S]*value:'edit'/);
 });
+
+test('Jarvis can use the hosted Cloudflare AI with a Firebase token and a richer brief', () => {
+  const html = require('node:fs').readFileSync(__dirname + '/../index.html', 'utf8');
+  assert.match(html, /northstar: \{ label: 'Northstar hosted AI/);
+  assert.match(html, /'Authorization': 'Bearer ' \+ idToken/);
+  assert.match(html, /window\.NorthstarGetIdToken=async/);
+  assert.match(html, /neededPerMonth/);
+  assert.match(html, /typicalMonthlyBills/);
+});

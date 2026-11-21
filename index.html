@@ -2215,6 +2215,7 @@ function connectStocks(e){
  if(remember){stockKeyTried=value;data={...data,settings:{...data.settings,finnhubKey:value}};persist()}
  render();showToast(remember?'Connecting to Finnhub · key saved to your account':'Connecting to Finnhub · sign in with Google to save the key');
 }
+window.NorthstarGetIdToken=async()=>{const u=fb?.auth?.currentUser;if(!u)throw new Error('Sign in with Google to use the hosted AI.');return u.getIdToken()};
 let stockKeyTried='';
 function restoreStockKey(){try{const k=data.settings?.finnhubKey;if(typeof k!=='string'||!k||k===stockKeyTried||!user||!cloudLoaded||window.NorthstarVaultLocked||stockFeed.getState().hasKey)return;stockKeyTried=k;stockFeed.setKey(k)}catch(e){console.warn('Saved Finnhub key could not be restored.',e)}}
 function disconnectStocks(){if(!canEditStocks())return;stockFeed.disconnect();stockKeyTried='';if(data.settings?.finnhubKey){const{finnhubKey,...rest}=data.settings;data={...data,settings:rest};persist()}render();focusStockControl('#stockApiKey');showToast('Finnhub disconnected; saved key and prices cleared.')}
@@ -4246,7 +4247,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
       return {
         name: g.name || 'Untitled goal', target: num(g.target), saved: num(g.saved),
         pct: num(g.target) > 0 ? (num(g.saved) / num(g.target)) * 100 : 0,
-        remaining: Math.max(0, num(g.target) - num(g.saved))
+        remaining: Math.max(0, num(g.target) - num(g.saved)), dueDate: g.dueDate || ''
       };
     });
 
@@ -4304,6 +4305,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   /* ---------------- connections: bring your own key ---------------- */
   var CONN_KEY = 'northstar-jarvis-conn-v1';
   var PROVIDERS = {
+    northstar: { label: 'Northstar hosted AI (free, no key)', model: 'glm-4.7-flash', url: 'https://northstar-finance-ai.camc-cf76.workers.dev/', help: 'runs on your Cloudflare account; sign in with Google' },
     gemini: { label: 'Google Gemini', model: 'gemini-2.5-flash-lite', url: 'https://generativelanguage.googleapis.com/v1beta/models/', help: 'aistudio.google.com' },
     openai: { label: 'OpenAI', model: 'gpt-4o-mini', url: 'https://api.openai.com/v1/chat/completions', help: 'platform.openai.com' },
     anthropic: { label: 'Anthropic', model: 'claude-haiku-4-5', url: 'https://api.anthropic.com/v1/messages', help: 'console.anthropic.com' },
@@ -4360,6 +4362,15 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   }
 
   function round(n) { return Math.round((num(n) + Number.EPSILON) * 100) / 100; }
+  function isoToday() { var t = new Date(); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); }
+  function monthsLeftUntil(dateText) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateText || ''));
+    if (!m) return null;
+    var end = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])), now = new Date(), start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (end.getMonth() !== Number(m[2]) - 1 || end <= start) return null;
+    var months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + (end.getDate() > start.getDate() ? 1 : 0);
+    return months >= 1 && months <= 120 ? months : null;
+  }
   function brief(s, opts) {
     opts = opts || {};
     if (!s || !s.cur) s = snapshot();
@@ -4387,15 +4398,38 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         return { category: b.category, limit: round(b.limit), spent: round(b.spent), pct: Math.round(b.pct) };
       }),
       goals: s.goals.slice(0, 6).map(function (g) {
-        return { name: g.name, target: round(g.target), saved: round(g.saved), pct: Math.round(g.pct) };
+        var item = { name: g.name, target: round(g.target), saved: round(g.saved), pct: Math.round(g.pct) };
+        var left = monthsLeftUntil(g.dueDate);
+        if (g.dueDate) { item.dueDate = g.dueDate; if (left !== null) { item.monthsLeft = left; item.neededPerMonth = round(Math.max(0, num(g.target) - num(g.saved)) / left); } }
+        return item;
       }),
       plannedPurchases: s.purchases.slice(0, 6).map(function (p) {
-        return { name: p.name, price: round(p.price), saved: round(p.saved), priority: p.priority };
+        var plan = { name: p.name, price: round(p.price), saved: round(p.saved), priority: p.priority };
+        if (p.date) { plan.targetDate = p.date; var pl = monthsLeftUntil(p.date); if (pl !== null) { plan.monthsLeft = pl; plan.neededPerMonth = round(Math.max(0, num(p.price) - num(p.saved)) / pl); } }
+        return plan;
       }),
       daysLeftInMonth: s.daysLeft,
       projectedSpend: round(s.projected)
     };
+    var rec = Array.isArray(d.recurring) ? d.recurring : [];
+    if (rec.length) {
+      var todayIso = isoToday(), monthly = { income: 0, expenses: 0 };
+      rec.forEach(function (r) {
+        var m = r.frequency === 'Weekly' ? num(r.amount) * 52 / 12 : r.frequency === 'Yearly' ? num(r.amount) / 12 : num(r.amount);
+        if (r.type === 'Income') monthly.income += m; else monthly.expenses += m;
+      });
+      out.recurring = {
+        count: rec.length, dueNow: rec.filter(function (r) { return r.nextDate && r.nextDate <= todayIso; }).length,
+        typicalMonthlyIncome: round(monthly.income), typicalMonthlyBills: round(monthly.expenses),
+        note: 'Recurring items are reminders; they only become transactions when the user posts them.'
+      };
+    }
+    var split = d.settings && d.settings.split;
+    if (split && split.enabled && Array.isArray(split.parts) && split.parts.length) out.incomeSplitEnabled = true;
     if (opts.includeTx) {
+      out.accountList = (d.accounts || []).slice(0, 12).map(function (a) { return { name: String(a.name || '').slice(0, 30), type: a.type, balance: round(a.balance), minimumBalance: round(a.minimumBalance) }; });
+      if (rec.length) out.recurringItems = rec.slice(0, 12).map(function (r) { return { description: String(r.description || '').slice(0, 30), type: r.type, amount: round(r.amount), frequency: r.frequency, nextDate: r.nextDate }; });
+      if (out.incomeSplitEnabled) out.incomeSplit = split.parts.map(function (p) { var a = (d.accounts || []).filter(function (x) { return x.id === p.accountId; })[0]; return { account: a ? String(a.name).slice(0, 30) : 'unknown', percent: p.percent }; });
       out.recentTransactions = (d.transactions || []).slice().sort(function (a, b) {
         return String(b.date || '').localeCompare(String(a.date || ''));
       }).slice(0, 8).map(function (t) {
@@ -4419,6 +4453,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
       '- If the brief lacks what you need, say exactly what is missing.\n' +
       '- Be concise: under 90 words unless asked for depth. No markdown headings, no bullet spam.\n' +
       '- Do the arithmetic you can do from the brief, and show the number.\n' +
+      '- Goals and plans may include dueDate, monthsLeft and neededPerMonth: use them to say whether the person is on track. Recurring bills and income are reminders until posted.\n' +
       '- Never treat combined tracked accounts as spendable cash. Ask for a specific funding account and note that minimums, purchase allocations, savings and future bills are not all in this brief.\n' +
       '- Never present regulated financial advice as certainty; be direct and practical anyway.\n' +
       '- Amounts are in ' + ((s.d && s.d.settings && s.d.settings.currency) || 'USD') + '.\n\n' +
@@ -4475,6 +4510,21 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     var maxTok = opts.maxTokens || 420;
 
     try {
+      if (conn.provider === 'northstar') {
+        var getToken = window.NorthstarGetIdToken;
+        if (typeof getToken !== 'function') throw new Error('Sign in with Google to use the hosted AI.');
+        var idToken = await getToken();
+        var nres = await fetch(PROVIDERS.northstar.url, {
+          method: 'POST', signal: ctrl.signal,
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+          body: JSON.stringify({ message: String(userText).slice(0, 2000), context: String(sys).slice(0, 6000) })
+        });
+        var nj = await nres.json().catch(function () { return null; });
+        if (!nres.ok) { var nerr = new Error((nj && nj.error) || ('Hosted AI error (' + nres.status + ')')); nerr.status = nres.status; throw nerr; }
+        var ntext = String(nj && nj.answer || '').trim();
+        if (!ntext) throw new Error('Empty response from the hosted AI');
+        return ntext;
+      }
       if (conn.provider === 'gemini') {
         var gurl = PROVIDERS.gemini.url + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key);
         var contents = turns.map(function (m) {
@@ -5196,6 +5246,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         var wasDefault = !conn.model || conn.model === (PROVIDERS[conn.provider] || {}).model;
         conn.provider = next; cloudVerified = false;
         if (wasDefault) conn.model = (PROVIDERS[next] || {}).model || '';
+        if (next === 'northstar') conn.key = 'hosted'; else if (conn.key === 'hosted') conn.key = '';
         saveConn(); paintSheet(); refreshStatus();
       });
       ['#nsjKey', '#nsjModel', '#nsjBase'].forEach(function (sel) {
