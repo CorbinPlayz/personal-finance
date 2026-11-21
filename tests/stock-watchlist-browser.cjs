@@ -20,7 +20,7 @@ const fixture = {
 };
 const firebase = {
   'firebase-app.js': 'export function getApps(){return []} export function initializeApp(){return {}}',
-  'firebase-auth.js': 'export function getAuth(){return {get currentUser(){return window.__mockCurrentUser??null}}} export function onAuthStateChanged(auth,cb){window.__authCallback=cb;cb(null)} export class GoogleAuthProvider{} export function getRedirectResult(){return Promise.resolve(null)}',
+  'firebase-auth.js': 'export function getAuth(){return {get currentUser(){return window.__mockCurrentUser??null}}} export function onAuthStateChanged(auth,cb){window.__authCallback=user=>{window.__mockCurrentUser=user?{uid:user.uid}:null;return cb(user)};cb(null)} export class GoogleAuthProvider{} export function getRedirectResult(){return Promise.resolve(null)}',
   'firebase-firestore.js': `export function getFirestore(){return {}} export function doc(){return {}}
     export async function getDocFromServer(){if(window.__mockReadError){const e=new Error('synthetic read failure');e.code=window.__mockReadError;throw e}const raw=window.__mockCloud??null;return {exists:()=>raw!==null,data:()=>raw}}
     export async function runTransaction(db,callback){if(window.__mockWriteError){const e=new Error('synthetic write failure');e.code=window.__mockWriteError;throw e}const raw=window.__mockCloud??null;let payload,options;
@@ -138,13 +138,28 @@ const server = http.createServer((req, res) => {
     updatedAt: Date.UTC(2026, 10, 15, 21, 12), schemaVersion: 1,
   });
   // Focus moves into a dialog on a short timer, and Escape is only heard from inside it, so wait for both before touching it.
-  const dialogOpen = async page => { await page.waitForSelector('#confirmRoot .confirm-dialog'); await page.waitForFunction(() => document.querySelector('#confirmRoot')?.contains(document.activeElement)); };
-  // The three "which copy to keep" dialogs ignore taps for their first half second (a double tap on the button that opened them must not land on a choice that replaces data).
-  // They mark themselves ready afterwards; every other dialog responds immediately, so this waits only for the guarded ones.
   const choose = async (page, index) => {
-    await page.waitForFunction(() => { const d = document.querySelector('#confirmRoot .confirm-dialog'); return !!d && (!d.classList.contains('confirm-dialog-choice') || d.dataset.ready === 'true'); });
+    await page.waitForSelector('#confirmRoot .confirm-dialog');
     await page.$eval(`#confirmRoot [data-confirm-index="${index}"]`, el => el.click());
   };
+  // The question that decides which copy to keep is a bar pinned to the bottom of the screen, not a pop-up. Its buttons ignore taps for
+  // 600 ms after it appears or opens, so a tap meant for something else cannot land on a choice that replaces data.
+  const pick = async (page, value) => {
+    await page.waitForFunction(() => !!document.querySelector('#syncChoiceBar:not(.is-collapsed)') && !document.querySelector('.app-shell').inert); await new Promise(resolve => setTimeout(resolve, 700));
+    await page.$eval(`#syncChoiceBar [data-value="${value}"]`, el => el.click());
+  };
+  // The first or the second button, whichever of the three questions is showing: they offer their two copies in the same order.
+  const pickAt = async (page, index) => {
+    await page.waitForSelector('#syncChoiceBar:not(.is-collapsed)');
+    await pick(page, await page.$$eval('#syncChoiceBar [data-action="answer-sync-choice"]', (buttons, index) => buttons[index].dataset.value, index));
+  };
+  // There is no pop-up to dismiss any more. A question nobody has answered is what "Decide later" used to leave behind: still waiting, nothing applied.
+  const unanswered = page => page.waitForFunction(() => !!document.querySelector('#syncChoiceBar') && !document.querySelector('.app-shell').inert);
+  const rects = page => page.evaluate(() => {
+    const box = selector => { const el = document.querySelector(selector); if (!el) return null; const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, width: r.width, height: r.height }; };
+    return { bar: box('#syncChoiceBar'), dock: box('#mobileDock'), orb: box('.nsj-orb'), toast: box('#toastRoot .toast'), scrollY: Math.round(scrollY), pageHeight: document.documentElement.scrollHeight };
+  });
+  const overlaps = (a, b) => !!a && !!b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
   try {
     await check('100 starters replace the dock Guide without creating prices or changing finance or Guide data', async () => {
       const page = await newPage(); const before = await page.evaluate(key => localStorage.getItem(key), ledgerKey);
@@ -320,9 +335,9 @@ const server = http.createServer((req, res) => {
       const data = { version: 1, accounts: [], transactions: [], budgets: [], goals: [], purchases: [], settings: { currency: 'USD', stockWatchlist: ['AAPL'] } };
       const page = await newPage({ data }); const localBefore = await page.evaluate(key => localStorage.getItem(key), ledgerKey);
       await page.evaluate(fixture => { window.__mockCloud = { data: fixture, updatedAt: 1 }; void window.__authCallback({ uid: 'alice', displayName: 'Synthetic user' }); }, fixture);
-      await page.waitForSelector('#confirmRoot .confirm-dialog');
-      assert.match(await text(page, '#confirmRoot'), /different finance data/i);
-      await choose(page, 2);
+      await page.waitForSelector('#syncChoiceBar');
+      assert.match(await text(page, '#syncChoiceBar'), /The two copies differ/i);
+      await unanswered(page);
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
       assert.deepEqual(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist), ['AAPL']);
       assert.equal(await page.evaluate(key => localStorage.getItem(key), ledgerKey), localBefore);
@@ -330,8 +345,8 @@ const server = http.createServer((req, res) => {
       assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
       // Retry and explicitly choose the device copy; only then is it uploaded.
       await page.evaluate(() => { void window.__authCallback({ uid: 'alice', displayName: 'Synthetic user' }); });
-      await page.waitForSelector('#confirmRoot .confirm-dialog');
-      await choose(page, 1);
+      await page.waitForSelector('#syncChoiceBar');
+      await pickAt(page, 1);
       await page.waitForFunction(() => window.__cloudWrites?.length === 1);
       assert.deepEqual(await page.evaluate(() => window.__cloudWrites[0].data.settings.stockWatchlist), ['AAPL']);
       assert.equal(await page.evaluate(key => localStorage.getItem(key), ledgerKey), localBefore);
@@ -346,9 +361,9 @@ const server = http.createServer((req, res) => {
         return { account, local: localStorage.getItem(key) };
       }, { device, key: ledgerKey });
       await page.evaluate(() => { window.__mockCloud = null; void window.__authCallback({ uid: 'alice', displayName: 'Synthetic user' }); });
-      await page.waitForSelector('#confirmRoot .confirm-dialog');
-      assert.match(await text(page, '#confirmRoot'), /different local and Google-account device copies/i);
-      await choose(page, 2);
+      await page.waitForSelector('#syncChoiceBar');
+      assert.match(await text(page, '#syncChoiceBar'), /different local and Google-account device copies/i);
+      await unanswered(page);
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
       assert.deepEqual(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist), []);
       assert.equal(await page.evaluate(() => localStorage.getItem('northstar-finance-v1:alice')), before.account);
@@ -363,9 +378,9 @@ const server = http.createServer((req, res) => {
       // A retry must still offer both device copies, including the edits to the
       // account copy, rather than silently selecting the previously deferred one.
       await page.evaluate(() => { void window.__authCallback({ uid: 'alice', displayName: 'Synthetic user' }); });
-      await page.waitForSelector('#confirmRoot .confirm-dialog');
-      assert.match(await text(page, '#confirmRoot'), /different local and Google-account device copies/i);
-      await choose(page, 2);
+      await page.waitForSelector('#syncChoiceBar');
+      assert.match(await text(page, '#syncChoiceBar'), /different local and Google-account device copies/i);
+      await unanswered(page);
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
       assert.deepEqual(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist), ['NVDA']);
       assert.equal(await page.evaluate(key => localStorage.getItem(key), ledgerKey), before.local);
@@ -379,9 +394,9 @@ const server = http.createServer((req, res) => {
         const page = await newPage({ data });
         const before = await page.evaluate(key => localStorage.getItem(key), ledgerKey);
         await page.evaluate(fixture => { window.__mockCloud = { data: fixture, updatedAt: 1 }; void window.__authCallback({ uid: 'alice' }); }, fixture);
-        await page.waitForSelector('#confirmRoot .confirm-dialog');
-        assert.match(await text(page, '#confirmRoot'), /different finance data/i);
-        await choose(page, 2);
+        await page.waitForSelector('#syncChoiceBar');
+        assert.match(await text(page, '#syncChoiceBar'), /The two copies differ/i);
+        await unanswered(page);
         await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
         assert.equal(await page.evaluate(key => localStorage.getItem(key), ledgerKey), before);
         assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
@@ -393,7 +408,7 @@ const server = http.createServer((req, res) => {
       const cloud = structuredClone(fixture); cloud.settings.stockWatchlist = ['MSFT'];
       await page.evaluate(cloud => { window.__mockCloud = { data: cloud, updatedAt: 1 }; void window.__authCallback({ uid: 'alice' }); }, cloud);
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert && window.NorthstarLedger()?.accounts.length === 1);
-      assert.equal(await page.$('#confirmRoot .confirm-dialog'), null);
+      assert.equal(await page.$('#syncChoiceBar'), null);
       assert.deepEqual(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist), ['MSFT']);
       assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
       await page.close();
@@ -403,9 +418,9 @@ const server = http.createServer((req, res) => {
       const page = await newPage();
       const guide = { version: 1, accounts: [], transactions: [], budgets: [], goals: [], purchases: [], settings: { profile: { notes: 'Account Guide only' } } };
       await page.evaluate(guide => { localStorage.setItem('northstar-finance-v1:alice', JSON.stringify(guide)); window.__mockCloud = null; void window.__authCallback({ uid: 'alice' }); }, guide);
-      await page.waitForSelector('#confirmRoot .confirm-dialog');
-      assert.match(await text(page, '#confirmRoot'), /different local and Google-account device copies/i);
-      await choose(page, 2);
+      await page.waitForSelector('#syncChoiceBar');
+      assert.match(await text(page, '#syncChoiceBar'), /different local and Google-account device copies/i);
+      await unanswered(page);
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
       assert.equal(await page.evaluate(() => window.NorthstarLedger().settings.profile.notes), 'Account Guide only');
       assert.deepEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).accounts, ledgerKey), fixture.accounts);
@@ -424,12 +439,12 @@ const server = http.createServer((req, res) => {
           window.__mockCloud = stage === 'cloud' ? { data: fixture, updatedAt: 1 } : null;
           void window.__authCallback({ uid: 'alice' });
         }, { stage, account, fixture });
-        await page.waitForSelector('#confirmRoot .confirm-dialog');
+        await page.waitForSelector('#syncChoiceBar');
         const newRaw = await page.evaluate(() => {
           const replacement = JSON.stringify({ version: 1, accounts: [], transactions: [], budgets: [], goals: [], purchases: [], settings: { stockWatchlist: ['NVDA'] } });
           localStorage.setItem('northstar-finance-v1:alice', replacement); return replacement;
         });
-        await choose(page, 1);
+        await pickAt(page, 1);
         await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
         assert.equal(await page.evaluate(() => localStorage.getItem('northstar-finance-v1:alice')), newRaw);
         assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
@@ -449,12 +464,12 @@ const server = http.createServer((req, res) => {
         localStorage.setItem('northstar-finance-v1:alice', JSON.stringify(account));
         window.__mockCloud = null; void window.__authCallback({ uid: 'alice' });
       }, account);
-      await page.waitForSelector('#confirmRoot .confirm-dialog');
+      await page.waitForSelector('#syncChoiceBar');
       await page.evaluate(({ initial, key }) => {
         const newer = structuredClone(initial); newer.settings.stockWatchlist = ['NVDA'];
         localStorage.setItem(key, JSON.stringify(newer));
       }, { initial, key: ledgerKey });
-      await choose(page, 1);
+      await pickAt(page, 1);
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
       assert.deepEqual(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist), []);
       assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
@@ -463,8 +478,8 @@ const server = http.createServer((req, res) => {
       // explicit choice without uploading the old AAPL snapshot.
       await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForFunction(() => window.NorthstarLedger?.() && window.__authCallback);
       await page.evaluate(() => { window.__mockCloud = null; void window.__authCallback({ uid: 'alice' }); });
-      await page.waitForSelector('#confirmRoot .confirm-dialog');
-      await choose(page, 1);
+      await page.waitForSelector('#syncChoiceBar');
+      await pickAt(page, 1);
       await page.waitForFunction(() => window.__cloudWrites?.length === 1 && !document.querySelector('.app-shell').inert);
       assert.deepEqual(await page.evaluate(() => window.__mockCloud.data.settings.stockWatchlist), ['NVDA']);
       await page.close();
@@ -524,8 +539,8 @@ const server = http.createServer((req, res) => {
           localStorage.setItem('northstar-finance-v1:alice', JSON.stringify(account));
           window.__mockCloud = { data: account, updatedAt: 1 }; void window.__authCallback({ uid: 'alice' });
         }, account);
-        await page.waitForSelector('#confirmRoot .confirm-dialog');
-        await choose(page, 2);
+        await page.waitForSelector('#syncChoiceBar');
+        await unanswered(page);
         await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
         await nav(page, 'Settings');
         if (action === 'clear') {
@@ -551,9 +566,9 @@ const server = http.createServer((req, res) => {
         assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
         // Retry must ask before either the clear/restore or the old cloud wins.
         await page.evaluate(() => { void window.__authCallback({ uid: 'alice' }); });
-        await page.waitForSelector('#confirmRoot .confirm-dialog');
-        assert.match(await text(page, '#confirmRoot'), /different finance data/i);
-        await choose(page, 1);
+        await page.waitForSelector('#syncChoiceBar');
+        assert.match(await text(page, '#syncChoiceBar'), /The two copies differ/i);
+        await pickAt(page, 1);
         await page.waitForFunction(() => window.__cloudWrites?.length === 1 && !document.querySelector('.app-shell').inert);
         assert.deepEqual(await page.evaluate(() => window.__mockCloud.data.accounts), []);
         assert.equal(await page.evaluate(() => window.__mockCloud.data.settings.stockWatchlist.length), 100);
@@ -767,6 +782,59 @@ const server = http.createServer((req, res) => {
       await page.close();
     });
 
+    await check('a protected workspace and a different protected cloud copy ask in the bar, upload only what is chosen, and never apply a stale answer', async () => {
+      // The cloud copy is encrypted with this workspace's own passphrase key but holds other data, so the only thing in the way is the choice.
+      const otherEnvelope = (page, raw) => page.evaluate(async ({ raw, other }) => {
+        const { deriveVaultKey, encryptLedger } = await import('/personal-finance/vault-crypto.mjs');
+        const kdf = JSON.parse(raw).kdf; return encryptLedger(other, await deriveVaultKey('stock-test-passphrase', kdf), kdf);
+      }, { raw, other: differentCloudCopy().data });
+      const openAsked = async () => {
+        const opened = await openProtectedWorkspace();
+        await signIn(opened.page, { uid: opened.uid, cloud: await otherEnvelope(opened.page, opened.raw) });
+        await opened.page.waitForSelector('#syncChoiceBar'); return opened;
+      };
+
+      // The question is on screen as a bar, says nothing about either copy's contents, and changes nothing while it waits.
+      const first = await openAsked();
+      assert.equal(await first.page.$eval('#confirmRoot', el => el.innerHTML), '', 'no dialog was opened');
+      const bar = await text(first.page, '#syncChoiceBar');
+      assert.match(bar, /This device and your cloud contain different protected data\./);
+      assert.match(bar, /Neither copy changes until you choose\. Export a backup first if you might need both\. Nothing changes until you tap a button\./);
+      assert.doesNotMatch(bar, /Synthetic|Cloud payee|Cloud checking|stock-test-user/, 'a protected question shows nothing from either copy');
+      assert.deepEqual(await first.page.$$eval('#syncChoiceBar [data-action="answer-sync-choice"]', els => els.map(el => el.innerText)), ['Use cloud copy', 'Keep this device']);
+      assert.match(await first.page.$eval('#syncStatus', el => el.innerText), /^Protected sync conflict/);
+      assert.equal(await first.page.evaluate(() => window.__cloudWrites?.length || 0), 0);
+      assert.equal(await first.page.evaluate(uid => localStorage.getItem('northstar-vault-v1:' + uid), first.uid), first.raw, 'the protected device copy is untouched while the question waits');
+      // "Use cloud copy" puts the protected cloud copy on this device and uploads nothing.
+      await pick(first.page, 'cloud');
+      await first.page.waitForFunction(() => document.querySelector('#syncStatus')?.innerText === 'Protected cloud sync on' && !document.querySelector('.app-shell').inert);
+      assert.equal(await first.page.evaluate(() => window.NorthstarLedger().transactions.length), 3, 'the device now shows the cloud copy');
+      assert.equal(await first.page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'choosing the cloud copy uploads nothing');
+      assert.notEqual(await first.page.evaluate(uid => localStorage.getItem('northstar-vault-v1:' + uid), first.uid), first.raw, 'the device copy is now the cloud one');
+      assert.equal(await first.page.$('#syncChoiceBar'), null, 'answered, so the bar is gone');
+      await first.page.close();
+
+      // "Keep this device" uploads the protected device copy, and what reaches the account is still ciphertext.
+      const second = await openAsked();
+      await pick(second.page, 'local');
+      await second.page.waitForFunction(() => window.__cloudWrites?.length === 1 && document.querySelector('#syncStatus')?.innerText === 'Protected cloud sync on' && !document.querySelector('.app-shell').inert);
+      const uploaded = await second.page.evaluate(() => JSON.stringify(window.__mockCloud));
+      assert.match(uploaded, /"format"/); assert.doesNotMatch(uploaded, /Synthetic|SYNT|Cloud payee|browser-test-only-key/, 'what reached the account is encrypted');
+      assert.equal(await second.page.evaluate(() => window.NorthstarLedger().transactions.length), 1, 'the device copy was kept');
+      await second.page.close();
+
+      // An edit made on this device while the question waits cancels the answer: the bar asks again and nothing is uploaded.
+      const third = await openAsked();
+      await addTicker(third.page, 'synt');
+      await pick(third.page, 'local');
+      await third.page.waitForFunction(() => [...document.querySelectorAll('#toastRoot .toast')].some(el => /^.?\s*That question changed since you looked, so nothing was applied\./.test(el.innerText.trim())) && !document.querySelector('.app-shell').inert);
+      assert.equal(await third.page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'a stale answer uploads nothing');
+      assert.deepEqual(await third.page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist.slice(-1)), ['SYNT'], 'the edit made while the question waited is still there');
+      await third.page.waitForSelector('#syncChoiceBar');
+      assert.equal(await third.page.evaluate(() => window.__cloudWrites?.length || 0), 0);
+      await third.page.close();
+    });
+
     await check('watchlist controls and rows fit narrow phones, tablet, and desktop with accessible targets', async () => {
       for (const [width, height, mobile] of [[320, 568, true], [390, 844, true], [768, 1024, true], [1440, 900, false]]) {
         const page = await newPage({ width, height, mobile }); await nav(page, 'Stocks');
@@ -782,224 +850,261 @@ const server = http.createServer((req, res) => {
       }
     });
 
-    await check('a different cloud copy asks which data to keep, describing both; early taps are ignored; deferring leaves the question on the page, which answers it; each choice does what it says', async () => {
+    await check('a different cloud copy asks which data to keep in a bar on the screen, describing both; early taps are ignored; Later and Open only change how it is shown; each choice does what it says', async () => {
       const page = await newPage(); await nav(page, 'Stocks'); // the device holds the synthetic fixture
       await signIn(page, { cloud: differentCloudCopy() });
-      await dialogOpen(page);
-      // A double tap on the button that opened the dialog must not land on a choice that replaces data, or close the dialog.
-      assert.equal(await page.evaluate(() => { document.querySelector('#confirmRoot [data-confirm-index="0"]').click(); return !!document.querySelector('#confirmRoot .confirm-dialog'); }), true, 'an immediate tap on a choice is ignored');
-      assert.equal(await page.evaluate(() => { document.querySelector('#confirmRoot .confirm-backdrop').click(); return !!document.querySelector('#confirmRoot .confirm-dialog'); }), true, 'an immediate tap outside is ignored');
+      await page.waitForSelector('#syncChoiceBar');
+      // It is not a pop-up: nothing dims the page, nothing is blocked, and there is no overlay that could fail to paint.
+      assert.equal(await page.$eval('#confirmRoot', el => el.innerHTML), '', 'no dialog was opened');
+      assert.equal(await page.evaluate(() => [document.querySelector('.app-shell').inert, document.querySelector('#mobileDock').inert]).then(list => list.join()), 'false,false', 'the page and the tab bar stay usable');
+      // A tap meant for something else cannot land on a choice that replaces data in the moments after the bar appears.
+      assert.equal(await page.evaluate(() => { document.querySelector('#syncChoiceBar [data-value="cloud"]').click(); return !!document.querySelector('#syncChoiceBar'); }), true, 'an immediate tap on a choice is ignored');
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:local')).transactions.length), 1, 'the device copy was not replaced by it');
       assert.equal(await page.evaluate(() => (window.__cloudWrites?.length || 0) + (window.__mockCloud.data.transactions.length === 3 ? 0 : 1)), 0, 'the cloud copy was not replaced by it');
-      // Keyboard and screen-reader users start on the one choice that changes nothing, so a stray Enter or Space cannot replace data.
-      assert.equal(await page.evaluate(() => document.activeElement?.innerText), 'Decide later', 'initial focus is on Decide later');
-      const dialog = await text(page, '#confirmRoot .confirm-dialog');
-      assert.match(dialog, /Choose which data to keep/);
-      assert.match(dialog, /This browser has 1 transaction, 1 account, 1 budget, 1 goal, 1 planned purchase\./);
-      assert.match(dialog, /Your Google account has 3 transactions, 2 accounts \(last saved [^)]*\d[^)]*\)\./);
-      assert.doesNotMatch(dialog, /Synthetic|Cloud payee|Cloud checking|432/, 'the dialog shows counts only, never names or amounts');
-      assert.match(dialog, /export a backup from Settings/);
-      // After its first half second a tap outside leaves the dialog, so an overlay that cannot be seen can never hold the page. It is the same as Decide later.
-      await page.waitForSelector('#confirmRoot .confirm-dialog[data-ready="true"]');
-      await page.$eval('#confirmRoot .confirm-backdrop', el => el.click());
-      await waitForSaveTone(page, 'warn');
+      const bar = await text(page, '#syncChoiceBar');
+      assert.match(bar, /Which copy should Northstar keep\?/);
+      assert.match(bar, /The two copies differ\. This browser has 1 transaction, 1 account, 1 budget, 1 goal, 1 planned purchase\./);
+      assert.match(bar, /Your Google account has 3 transactions, 2 accounts \(last saved [^)]*\d[^)]*\)\./);
+      assert.doesNotMatch(bar, /Synthetic|Cloud payee|Cloud checking|432/, 'the bar shows counts only, never names or amounts');
+      assert.match(bar, /Use cloud copy replaces this device’s data with your account’s\. Keep this device replaces your account’s data with this device’s\. Not sure\? Tap Later, then use Export backup in Settings\./);
+      assert.match(bar, /Nothing changes until you tap a button\./);
+      assert.doesNotMatch(bar, /Decide later/, 'there is no pop-up to dismiss, so nothing is called Decide later');
+      assert.deepEqual(await page.$$eval('#syncChoiceBar [data-action="answer-sync-choice"]', els => els.map(el => el.innerText)), ['Use cloud copy', 'Keep this device']);
+      await screenshot(page, 'bar-open-390');
+      // The header, the notice and the Stocks line say the same thing; no toast pretends the visitor deferred anything.
       let line = await saveLine(page);
       assert.equal(line.text, 'Saved on this device only. Cloud sync is waiting for you to choose which data to keep (northstar/conflict). Choose which data to keep');
       assert.equal(line.link, true);
-      assert.match(await toastText(page), /^Choice deferred\. Nothing was changed\. Tap Choose which data to keep/);
-      await page.evaluate(() => { document.querySelector('#toastRoot')?.replaceChildren(); document.querySelector('#stockSaveStatus').scrollIntoView({ block: 'center' }); });
-      await screenshot(page, 'choice-stocks-line-390');
-      await page.evaluate(() => scrollTo(0, 0)); await screenshot(page, 'choice-banner-390');
+      assert.equal(await page.$('#toastRoot .toast'), null, 'no toast');
+      const header = await page.$eval('#syncStatus', el => ({ text: el.innerText, err: el.classList.contains('err') }));
+      assert.match(header.text, /^Sync conflict · action needed/); assert.equal(header.err, true);
+      const notice = await page.$eval('#syncIssueRoot', el => ({ text: el.innerText, action: el.querySelector('[data-action="choose-sync-data"]')?.innerText }));
+      assert.equal(notice.action, 'Choose which data to keep'); assert.match(notice.text, /northstar\/conflict/);
       assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'nothing was uploaded');
-      assert.equal(await page.evaluate(() => window.__mockCloud.data.transactions.length), 3, 'the cloud copy is untouched');
       assert.equal(await page.evaluate(() => window.NorthstarLedger().transactions.length), 1, 'the device copy is untouched');
-      // The notice under the header and the Stocks line take you to the question on the Settings page.
-      const banner = await page.$eval('#syncIssueRoot', el => ({ text: el.innerText, action: el.querySelector('[data-action="choose-sync-data"]')?.innerText }));
-      assert.equal(banner.action, 'Choose which data to keep'); assert.match(banner.text, /northstar\/conflict/);
+
+      // Later shrinks it to a strip that stays pinned; the Stocks line (or the notice) brings it back. Neither decides anything.
+      await page.$eval('#syncChoiceBar [data-action="minimize-sync-choice"]', el => el.click());
+      await page.waitForSelector('#syncChoiceBar.is-collapsed');
+      assert.equal(await text(page, '#syncChoiceBar'), 'Choose which data to keep\nOpen');
+      assert.equal(await page.$('#syncChoiceBar [data-action="answer-sync-choice"]'), null, 'a strip cannot answer');
+      await screenshot(page, 'bar-collapsed-390');
       await page.$eval('.stock-save-link', el => el.click());
-      await page.waitForSelector('#syncChoiceCard');
-      assert.equal(await page.evaluate(() => document.activeElement?.id), 'syncChoiceCard', 'the question takes focus');
-      const card = await text(page, '#syncChoiceCard');
-      assert.match(card, /Which copy should Northstar keep\?/);
-      assert.match(card, /This browser has 1 transaction, 1 account, 1 budget, 1 goal, 1 planned purchase\./);
-      assert.match(card, /Your Google account has 3 transactions, 2 accounts \(last saved [^)]*\d[^)]*\)\./);
-      assert.doesNotMatch(card, /Synthetic|Cloud payee|Cloud checking|432/, 'counts only, never names or amounts');
-      assert.deepEqual(await page.$$eval('#syncChoiceCard [data-action="answer-sync-choice"]', els => els.map(el => el.innerText)), ['Use cloud copy', 'Keep this device']);
-      assert.match(card, /Nothing changes until you tap a button\./);
-      assert.doesNotMatch(card, /Decide later/);
-      // One way to answer at a time: no second "Retry" button beside the question.
-      assert.equal(await page.$('#content [data-action="retry-sync"]'), null);
-      assert.equal(await page.$('#syncDiagnosticsPanel [data-action="choose-sync-data"]'), null);
-      // A double tap on the Stocks link cannot land on the question's buttons.
-      assert.equal(await page.evaluate(() => { document.querySelector('#syncChoiceCard [data-value="cloud"]').click(); return !!document.querySelector('#syncChoiceCard'); }), true, 'an immediate tap on the question is ignored');
-      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:local')).transactions.length), 1, 'the device copy was not replaced by it');
-      await screenshot(page, 'choice-card-390');
-      // Settings says what is going on instead of describing a different kind of conflict.
-      let panel = await text(page, '#syncDiagnosticsPanel');
-      assert.match(panel, /Sync is waiting for your choice\./);
-      assert.match(panel, /saved on this device only/);
-      assert.doesNotMatch(panel, /Retry cloud sync/);
+      await page.waitForSelector('#syncChoiceBar:not(.is-collapsed)');
+      assert.equal(await page.evaluate(() => document.activeElement?.id), 'syncChoiceBar', 'the question takes focus without moving the page');
+      await page.$eval('#syncChoiceBar [data-action="minimize-sync-choice"]', el => el.click()); await page.waitForSelector('#syncChoiceBar.is-collapsed');
+      await page.$eval('#syncIssueRoot [data-action="choose-sync-data"]', el => el.click());
+      await page.waitForSelector('#syncChoiceBar:not(.is-collapsed)');
+      await page.$eval('#syncChoiceBar [data-action="minimize-sync-choice"]', el => el.click()); await page.waitForSelector('#syncChoiceBar.is-collapsed');
+      await page.$eval('#syncChoiceBar [data-action="expand-sync-choice"]', el => el.click());
+      await page.waitForSelector('#syncChoiceBar:not(.is-collapsed)');
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'shrinking and opening uploaded nothing');
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:local')).transactions.length), 1);
+      // Settings has its own button too, and it does the same.
+      await nav(page, 'Settings');
+      assert.equal(await page.$eval('#content .settings-layout > .panel:first-child [data-action="choose-sync-data"]', el => el.innerText), 'Choose which data to keep', 'the account section keeps its own button');
+      assert.equal(await page.$eval('#syncDiagnosticsPanel [data-action="choose-sync-data"]', el => el.innerText), 'Choose which data to keep', 'and so does the diagnostics panel');
+      assert.equal(await page.$('#content [data-action="retry-sync"]'), null, 'a choice is not a retry');
+      assert.ok(await page.$('#syncChoiceBar'), 'the bar followed the visitor to Settings');
+      const panel = await text(page, '#syncDiagnosticsPanel');
+      assert.match(panel, /Sync is waiting for your choice\./); assert.match(panel, /Answer in the bar at the bottom of the screen/); assert.match(panel, /saved on this device only/);
       assert.doesNotMatch(panel, /changed the cloud document after this device loaded it, so nothing was overwritten/);
-      await page.evaluate(() => document.querySelector('#syncDiagnosticsPanel').scrollIntoView()); await screenshot(page, 'choice-settings-panel-390');
       // The access check proves the read works, but the header must not claim that sync is fine.
       await page.$eval('[data-action="check-cloud-access"]', el => el.click());
       await page.waitForFunction(() => /Read access confirmed/.test(document.querySelector('#syncDiagnosticsPanel')?.innerText || '') && !document.querySelector('.app-shell').inert);
-      const header = await page.$eval('#syncStatus', el => ({ text: el.innerText, err: el.classList.contains('err') }));
-      assert.match(header.text, /^Sync conflict · action needed/); assert.equal(header.err, true); assert.doesNotMatch(header.text, /confirmed/i);
+      const checked = await page.$eval('#syncStatus', el => ({ text: el.innerText, err: el.classList.contains('err') }));
+      assert.match(checked.text, /^Sync conflict · action needed/); assert.equal(checked.err, true); assert.doesNotMatch(checked.text, /confirmed/i);
       assert.match(await toastText(page), /Tap Choose which data to keep to finish syncing\.$/);
+      await page.waitForSelector('#syncChoiceBar:not(.is-collapsed)');
       assert.match(await text(page, '#syncIssueRoot'), /northstar\/conflict/, 'the access check did not clear the conflict');
-      assert.ok(await page.$('#syncChoiceCard'), 'the question is still waiting');
-      // "Use cloud copy" from the page resolves it without uploading, through the same code the dialog uses and without opening a dialog.
+      assert.equal(await page.evaluate(() => (window.__cloudWrites?.length || 0)), 0);
+
+      // "Use cloud copy" resolves it without uploading, through the same code a pop-up would have used, and without opening any dialog.
       await page.evaluate(() => { window.__dialogsOpened = 0; new MutationObserver(records => { for (const record of records) for (const node of record.addedNodes) if (node.querySelector?.('.confirm-dialog')) window.__dialogsOpened++; }).observe(document.querySelector('#confirmRoot'), { childList: true, subtree: true }); });
-      await new Promise(resolve => setTimeout(resolve, 700));
-      await page.$eval('#syncChoiceCard [data-value="cloud"]', el => el.click());
+      await pick(page, 'cloud');
       await page.waitForFunction(() => document.querySelector('#syncStatus')?.innerText === 'Cloud sync on' && !document.querySelector('.app-shell').inert);
       assert.equal(await page.evaluate(() => window.NorthstarLedger().transactions.length), 3, 'the device now shows the cloud copy');
       assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'choosing the cloud copy uploads nothing');
       assert.equal(await page.evaluate(() => window.__dialogsOpened), 0, 'no dialog was needed');
-      assert.equal(await page.$('#syncChoiceCard'), null, 'the question is gone once it is answered');
+      assert.equal(await page.$('#syncChoiceBar'), null, 'the question is gone once it is answered');
+      assert.equal(await page.evaluate(() => document.body.classList.contains('has-sync-choice-bar')), false, 'and the page, the toast and the assistant button take their room back');
       assert.equal(await page.$('#syncIssueRoot .sync-issue-bar'), null, 'the notice is gone once sync is confirmed');
       await nav(page, 'Stocks'); line = await saveLine(page); assert.equal(line.tone, 'neutral'); assert.match(line.text, /^Showing the starter list\./);
       await page.close();
 
-      // "Keep this device" uploads this device's copy and the line then confirms the saved list. This time the dialog answers directly.
+      // "Keep this device" uploads this device's copy and the line then confirms the saved list.
       const second = await newPage(); await nav(second, 'Stocks');
       await signIn(second, { cloud: differentCloudCopy() });
-      await dialogOpen(second);
-      await choose(second, 1);
+      await pick(second, 'local');
       await second.waitForFunction(() => window.__cloudWrites?.length >= 1 && document.querySelector('#syncStatus')?.innerText === 'Cloud sync on' && !document.querySelector('.app-shell').inert);
       assert.equal(await second.evaluate(() => window.__mockCloud.data.transactions.length), 1, 'the account now holds this device\'s copy');
+      assert.equal(await second.$('#syncChoiceBar'), null);
       await addTicker(second, 'synt');
       await second.waitForFunction(() => /^Saved to your Google account · confirmed/.test(document.querySelector('#stockSaveStatus')?.innerText.replace(/\s+/g, ' ') || ''));
       assert.equal(await second.evaluate(() => window.__mockCloud.data.settings.stockWatchlist.at(-1)), 'SYNT');
       await second.close();
-
-      // "Keep this device" from the question on the page does the same.
-      const third = await newPage(); await nav(third, 'Settings');
-      await signIn(third, { cloud: differentCloudCopy() });
-      await dialogOpen(third); await third.waitForSelector('#confirmRoot .confirm-dialog[data-ready="true"]');
-      await third.$eval('#confirmRoot .confirm-backdrop', el => el.click());
-      await third.waitForSelector('#syncChoiceCard');
-      await new Promise(resolve => setTimeout(resolve, 700));
-      await third.$eval('#syncChoiceCard [data-value="local"]', el => el.click());
-      await third.waitForFunction(() => window.__cloudWrites?.length >= 1 && document.querySelector('#syncStatus')?.innerText === 'Cloud sync on' && !document.querySelector('.app-shell').inert);
-      assert.equal(await third.evaluate(() => window.__mockCloud.data.transactions.length), 1, 'the account now holds this device\'s copy');
-      await third.close();
     });
 
-    await check('two different device copies ask which workspace to use, describe both, can be deferred, and are answered from the page', async () => {
+    await check('two different device copies ask which workspace to use in the bar, describe both, and are answered there', async () => {
       const page = await newPage(); await nav(page, 'Stocks'); // the local workspace is the synthetic fixture
       await page.evaluate(copy => localStorage.setItem('northstar-finance-v1:alice', JSON.stringify(copy)), differentCloudCopy().data); // the account's earlier device copy
       await signIn(page, { cloud: null });
-      await dialogOpen(page);
-      assert.equal(await page.evaluate(() => document.activeElement?.innerText), 'Decide later', 'initial focus is on Decide later');
-      const dialog = await text(page, '#confirmRoot .confirm-dialog');
-      assert.match(dialog, /Choose a device workspace/);
-      assert.match(dialog, /The Google-account copy has 3 transactions, 2 accounts\. The local workspace has 1 transaction, 1 account, 1 budget, 1 goal, 1 planned purchase\./);
-      assert.doesNotMatch(dialog, /Synthetic|Cloud payee|Cloud checking/, 'counts only');
-      assert.equal(await page.evaluate(() => { document.querySelector('#confirmRoot .confirm-backdrop').click(); return !!document.querySelector('#confirmRoot .confirm-dialog'); }), true, 'an immediate tap outside is ignored');
-      await page.waitForSelector('#confirmRoot .confirm-dialog[data-ready="true"]');
-      await page.$eval('#confirmRoot .confirm-backdrop', el => el.click()); // leaves the dialog, like Decide later
+      await page.waitForSelector('#syncChoiceBar');
+      assert.equal(await page.$eval('#confirmRoot', el => el.innerHTML), '', 'no dialog was opened');
       await waitForSaveTone(page, 'warn');
-      assert.match(await toastText(page), /^Choice deferred\. Showing the account device copy; your other copy was kept\./);
+      const bar = await text(page, '#syncChoiceBar');
+      assert.match(bar, /different local and Google-account device copies\. The Google-account copy has 3 transactions, 2 accounts\. The local workspace has 1 transaction, 1 account, 1 budget, 1 goal, 1 planned purchase\./);
+      assert.doesNotMatch(bar, /Synthetic|Cloud payee|Cloud checking/, 'counts only');
+      assert.match(bar, /The selected copy may replace the account’s device copy\. Cloud conflicts are checked next\./);
+      assert.deepEqual(await page.$$eval('#syncChoiceBar [data-action="answer-sync-choice"]', els => els.map(el => el.innerText)), ['Use account device copy', 'Use local workspace']);
+      assert.match(await toastText(page), /^Showing the account’s device copy until you choose\. Your other copy was kept\./, 'the toast says which copy is on screen meanwhile');
       assert.match((await saveLine(page)).text, /waiting for you to choose which data to keep \(northstar\/conflict\)\. Choose which data to keep$/);
       assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'nothing was uploaded');
-      await page.$eval('.stock-save-link', el => el.click());
-      await page.waitForSelector('#syncChoiceCard');
-      const card = await text(page, '#syncChoiceCard');
-      assert.match(card, /different local and Google-account device copies\. The Google-account copy has 3 transactions, 2 accounts\. The local workspace has 1 transaction/);
-      assert.doesNotMatch(card, /Synthetic|Cloud payee|Cloud checking/, 'counts only');
-      assert.deepEqual(await page.$$eval('#syncChoiceCard [data-action="answer-sync-choice"]', els => els.map(el => el.innerText)), ['Use account device copy', 'Use local workspace']);
-      await new Promise(resolve => setTimeout(resolve, 700));
-      await page.$eval('#syncChoiceCard [data-value="local"]', el => el.click()); // Use local workspace, then the cloud step runs
+      await pick(page, 'local'); // Use local workspace, then the cloud step runs
       await page.waitForFunction(() => document.querySelector('#syncStatus')?.innerText === 'Cloud sync on' && !document.querySelector('.app-shell').inert);
       assert.equal(await page.evaluate(() => window.__mockCloud.data.transactions.length), 1, 'the local workspace is what reached the account');
+      assert.equal(await page.$('#syncChoiceBar'), null);
       await page.close();
     });
 
-    await check('if the overlay cannot be seen at all, a tap gets out of it and the page still answers the question', async () => {
-      const page = await newPage(); await nav(page, 'Settings');
-      // Stands in for what iPhone Safari did: the dimmed backdrop painted, the dialog did not.
-      await page.addStyleTag({ content: '.confirm-dialog{visibility:hidden!important}' });
-      await signIn(page, { cloud: differentCloudCopy() });
-      await page.waitForSelector('#confirmRoot .confirm-dialog[data-ready="true"]');
-      assert.equal(await page.$eval('#confirmRoot .confirm-dialog', el => getComputedStyle(el).visibility), 'hidden');
-      assert.equal(await page.evaluate(() => document.querySelector('.app-shell').inert), true, 'the page is blocked behind it');
-      await page.$eval('#confirmRoot .confirm-backdrop', el => el.click()); // a blind tap
+    await check('the bar stays pinned to the bottom of the screen above the tab bar on a phone, a small phone and a desktop, however far the page is scrolled', async () => {
+      for (const [width, height, mobile] of [[390, 844, true], [320, 568, true], [1280, 800, false]]) {
+        const label = `${width}x${height}`;
+        const page = await newPage({ width, height, mobile }); await nav(page, 'Stocks'); // 100 starter rows: a page that really scrolls
+        await signIn(page, { cloud: differentCloudCopy() }); await page.waitForSelector('#syncChoiceBar');
+        const top = await rects(page);
+        assert.ok(top.pageHeight > height * 2, `${label}: the page is long enough to scroll`);
+        const { bar, dock } = top;
+        assert.equal(await page.$eval('#syncChoiceBar', el => getComputedStyle(el).position), 'fixed', `${label}: pinned to the screen, not to the page`);
+        assert.ok(bar.top >= 0 && bar.bottom <= height && bar.left >= 0 && bar.right <= width, `${label}: all of it is on screen ${JSON.stringify(bar)}`);
+        assert.ok(bar.bottom <= dock.top - 4 && bar.bottom >= dock.top - 40, `${label}: right above the tab bar, not floating (bar bottom ${bar.bottom}, dock top ${dock.top})`);
+        assert.ok(Math.abs((bar.left + bar.right) / 2 - width / 2) <= 1, `${label}: centred across the screen like the tab bar`);
+        assert.ok(bar.width <= dock.width + 1 && bar.width <= (mobile ? width - 20 : 520), `${label}: no wider than the tab bar (${bar.width} vs ${dock.width})`);
+        assert.ok(bar.bottom > height * 0.55, `${label}: in the lower part of the screen, not the middle`);
+        // A bar like this is for glancing at, so it must not take over the screen: the whole question (down to the last line) shows without scrolling inside it.
+        const fit = await page.$eval('#syncChoiceBar', el => ({ hidden: el.scrollHeight - el.clientHeight, height: el.getBoundingClientRect().height }));
+        assert.ok(fit.hidden <= 1, `${label}: every line is visible without scrolling inside the bar (${fit.hidden}px cut off)`);
+        const share = width < 400 && height < 600 ? 0.6 : 0.4;
+        assert.ok(fit.height <= height * share, `${label}: it covers at most ${share * 100}% of the screen (${Math.round(fit.height)}px of ${height}px)`);
+        assert.ok(!overlaps(bar, dock), `${label}: it does not cover the tab bar`);
+        assert.equal(await page.evaluate(() => document.elementFromPoint(innerWidth / 2, document.querySelector('#mobileDock').getBoundingClientRect().top + 20)?.closest('#mobileDock') !== null), true, `${label}: the tab bar still gets the taps over it`);
+        const buttons = await page.$$eval('#syncChoiceBar [data-action="answer-sync-choice"]', els => els.map(el => { const r = el.getBoundingClientRect(), b = document.querySelector('#syncChoiceBar').getBoundingClientRect(); return { label: el.innerText, height: r.height, inside: r.top >= b.top - 0.5 && r.bottom <= b.bottom + 0.5 && r.left >= b.left && r.right <= b.right }; }));
+        for (const b of buttons) assert.ok(b.height >= 44 && b.inside, `${label}: ${b.label} is reachable and at least 44px tall ${JSON.stringify(b)}`);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${label}: no sideways scroll`);
+        // It does not move with the page: the top, the middle and the very end of the page see it in exactly the same place.
+        for (const y of [0.5, 1]) {
+          await page.evaluate(fraction => scrollTo(0, (document.documentElement.scrollHeight - innerHeight) * fraction), y);
+          const moved = await rects(page);
+          assert.ok(moved.scrollY > 0, `${label}: the page did scroll`);
+          assert.ok(Math.abs(moved.bar.top - bar.top) < 1 && Math.abs(moved.bar.bottom - bar.bottom) < 1, `${label}: it stayed put at scroll ${moved.scrollY} (${moved.bar.top} vs ${bar.top})`);
+        }
+        // The end of the page can be scrolled clear of it, and the tab bar does not move.
+        const room = await page.evaluate(() => ({ padding: parseFloat(getComputedStyle(document.querySelector('.app-shell .content')).paddingBottom), bar: document.querySelector('#syncChoiceBar').offsetHeight, published: getComputedStyle(document.documentElement).getPropertyValue('--sync-choice-height').trim() }));
+        assert.ok(room.padding >= 118 + room.bar, `${label}: room under the page for the bar (${room.padding}px for a ${room.bar}px bar)`);
+        assert.equal(room.published, `${room.bar}px`, `${label}: the layout knows how tall the bar is`);
+        if (width === 390) await screenshot(page, 'bar-scrolled-390');
+        // A toast and the assistant button sit above the bar instead of under it.
+        await page.evaluate(() => scrollTo(0, 0)); await addTicker(page, 'synt'); await page.waitForSelector('#toastRoot .toast');
+        const lifted = await rects(page);
+        assert.ok(lifted.toast, `${label}: a toast showed`);
+        assert.ok(!overlaps(lifted.toast, lifted.bar) && lifted.toast.bottom <= lifted.bar.top + 1, `${label}: the toast is above the bar ${JSON.stringify([lifted.toast, lifted.bar])}`);
+        if (lifted.orb) assert.ok(!overlaps(lifted.orb, lifted.bar) && lifted.orb.bottom <= lifted.bar.top + 1, `${label}: the assistant button is above the bar ${JSON.stringify([lifted.orb, lifted.bar])}`);
+        else assert.fail(`${label}: the assistant button was not found, so it was not checked`);
+        await screenshot(page, `bar-with-toast-${width}`);
+        // Later keeps it pinned as a slim strip, and everything around it follows.
+        await page.evaluate(() => { document.querySelector('#toastRoot').innerHTML = ''; });
+        await page.$eval('#syncChoiceBar [data-action="minimize-sync-choice"]', el => el.click()); await page.waitForSelector('#syncChoiceBar.is-collapsed');
+        const strip = await rects(page);
+        assert.ok(strip.bar.height < 75 && strip.bar.bottom <= strip.dock.top - 4 && strip.bar.bottom >= strip.dock.top - 40, `${label}: a slim strip right above the tab bar ${JSON.stringify(strip.bar)}`);
+        assert.equal(await page.evaluate(() => document.querySelector('#syncChoiceBar').offsetHeight + 'px' === getComputedStyle(document.documentElement).getPropertyValue('--sync-choice-height').trim()), true, `${label}: the layout follows the strip`);
+        if (strip.orb) assert.ok(strip.orb.bottom <= strip.bar.top + 1, `${label}: the assistant button follows the strip down`);
+        await screenshot(page, `bar-strip-${width}`);
+        // The page stays usable with the question waiting: the tab bar still navigates and the bar goes along to the new page.
+        await nav(page, 'Overview'); assert.ok(await page.$('#syncChoiceBar'), `${label}: still there on the Home page`); await nav(page, 'Transactions'); assert.ok(await page.$('#syncChoiceBar'), `${label}: and on Transactions`);
+        assert.equal(await page.evaluate(() => document.querySelector('.app-shell').inert), false);
+        await page.close();
+      }
+    });
+
+    await check('a change made while the question waits cancels a stale answer, and the bar asks again', async () => {
+      const page = await newPage(); await nav(page, 'Stocks');
+      await signIn(page, { cloud: differentCloudCopy() }); await page.waitForSelector('#syncChoiceBar');
+      // The visitor changes a value on this device (no record is added or removed, so the counts in the question stay the same).
+      await nav(page, 'Settings');
+      await page.$eval('#currencySelect', el => { el.value = 'EUR'; el.dispatchEvent(new Event('change', { bubbles: true })); });
+      await page.waitForFunction(() => window.NorthstarLedger().settings.currency === 'EUR');
+      const before = await text(page, '#syncChoiceBar');
+      await pick(page, 'cloud');
       await page.waitForFunction(() => !document.querySelector('.app-shell').inert);
-      assert.equal(await page.$('#confirmRoot .confirm-dialog'), null, 'the overlay is gone');
-      await page.waitForSelector('#syncChoiceCard');
-      assert.match(await text(page, '#syncChoiceCard'), /Your Google account has 3 transactions/);
-      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'nothing was uploaded by getting out');
-      await page.evaluate(() => { window.__dialogsOpened = 0; new MutationObserver(records => { for (const record of records) for (const node of record.addedNodes) if (node.querySelector?.('.confirm-dialog')) window.__dialogsOpened++; }).observe(document.querySelector('#confirmRoot'), { childList: true, subtree: true }); });
-      await new Promise(resolve => setTimeout(resolve, 700));
-      await page.$eval('#syncChoiceCard [data-value="local"]', el => el.click());
-      await page.waitForFunction(() => window.__cloudWrites?.length >= 1 && document.querySelector('#syncStatus')?.innerText === 'Cloud sync on' && !document.querySelector('.app-shell').inert);
-      assert.equal(await page.evaluate(() => window.__mockCloud.data.transactions.length), 1, 'the account now holds this device\'s copy');
-      assert.equal(await page.evaluate(() => window.__dialogsOpened), 0, 'no overlay was needed to answer');
+      assert.match(await toastText(page), /^That question changed since you looked, so nothing was applied\./);
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:alice')).settings.currency), 'EUR', 'the edit on this device was not thrown away by a stale answer');
+      assert.equal(await page.evaluate(() => window.NorthstarLedger().transactions.length), 1, 'the device copy was not replaced');
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'nothing was uploaded');
+      await page.waitForSelector('#syncChoiceBar'); assert.equal(await text(page, '#syncChoiceBar'), before, 'the same question is asked again for the visitor to confirm');
+      // Answering the question as it stands now works.
+      await pick(page, 'cloud');
+      await page.waitForFunction(() => document.querySelector('#syncStatus')?.innerText === 'Cloud sync on' && !document.querySelector('.app-shell').inert);
+      assert.equal(await page.evaluate(() => window.NorthstarLedger().transactions.length), 3);
+      assert.equal(await page.$('#syncChoiceBar'), null);
       await page.close();
     });
 
-    await check('an answer given on the page is not applied if the copies changed since you looked', async () => {
+    await check('an answer given on the bar is not applied if the cloud copy changed since you looked, even when no count changed', async () => {
       const page = await newPage(); await nav(page, 'Settings');
-      await signIn(page, { cloud: differentCloudCopy() });
-      await dialogOpen(page); await page.waitForSelector('#confirmRoot .confirm-dialog[data-ready="true"]');
-      await page.$eval('#confirmRoot .confirm-backdrop', el => el.click());
-      await page.waitForSelector('#syncChoiceCard');
+      await signIn(page, { cloud: differentCloudCopy() }); await page.waitForSelector('#syncChoiceBar');
       // Another device saves in the meantime: the account now holds 4 transactions.
       await page.evaluate(() => { const extra = { id: 'cloud-tx-4', type: 'Expense', amount: 40, date: '2026-02-04', accountId: 'cloud-a', category: 'Food', description: 'Cloud payee 4' }; window.__mockCloud = { ...window.__mockCloud, data: { ...window.__mockCloud.data, transactions: [...window.__mockCloud.data.transactions, extra] }, updatedAt: Date.UTC(2026, 10, 16, 8, 30) }; });
-      await new Promise(resolve => setTimeout(resolve, 700));
-      await page.$eval('#syncChoiceCard [data-value="cloud"]', el => el.click());
-      await dialogOpen(page); // asked again with the new counts instead of being answered for you
-      assert.match(await text(page, '#confirmRoot .confirm-dialog'), /Your Google account has 4 transactions/);
+      await pick(page, 'cloud');
+      await page.waitForFunction(() => /Your Google account has 4 transactions/.test(document.querySelector('#syncChoiceBar')?.innerText || ''));
       assert.match(await toastText(page), /^That question changed since you looked, so nothing was applied\./);
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:local')).transactions.length), 1, 'the device copy is untouched');
       assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'nothing was uploaded');
-      await page.waitForSelector('#confirmRoot .confirm-dialog[data-ready="true"]');
-      await page.$eval('#confirmRoot .confirm-backdrop', el => el.click());
-      await page.waitForSelector('#syncChoiceCard');
-      assert.match(await text(page, '#syncChoiceCard'), /Your Google account has 4 transactions/, 'the page now shows the new counts');
+      assert.equal(await page.$eval('#confirmRoot', el => el.innerHTML), '', 'it did not turn into a pop-up');
+      // Neither the counts nor the saved time show everything: an amount in the account's copy is edited without a new save time (another client, or the Firebase console), and the number of records stays the same.
+      await page.evaluate(() => { document.querySelector('#toastRoot').innerHTML = ''; });
+      const askedAgain = await text(page, '#syncChoiceBar');
+      await page.evaluate(() => { const data = window.__mockCloud.data; window.__mockCloud = { ...window.__mockCloud, data: { ...data, transactions: data.transactions.map((tx, i) => (i === 0 ? { ...tx, amount: tx.amount + 1 } : tx)) } }; });
+      await pick(page, 'cloud');
+      await page.waitForFunction(() => !document.querySelector('.app-shell').inert && /^.?\s*That question changed since you looked, so nothing was applied\./.test(document.querySelector('#toastRoot .toast')?.innerText.trim() || ''));
+      assert.equal(await page.evaluate(() => window.NorthstarLedger().transactions.length), 1, 'an edit that changes no count still cancels the answer: the device copy was not replaced');
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'and nothing was uploaded');
+      await page.waitForSelector('#syncChoiceBar');
+      assert.equal(await text(page, '#syncChoiceBar'), askedAgain, 'the question reads the same, and is asked again for the visitor to confirm');
       await page.close();
     });
 
-    await check('dialogs paint from their first frame: no blur or entry animation of their own, a flat overlay for the three questions, the blurred backdrop kept elsewhere', async () => {
+    await check('signing out takes the question away and gives its room back, and signing in again asks it afresh', async () => {
+      const page = await newPage({ width: 390, height: 844, mobile: true }); await nav(page, 'Stocks');
+      await signIn(page, { cloud: differentCloudCopy() }); await page.waitForSelector('#syncChoiceBar');
+      assert.equal(await page.evaluate(() => document.body.classList.contains('has-sync-choice-bar')), true);
+      await page.evaluate(() => { window.__mockCurrentUser = null; void window.__authCallback(null); });
+      await page.waitForFunction(() => !document.querySelector('#syncChoiceBar') && !document.body.classList.contains('has-sync-choice-bar'));
+      assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--sync-choice-height').trim()), '', 'the page gets its room back');
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'signing out uploads nothing');
+      assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:local')).transactions.length), 1, 'the device copy is untouched');
+      await signIn(page, { cloud: differentCloudCopy() }); await page.waitForSelector('#syncChoiceBar:not(.is-collapsed)');
+      assert.match(await text(page, '#syncChoiceBar'), /The two copies differ\./, 'the same sign-in asks the same question again, open');
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
+      await page.close();
+    });
+
+    await check('dialogs paint from their first frame, with no blur or entry animation of their own, and the bar has nothing that could fail to paint', async () => {
       const page = await newPage(); await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
       await nav(page, 'Stocks');
-      // iPhone Safari painted the dimmed page but not the dialog, which had a blur of its own nested in the backdrop's and an entry animation that starts at opacity 0.
+      // iPhone Safari painted the dimmed page but not a dialog, which had a blur of its own nested in the backdrop's and an entry animation that starts at opacity 0.
       const inspect = () => page.evaluate(() => {
         const dialog = document.querySelector('#confirmRoot .confirm-dialog'), backdrop = document.querySelector('#confirmRoot .confirm-backdrop');
         const own = getComputedStyle(dialog), around = getComputedStyle(backdrop);
-        return { opacity: own.opacity, animation: own.animationName, blur: own.backdropFilter, running: dialog.getAnimations().length, background: own.backgroundColor, backdropBlur: around.backdropFilter, backdropAnimation: around.animationName, backdropBackground: around.backgroundColor };
+        return { opacity: own.opacity, animation: own.animationName, blur: own.backdropFilter, running: dialog.getAnimations().length, backdropBlur: around.backdropFilter };
       });
       await page.$eval('[data-action="stock-reset"]', el => el.click()); await page.waitForSelector('#confirmRoot .confirm-dialog');
       const ordinary = await inspect();
       assert.deepEqual({ opacity: ordinary.opacity, animation: ordinary.animation, blur: ordinary.blur, running: ordinary.running }, { opacity: '1', animation: 'none', blur: 'none', running: 0 }, JSON.stringify(ordinary));
       assert.match(ordinary.backdropBlur, /blur\(10px\)/, 'the glass look of the backdrop is kept');
       await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('#confirmRoot .confirm-dialog'));
-      await signIn(page, { cloud: differentCloudCopy() }); await page.waitForSelector('#confirmRoot .confirm-dialog');
-      const asked = await inspect();
-      assert.deepEqual({ opacity: asked.opacity, animation: asked.animation, blur: asked.blur, running: asked.running, background: asked.background }, { opacity: '1', animation: 'none', blur: 'none', running: 0, background: 'rgb(255, 255, 255)' }, JSON.stringify(asked));
-      assert.deepEqual({ blur: asked.backdropBlur, animation: asked.backdropAnimation, background: asked.backdropBackground }, { blur: 'none', animation: 'none', background: 'rgba(8, 8, 8, 0.62)' }, 'the three questions sit on a flat overlay');
-      await page.close();
-    });
-
-    await check('the choose-data dialog stays usable on the narrowest phone, and Escape still defers without uploading', async () => {
-      const page = await newPage({ width: 320, height: 568 }); await nav(page, 'Stocks');
-      await signIn(page, { cloud: differentCloudCopy() });
-      await dialogOpen(page);
-      const geometry = await page.evaluate(() => {
-        const dialog = document.querySelector('#confirmRoot .confirm-dialog'), box = dialog.getBoundingClientRect();
-        const buttons = [...dialog.querySelectorAll('[data-confirm-index]')].map(button => { button.scrollIntoView({ block: 'nearest' }); const r = button.getBoundingClientRect(); return { label: button.innerText, top: r.top, bottom: r.bottom, left: r.left, right: r.right, height: r.height }; });
-        return { overflowX: dialog.scrollWidth - dialog.clientWidth, within: box.left >= 0 && box.right <= innerWidth && box.bottom <= innerHeight, buttons, pageOverflow: document.documentElement.scrollWidth - innerWidth };
-      });
-      assert.deepEqual(geometry.buttons.map(b => b.label), ['Use cloud copy', 'Keep this device', 'Decide later']);
-      for (const b of geometry.buttons) { assert.ok(b.top >= 0 && b.bottom <= 568 && b.left >= 0 && b.right <= 320, `${b.label} can be reached on screen`); assert.ok(b.height >= 44, `${b.label} is at least 44px tall (${b.height}px)`); }
-      assert.ok(geometry.overflowX <= 1 && geometry.pageOverflow <= 1 && geometry.within, JSON.stringify(geometry));
-      await screenshot(page, 'choose-data-dialog-320');
-      await page.keyboard.press('Escape');
-      await waitForSaveTone(page, 'warn');
-      assert.match((await saveLine(page)).text, /waiting for you to choose which data to keep \(northstar\/conflict\)/);
-      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
+      await signIn(page, { cloud: differentCloudCopy() }); await page.waitForSelector('#syncChoiceBar');
+      const own = await page.$eval('#syncChoiceBar', el => { const s = getComputedStyle(el); return { position: s.position, blur: s.backdropFilter, animation: s.animationName, transition: s.transitionProperty, transform: s.transform, opacity: s.opacity, background: s.backgroundColor, running: el.getAnimations().length }; });
+      assert.deepEqual(own, { position: 'fixed', blur: 'none', animation: 'none', transition: 'all', transform: 'none', opacity: '1', background: 'rgb(255, 255, 255)', running: 0 }, 'a plain, opaque, fixed box');
       await page.close();
     });
 
@@ -1043,20 +1148,22 @@ const server = http.createServer((req, res) => {
       await page.close();
     });
 
-    await check('the choose-data dialog, the notice, the save line, the question on the page and the Settings panel pass scoped automated WCAG checks while sync waits for a choice', async () => {
+    await check('the question bar, the notice, the save line and the Settings panel pass scoped automated WCAG checks while sync waits for a choice', async () => {
       const page = await newPage({ width: 1000, height: 800, mobile: false }); await nav(page, 'Stocks');
       await page.addScriptTag({ path: axePath });
       const audit = (selector) => page.evaluate(async selector => {
         const result = await window.axe.run(document.querySelector(selector), { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } });
         return { selector, violations: result.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => ({ target: n.target, summary: n.failureSummary })) })) };
       }, selector);
-      await signIn(page, { cloud: differentCloudCopy() }); await dialogOpen(page);
-      const seen = [await audit('#confirmRoot .confirm-dialog')];
-      await choose(page, 2); await waitForSaveTone(page, 'warn');
+      await signIn(page, { cloud: differentCloudCopy() }); await page.waitForSelector('#syncChoiceBar'); await waitForSaveTone(page, 'warn');
+      const seen = [await audit('#syncChoiceBar')];
+      await page.$eval('#syncChoiceBar [data-action="minimize-sync-choice"]', el => el.click()); await page.waitForSelector('#syncChoiceBar.is-collapsed');
+      seen.push(await audit('#syncChoiceBar'));
+      await page.$eval('#syncChoiceBar [data-action="expand-sync-choice"]', el => el.click()); await page.waitForSelector('#syncChoiceBar:not(.is-collapsed)');
       seen.push(await audit('.stock-list-top'), await audit('#syncIssueRoot'));
-      await nav(page, 'Settings'); seen.push(await audit('#syncChoiceCard'), await audit('#syncDiagnosticsPanel'));
+      await nav(page, 'Settings'); seen.push(await audit('#syncDiagnosticsPanel'));
       for (const item of seen) assert.deepEqual(item.violations, [], `${item.selector}: ${JSON.stringify(item.violations, null, 2)}`);
-      assert.deepEqual(seen.map(item => item.selector), ['#confirmRoot .confirm-dialog', '.stock-list-top', '#syncIssueRoot', '#syncChoiceCard', '#syncDiagnosticsPanel']);
+      assert.deepEqual(seen.map(item => item.selector), ['#syncChoiceBar', '#syncChoiceBar', '.stock-list-top', '#syncIssueRoot', '#syncDiagnosticsPanel']);
       await page.close();
     });
 

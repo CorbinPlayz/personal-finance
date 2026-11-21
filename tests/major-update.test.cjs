@@ -44,7 +44,7 @@ test('Settings renders the major-update link with safe external-link attributes'
     pageHeading: title => `<h1>${title}</h1>`,
     renderVaultPanel: () => '',
     renderSyncIssuePanel: () => '',
-    renderSyncChoiceCard: () => '', syncChoiceReady: () => false, syncNeedsChoice: () => false,
+    syncNeedsChoice: () => false,
     renderWorkspaceCountGraph,
     options: () => '', fxVolumePercent: () => 55, renderSplitPanel: () => '',
     esc: value => String(value),

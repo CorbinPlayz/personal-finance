@@ -85,7 +85,6 @@
 .confirm-dialog-detail-icon{color:#141414;font-weight:800;flex-shrink:0}
 .confirm-dialog-actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:23px;padding-top:17px;border-top:1px solid #e4e4e4}
 .confirm-dialog-actions button{min-height:39px}
-.confirm-dialog-choice .confirm-dialog-actions button{min-height:46px}
 .confirm-dialog-actions .confirm-danger{background:#8f2f26;border-color:#8f2f26;color:#ffffff}
 .confirm-dialog-actions .confirm-danger:hover{background:#7f2a22}
 @keyframes confirmFadeIn{from{opacity:0}to{opacity:1}}
@@ -1543,16 +1542,23 @@ html.northstar-vault-locked #goalCelebrationRoot,html.northstar-vault-locked #to
 .confirm-backdrop{z-index:4000}.modal-backdrop{z-index:3500}
 /* iPhone Safari painted the dimmed page but not the dialog. The dialog had its own backdrop-filter nested inside the backdrop's, plus an entry animation that starts at opacity 0, a combination WebKit is known to leave unpainted. The backdrop already blurs the page and the dialog is 86-92% white, so the dialog needs neither. */
 .confirm-backdrop .confirm-dialog,.modal-backdrop .modal{-webkit-backdrop-filter:none;backdrop-filter:none;animation:none}
-/* The "which copy to keep" questions use the plainest overlay there is: a flat dim with no blur or animation, and an opaque card. */
-.confirm-backdrop.confirm-backdrop-plain{background:rgba(8,8,8,.62)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;animation:none!important}
-.confirm-backdrop-plain .confirm-dialog{background:#fff!important;border:1px solid #d9d9d9!important;box-shadow:0 10px 40px rgba(8,8,8,.4)!important}
-.sync-choice-card{margin:14px 0 4px;padding:15px;border:1px solid #cfcfcf;border-radius:13px;background:#fff;color:#262626}
-.sync-choice-card:focus{outline:2px solid #080808;outline-offset:2px}
-.sync-choice-card h3{margin:0 0 6px;font-size:15px;letter-spacing:-.2px;color:#080808}
-.sync-choice-card p{margin:0 0 10px;font-size:12px;line-height:1.65;color:#4d4d4d}
-.sync-choice-card p.form-hint{color:#666}
-.sync-choice-buttons{display:flex;flex-wrap:wrap;gap:9px;margin:12px 0}
-.sync-choice-buttons button{flex:1 1 150px;min-height:46px}
+/* The question that decides which copy to keep is a bar pinned to the bottom of the screen, above the tab bar, so it is in front
+   of the visitor on every page without scrolling. It is plain on purpose (no blur, no animation, no overlay) and never blocks the
+   page. syncChoiceLayout() sets --dock-height and --sync-choice-height. */
+.sync-choice-bar{position:fixed;left:0;right:0;margin:0 auto;box-sizing:border-box;z-index:55;width:min(440px,calc(100% - 24px));bottom:calc(var(--dock-height,67px) + 20px + env(safe-area-inset-bottom,0px));max-height:min(60vh,calc(100vh - var(--dock-height,67px) - 110px));max-height:min(60dvh,calc(100dvh - var(--dock-height,67px) - 110px - env(safe-area-inset-bottom,0px)));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:8px 14px 10px;background:#fff;color:#262626;border:1px solid #b5b5b5;border-radius:16px;box-shadow:0 10px 34px rgba(8,8,8,.3)}
+.sync-choice-bar:focus{outline:2px solid #080808;outline-offset:2px}
+.sync-choice-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 2px}
+.sync-choice-head h2{margin:0;font-size:14px;line-height:1.3;letter-spacing:-.2px;color:#080808}
+.sync-choice-head button,.sync-choice-bar.is-collapsed button{flex:none;min-height:40px}
+.sync-choice-message{margin:0 0 8px;font-size:12px;line-height:1.45;color:#333}
+.sync-choice-buttons{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,118px),1fr));gap:8px;margin:0 0 8px}
+.sync-choice-buttons button{min-width:0;min-height:46px;padding:6px 8px;font-size:13px;line-height:1.2;white-space:normal;overflow-wrap:anywhere}
+.sync-choice-bar-note{margin:0;font-size:11px;line-height:1.45;color:#555}
+.sync-choice-bar.is-collapsed{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 7px 7px 14px;overflow:visible}
+.sync-choice-bar.is-collapsed strong{font-size:13px;color:#080808}
+@media(min-width:701px){.sync-choice-bar{width:min(520px,calc(100% - 28px))}}
+body.has-sync-choice-bar .app-shell .content{padding-bottom:calc(118px + var(--sync-choice-height,0px) + 14px + env(safe-area-inset-bottom,0px))}
+body.has-sync-choice-bar .toast,body.has-sync-choice-bar .nsj-orb{bottom:calc(var(--dock-height,67px) + 30px + var(--sync-choice-height,0px) + env(safe-area-inset-bottom,0px))}
 .toast{right:92px}.toast span{min-width:0;overflow-wrap:anywhere}.toast button{flex:none}
 @media(max-width:600px){.toast{left:12px;right:80px;bottom:calc(84px + env(safe-area-inset-bottom));max-width:none;max-height:calc(100dvh - 170px);overflow:auto}}
 .vault-confirm-dialog{background:#fff!important;-webkit-backdrop-filter:none;backdrop-filter:none}
@@ -1666,7 +1672,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
     <button type="button" class="dock-menu-item" data-action="page" data-page="Budgets"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 19v-8"/><path d="M12 19V5"/><path d="M18 19v-5"/><path d="M3.6 19h16.8"/></svg></span>Budgets</button>
     <button type="button" class="dock-menu-item" data-action="page" data-page="Settings"><span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7.5h9"/><path d="M17 7.5h3"/><circle cx="15" cy="7.5" r="2"/><path d="M4 16.5h3"/><path d="M11 16.5h9"/><circle cx="9" cy="16.5" r="2"/></svg></span>Settings</button>
   </div>
-</nav><div id="goalCelebrationRoot" aria-live="polite"></div><div id="modalRoot"></div><div id="confirmRoot"></div><div id="toastRoot" aria-live="polite"></div>
+</nav><div id="goalCelebrationRoot" aria-live="polite"></div><div id="modalRoot"></div><div id="confirmRoot"></div><div id="toastRoot" aria-live="polite"></div><div id="syncChoiceBarRoot"></div>
 <div id="vaultRoot"><div class="vault-screen vault-loading" role="status"><div class="vault-card"><div class="vault-mark" aria-hidden="true">✦</div><h1>Opening your protected workspace</h1><p>If this screen does not change, make sure Northstar is loaded over HTTPS and <code>vault-crypto.mjs</code>, <code>finance-graphs.mjs</code>, <code>financial-graphs-view.mjs</code>, <code>stock-watchlist.mjs</code>, and <code>stock-watchlist-view.mjs</code> are deployed next to the page. Reload without clearing browser data; your protected copy has not been changed.</p></div></div></div>
 <input id="backupFile" type="file" accept="application/json,.json" class="hidden">
 <script type="module">
@@ -1745,7 +1751,7 @@ function readVaultMarker(){try{const raw=localStorage.getItem(VAULT_MARKER);if(!
 const initialVaultMarker=readVaultMarker();
 let vault={state:initialVaultMarker?'locked':'off',uid:initialVaultMarker?.uid||'',key:null,kdf:null,localRaw:null,session:0,editSeq:0,savedSeq:0,error:null,pendingCloud:null};
 window.NorthstarVaultLocked=vault.state==='locked';
-let data=vault.state==='locked'?blankData():loadLocal('local'),page='Overview',purchaseDetailId=null,completedPurchaseQuery='',query='',txTypeFilter='All',txMonthFilter='All',modalState=null,toastTimer=null,saveTimer=null,user=null,fb=null,cloudLoaded=false,authReady=false,signingIn=false,lastSyncError=null,confirmResolver=null,confirmChoices=[],confirmCleanup=null,confirmGuarded=false,confirmArmedAt=0,pendingChoice=null,scriptedChoice=null,syncChoiceGuardUntil=0;
+let data=vault.state==='locked'?blankData():loadLocal('local'),page='Overview',purchaseDetailId=null,completedPurchaseQuery='',query='',txTypeFilter='All',txMonthFilter='All',modalState=null,toastTimer=null,saveTimer=null,user=null,fb=null,cloudLoaded=false,authReady=false,signingIn=false,lastSyncError=null,confirmResolver=null,confirmChoices=[],confirmCleanup=null,pendingChoice=null,scriptedChoice=null,syncChoiceGuardUntil=0,syncChoiceCollapsed=false,syncChoiceShown='';
 let cloudEpoch=0,cloudFingerprint=undefined,cloudWriteTail=Promise.resolve(),vaultWriteTail=Promise.resolve(),syncLoading=false,deferredDeviceWorkspace=null;
 // Display only (Stocks save line): when the cloud last confirmed this device's copy, whether a save is in flight,
 // and whether Firebase has reported the sign-in state at least once.
@@ -1837,7 +1843,7 @@ function showNorthstarDialog(config={}){
   {value:false,label:config.cancelText||'Cancel',style:'secondary'}
  ];
  return new Promise(resolve=>{
-  confirmResolver=resolve;confirmChoices=choices;confirmGuarded=config.guarded===true;confirmArmedAt=confirmGuarded?Date.now()+500:0;
+  confirmResolver=resolve;confirmChoices=choices;
   const icon=esc(config.icon||'✦');
   const label=esc(config.label||'NORTHSTAR');
   const title=esc(config.title||'Are you sure?');
@@ -1850,15 +1856,13 @@ function showNorthstarDialog(config={}){
    return '<button type="button" class="'+klass+'" data-confirm-index="'+index+'">'+esc(choice.label)+'</button>'
   }).join('');
   const previous=document.activeElement;
-  root.innerHTML='<div class="confirm-backdrop'+(config.guarded?' confirm-backdrop-plain':'')+'" role="presentation"><section class="confirm-dialog'+(config.guarded?' confirm-dialog-choice':'')+'" role="alertdialog" aria-modal="true" aria-labelledby="confirmDialogTitle" aria-describedby="confirmDialogMessage"><div class="confirm-dialog-head"><div class="confirm-dialog-icon '+(config.danger?'danger':'')+'" aria-hidden="true">'+icon+'</div><div><div class="eyebrow">'+label+'</div><h2 id="confirmDialogTitle">'+title+'</h2></div></div><p class="confirm-dialog-message" id="confirmDialogMessage">'+message+'</p>'+detail+'<div class="confirm-dialog-actions">'+buttons+'</div></section></div>';
+  root.innerHTML='<div class="confirm-backdrop" role="presentation"><section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirmDialogTitle" aria-describedby="confirmDialogMessage"><div class="confirm-dialog-head"><div class="confirm-dialog-icon '+(config.danger?'danger':'')+'" aria-hidden="true">'+icon+'</div><div><div class="eyebrow">'+label+'</div><h2 id="confirmDialogTitle">'+title+'</h2></div></div><p class="confirm-dialog-message" id="confirmDialogMessage">'+message+'</p>'+detail+'<div class="confirm-dialog-actions">'+buttons+'</div></section></div>';
   const untrap=trapDialogFocus(root,()=>settleNorthstarDialog(null));
   confirmCleanup=()=>{untrap();if(previous?.isConnected)previous.focus()};
-  setTimeout(()=>root.querySelector('[data-confirm-index="'+Math.max(0,choices.findIndex(choice=>choice.focus===true))+'"]')?.focus(),10);
-  // A double tap on the button that opened this dialog must not land on a choice that replaces data.
-  if(confirmGuarded)setTimeout(()=>{if(confirmResolver===resolve)root.querySelector('.confirm-dialog')?.setAttribute('data-ready','true')},550)
+  setTimeout(()=>root.querySelector('[data-confirm-index]')?.focus(),10)
  })
 }
-function settleNorthstarDialog(value){if(!confirmResolver)return;const resolve=confirmResolver,cleanup=confirmCleanup;confirmResolver=null;confirmChoices=[];confirmCleanup=null;confirmGuarded=false;confirmArmedAt=0;$('confirmRoot').innerHTML='';cleanup?.();resolve(value)}
+function settleNorthstarDialog(value){if(!confirmResolver)return;const resolve=confirmResolver,cleanup=confirmCleanup;confirmResolver=null;confirmChoices=[];confirmCleanup=null;$('confirmRoot').innerHTML='';cleanup?.();resolve(value)}
 const CLEAR_PASSWORD_KEY='northstar-clear-password-v1';
 async function clearPasswordHash(password,salt){
  const bytes=new TextEncoder().encode(salt+'|'+password);
@@ -1992,42 +1996,73 @@ function syncIssueShortWhen(issue=syncIssue){return syncIssueWhen(issue,{zone:fa
 // Sync is paused only because two copies differ and nobody has chosen one yet; the connection itself is fine.
 function syncNeedsChoice(issue=syncIssue){return issue?.code==='northstar/conflict'&&/^Choose (which|a) /.test(String(issue.message||''))}
 function syncIssueStatus(issue=syncIssue){return syncNeedsChoice(issue)?`Sync conflict · action needed · ${issue.code}`:`${issue?.stage||'Cloud sync'} needs attention · ${issue?.code||'northstar/app'}`}
-/* The question a "which copy to keep" dialog is asking is remembered, so it can also be answered from a plain section of the
-   Settings page. That matters if the overlay cannot be seen (iPhone Safari showed only its dimmed backdrop). An answer given
-   from the page is applied only to an identical question, only once, and only through the same code the dialog uses. */
+/* The "which copy to keep" question is not a pop-up. It is remembered here (memory only, never saved) and drawn by
+   renderSyncChoiceBar() as a plain bar pinned to the bottom of the screen, above the tab bar, so it is in front of the visitor on
+   every page without scrolling and cannot hide behind an overlay or block the page. The callers treat the immediate null as
+   "not decided yet": sync stays paused and nothing is chosen, changed or uploaded. A tap on the bar stores an answer and runs the
+   sync again, which asks the same question again. The answer is used only if that question is identical (account, title, counts,
+   and the contents of both copies, so an edit made while it waited cancels it), only once, and through the same code a choice
+   would have gone through. */
 function syncChoiceReady(){return !!pendingChoice&&pendingChoice.uid===(user?.uid||null)&&syncNeedsChoice()&&!syncLoading}
 function askSyncChoice(config){
- const question={uid:user?.uid||null,title:config.title,message:config.message,cardNote:config.cardNote||'',choices:(config.choices||[]).filter(choice=>choice.value!=='cancel').map(choice=>({value:choice.value,label:choice.label}))};
+ const question={uid:user?.uid||null,title:config.title,message:config.message,cardNote:config.cardNote||'',signature:String(config.signature||''),choices:(config.choices||[]).filter(choice=>choice.value!=='cancel').map(choice=>({value:choice.value,label:choice.label}))};
  if(scriptedChoice){
   const answer=scriptedChoice;scriptedChoice=null;
-  if(answer.uid===question.uid&&answer.title===question.title&&answer.message===question.message&&question.choices.some(choice=>choice.value===answer.value)){pendingChoice=null;return Promise.resolve(answer.value)}
+  if(answer.uid===question.uid&&answer.title===question.title&&answer.message===question.message&&answer.signature===question.signature&&question.choices.some(choice=>choice.value===answer.value)){pendingChoice=null;syncChoiceCollapsed=false;return Promise.resolve(answer.value)}
   showToast('That question changed since you looked, so nothing was applied. Review it and choose again.');
  }
- pendingChoice=question;
- return showNorthstarDialog(config).then(value=>{
-  if(value!==null&&value!=='cancel'){if(pendingChoice===question)pendingChoice=null}else syncChoiceGuardUntil=Date.now()+600;
-  return value
- })
+ pendingChoice=question;syncChoiceCollapsed=false;syncChoiceGuardUntil=Date.now()+600;
+ try{renderSyncChoiceBar()}catch(e){}
+ return Promise.resolve(null)
 }
 async function answerSyncChoice(value){
  const question=pendingChoice;
  if(!syncChoiceReady()||Date.now()<syncChoiceGuardUntil||!question.choices.some(choice=>choice.value===value))return;
- scriptedChoice={uid:question.uid,title:question.title,message:question.message,value};
+ scriptedChoice={uid:question.uid,title:question.title,message:question.message,signature:question.signature,value};
  try{await retryCloudSync()}finally{scriptedChoice=null}
+}
+function minimizeSyncChoice(){
+ if(!syncChoiceReady())return;
+ syncChoiceCollapsed=true;renderSyncChoiceBar();
+ $('syncChoiceBar')?.querySelector('[data-action="expand-sync-choice"]')?.focus({preventScroll:true})
+}
+function expandSyncChoice(){
+ if(!syncChoiceReady())return;
+ if(syncChoiceCollapsed){syncChoiceCollapsed=false;syncChoiceGuardUntil=Date.now()+600}
+ renderSyncChoiceBar();$('syncChoiceBar')?.focus({preventScroll:true})
 }
 function chooseSyncData(){
  if(syncLoading)return;
- if(syncChoiceReady()){
-  syncChoiceGuardUntil=Date.now()+600;navigate('Settings');
-  requestAnimationFrame(()=>{const card=$('syncChoiceCard');if(card){card.scrollIntoView({block:'center'});card.focus({preventScroll:true})}});
-  return
- }
+ if(syncChoiceReady()){expandSyncChoice();return}
  retryCloudSync()
 }
-function renderSyncChoiceCard(){
- if(!syncChoiceReady())return '';
- const question=pendingChoice;
- return `<div class="sync-choice-card" id="syncChoiceCard" tabindex="-1" role="group" aria-labelledby="syncChoiceTitle"><h3 id="syncChoiceTitle">Which copy should Northstar keep?</h3><p>${esc(question.message)}</p><div class="sync-choice-buttons">${question.choices.map(choice=>`<button type="button" class="secondary-btn" data-action="answer-sync-choice" data-value="${esc(choice.value)}">${esc(choice.label)}</button>`).join('')}</div>${question.cardNote?`<p class="form-hint">${esc(question.cardNote)}</p>`:''}<p class="form-hint">Nothing changes until you tap a button.</p></div>`
+function syncChoiceBarHtml(question,collapsed){
+ if(collapsed)return `<section class="sync-choice-bar is-collapsed" id="syncChoiceBar" tabindex="-1" role="group" aria-label="Choose which data to keep"><strong>Choose which data to keep</strong><button type="button" class="primary-btn small" data-action="expand-sync-choice">Open</button></section>`;
+ return `<section class="sync-choice-bar" id="syncChoiceBar" tabindex="-1" role="group" aria-labelledby="syncChoiceTitle"><div class="sync-choice-head"><h2 id="syncChoiceTitle">Which copy should Northstar keep?</h2><button type="button" class="secondary-btn small" data-action="minimize-sync-choice" aria-label="Later: minimize this question">Later</button></div><p class="sync-choice-message">${esc(question.message)}</p><div class="sync-choice-buttons">${question.choices.map(choice=>`<button type="button" class="secondary-btn" data-action="answer-sync-choice" data-value="${esc(choice.value)}">${esc(choice.label)}</button>`).join('')}</div><p class="sync-choice-bar-note">${esc([question.cardNote,'Nothing changes until you tap a button.'].filter(Boolean).join(' '))}</p></section>`
+}
+function renderSyncChoiceBar(){
+ const root=$('syncChoiceBarRoot');if(!root)return;
+ if(!syncChoiceReady()||isWelcomeVisible()||window.NorthstarVaultLocked){if(syncChoiceShown||root.firstChild){syncChoiceShown='';root.innerHTML=''}syncChoiceLayout();return}
+ const html=syncChoiceBarHtml(pendingChoice,syncChoiceCollapsed);
+ if(syncChoiceShown!==html||!root.firstChild){
+  // It can appear well after it was asked (it waits out a running sync, the welcome screen and a locked vault), so a tap meant for something else is ignored from the moment it shows.
+  if(!root.firstChild)syncChoiceGuardUntil=Date.now()+600;
+  root.innerHTML=html;syncChoiceShown=html
+ }
+ syncChoiceLayout()
+}
+function syncChoiceLayout(){
+ const page=document.documentElement,bar=$('syncChoiceBar'),dock=$('mobileDock');
+ if(dock&&dock.offsetHeight>0)page.style.setProperty('--dock-height',dock.offsetHeight+'px');
+ if(bar)page.style.setProperty('--sync-choice-height',bar.offsetHeight+'px');else page.style.removeProperty('--sync-choice-height');
+ document.body.classList.toggle('has-sync-choice-bar',!!bar)
+}
+function initSyncChoiceLayout(){
+ let queued=false;
+ const again=()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;try{syncChoiceLayout()}catch(e){}})};
+ window.addEventListener('resize',again);window.addEventListener('orientationchange',again);window.addEventListener('load',again);
+ window.visualViewport?.addEventListener('resize',again);
+ document.fonts?.ready?.then(again)
 }
 function syncDiagnosticsText(){
  if(!syncIssue)return 'Northstar has no recorded sync problem on this device.';
@@ -2041,7 +2076,7 @@ function syncDiagnosticsText(){
   `Connection: ${syncIssue.online===false?'offline':'online'}`,
   `Cloud copy loaded: ${cloudLoaded?'yes':'no'}`,
   `Protection: ${vault.state==='off'?'off':vault.state}`,
-  syncNeedsChoice()?'Open Settings → Sync diagnostics and tap Choose which data to keep. Nothing has been overwritten.':'Open Settings → Sync diagnostics, then Retry cloud sync to review both copies.'
+  syncNeedsChoice()?'Answer the question in the bar at the bottom of the screen, or open Settings → Sync diagnostics and tap Choose which data to keep. Nothing has been overwritten.':'Open Settings → Sync diagnostics, then Retry cloud sync to review both copies.'
  ].join('\n');
 }
 /* Sign-in can finish without an error and without a confirmed copy: another
@@ -2055,6 +2090,7 @@ function confirmSyncOutcome(stage='Cloud load'){
  return true;
 }
 function renderSyncIssueBanner(){
+ try{renderSyncChoiceBar()}catch(e){}
  const root=$('syncIssueRoot');if(!root)return;
  if(!syncIssue||syncIssueDismissed){root.hidden=true;root.replaceChildren();return}
  const issue=syncIssue;root.hidden=false;
@@ -2128,6 +2164,7 @@ function updateBackgroundAvailability(){
  const shell=document.querySelector('.app-shell'),dock=$('mobileDock');if(shell)shell.inert=blocked;if(dock)dock.inert=blocked;
  try{window.NorthstarJarvis?.setWorkspaceBlocked?.(blocked,syncLoading||!!window.NorthstarVaultLocked)}catch(e){console.warn('Assistant workspace update was skipped.',e)}
  syncStockFeed();
+ try{renderSyncChoiceBar()}catch(e){}
 }
 function setCloudLoading(loading){syncLoading=loading;updateBackgroundAvailability();const content=$('content');if(content)content.setAttribute('aria-busy',String(loading));const signOut=$('signOutBtn');if(signOut)signOut.disabled=loading;}
 function update(mutator,toastText){data=mutator(data);persist();if(toastText)showToast(toastText)}
@@ -2514,9 +2551,9 @@ function savePriceCheck(e){e.preventDefault();const form=e.target,id=form.datase
 function renderSyncIssuePanel(){
  const issue=syncIssue;
  if(!user&&!issue)return '';
- return `<section class="panel" id="syncDiagnosticsPanel"><div class="panel-head"><div><h2>Sync diagnostics</h2><p>Every paused sync keeps a code, a reason, and a time on this device.</p></div><span class="category-pill">${issue?esc(issue.code):'No issue recorded'}</span></div>${syncNeedsChoice(issue)?'<p class="form-hint sync-choice-note" role="note"><strong>Sync is waiting for your choice.</strong> Two copies of your data differ, and Northstar will not pick one for you. Nothing has been changed or overwritten. Until you choose, everything you add here, including your stock list, is saved on this device only. Not sure which to keep? Tap Export backup on this page first.</p>':''}${issue?`<div class="sync-detail-grid"><div class="sync-detail-row"><span>Code</span><span><code>${esc(issue.code)}</code></span></div><div class="sync-detail-row"><span>Stage</span><span>${esc(issue.stage)}</span></div><div class="sync-detail-row"><span>Reason</span><span>${esc(issue.message)}</span></div><div class="sync-detail-row"><span>Recorded</span><span>${esc(syncIssueWhen(issue))}</span></div><div class="sync-detail-row"><span>Workspace</span><span>${esc(issue.mode||syncWorkspaceMode())}</span></div><div class="sync-detail-row"><span>Connection</span><span>${issue.online===false?'Offline when recorded':'Online'}</span></div><div class="sync-detail-row"><span>Cloud copy</span><span>${cloudLoaded?'Loaded from Firestore':'Not loaded'}</span></div><div class="sync-detail-row"><span>Project</span><span>${esc(firebaseConfig.projectId)}</span></div><div class="sync-detail-row"><span>Database</span><span>${esc(fb?.db?._databaseId?.database||'(default)')}</span></div>${cloudCheck?`<div class="sync-detail-row"><span>Last check</span><span>${cloudCheck.ok?'Read access confirmed':'Failed'} · ${esc(syncIssueShortWhen(cloudCheck))}${cloudCheck.code?` · <code>${esc(cloudCheck.code)}</code>`:''}</span></div>`:''}</div>`:`<p class="form-hint" style="margin:0">No cloud sync problem is recorded on this device. ${user?'Use Check cloud access to test Firestore directly; a failed load or save records its code here and in the notice under the header.':'Sign in with Google to enable cloud sync.'}</p>`}<div class="form-actions-top" style="margin-top:14px">${issue?'<button type="button" class="secondary-btn small" data-action="sync-details">Sync details</button>':''}${user?'<button type="button" class="secondary-btn small" data-action="check-cloud-access">Check cloud access</button>':''}${user&&!syncChoiceReady()?`<button type="button" class="primary-btn small" data-action="${syncNeedsChoice(issue)?'choose-sync-data':'retry-sync'}">${syncNeedsChoice(issue)?'Choose which data to keep':'Retry cloud sync'}</button>`:''}</div><p class="form-hint" style="margin-top:10px">Codes come from Firestore or Google sign-in. northstar/conflict means two copies differ: either this device and your account hold different data, or the cloud copy changed after this device loaded it. Nothing is overwritten until you choose which to keep. northstar/offline means this device could not reach Firestore; your changes stay here and sync retries when the connection returns.</p></section>`;
+ return `<section class="panel" id="syncDiagnosticsPanel"><div class="panel-head"><div><h2>Sync diagnostics</h2><p>Every paused sync keeps a code, a reason, and a time on this device.</p></div><span class="category-pill">${issue?esc(issue.code):'No issue recorded'}</span></div>${syncNeedsChoice(issue)?'<p class="form-hint sync-choice-note" role="note"><strong>Sync is waiting for your choice.</strong> Two copies of your data differ, and Northstar will not pick one for you. Nothing has been changed or overwritten. Answer in the bar at the bottom of the screen, or tap Choose which data to keep to bring it back. Until you choose, everything you add here, including your stock list, is saved on this device only. Not sure which to keep? Tap Export backup on this page first.</p>':''}${issue?`<div class="sync-detail-grid"><div class="sync-detail-row"><span>Code</span><span><code>${esc(issue.code)}</code></span></div><div class="sync-detail-row"><span>Stage</span><span>${esc(issue.stage)}</span></div><div class="sync-detail-row"><span>Reason</span><span>${esc(issue.message)}</span></div><div class="sync-detail-row"><span>Recorded</span><span>${esc(syncIssueWhen(issue))}</span></div><div class="sync-detail-row"><span>Workspace</span><span>${esc(issue.mode||syncWorkspaceMode())}</span></div><div class="sync-detail-row"><span>Connection</span><span>${issue.online===false?'Offline when recorded':'Online'}</span></div><div class="sync-detail-row"><span>Cloud copy</span><span>${cloudLoaded?'Loaded from Firestore':'Not loaded'}</span></div><div class="sync-detail-row"><span>Project</span><span>${esc(firebaseConfig.projectId)}</span></div><div class="sync-detail-row"><span>Database</span><span>${esc(fb?.db?._databaseId?.database||'(default)')}</span></div>${cloudCheck?`<div class="sync-detail-row"><span>Last check</span><span>${cloudCheck.ok?'Read access confirmed':'Failed'} · ${esc(syncIssueShortWhen(cloudCheck))}${cloudCheck.code?` · <code>${esc(cloudCheck.code)}</code>`:''}</span></div>`:''}</div>`:`<p class="form-hint" style="margin:0">No cloud sync problem is recorded on this device. ${user?'Use Check cloud access to test Firestore directly; a failed load or save records its code here and in the notice under the header.':'Sign in with Google to enable cloud sync.'}</p>`}<div class="form-actions-top" style="margin-top:14px">${issue?'<button type="button" class="secondary-btn small" data-action="sync-details">Sync details</button>':''}${user?'<button type="button" class="secondary-btn small" data-action="check-cloud-access">Check cloud access</button>':''}${user?`<button type="button" class="primary-btn small" data-action="${syncNeedsChoice(issue)?'choose-sync-data':'retry-sync'}">${syncNeedsChoice(issue)?'Choose which data to keep':'Retry cloud sync'}</button>`:''}</div><p class="form-hint" style="margin-top:10px">Codes come from Firestore or Google sign-in. northstar/conflict means two copies differ: either this device and your account hold different data, or the cloud copy changed after this device loaded it. Nothing is overwritten until you choose which to keep. northstar/offline means this device could not reach Firestore; your changes stay here and sync retries when the connection returns.</p></section>`;
 }
-function renderSettings(){const counts=[['Accounts',data.accounts.length],['Transactions',data.transactions.length],['Budgets',data.budgets.length],['Goals',data.goals.length],['Purchases',data.purchases.length],['Recurring',(data.recurring||[]).length]];return `${pageHeading('Settings')}<div class="settings-layout"><section class="panel"><div class="panel-head"><div><h2>Cloud sync & account</h2><p>Optional Google sign-in for this device and your other devices.</p></div><span class="category-pill">${user?(cloudLoaded&&!lastSyncError?'Cloud active':'Sync needs attention'):'Local only'}</span></div><div class="setting-action"><div><strong>${user?esc(user.displayName||user.email||'Google account'):'Connect Google'}</strong><p>${user?(cloudLoaded&&!lastSyncError?'Your finance data loaded from Firestore and cloud saves are enabled.':'Google sign-in succeeded, but Northstar has not confirmed a successful cloud sync. Your changes stay in this browser until the cloud copy is confirmed. Sync diagnostics below shows the code, and Check cloud access tests Firestore directly.'):'Your entries stay in this browser until you connect Google and sync them.'}</p></div>${user?`${(!cloudLoaded||lastSyncError)?(syncChoiceReady()?'':(syncNeedsChoice()?'<button class="primary-btn" data-action="choose-sync-data">Choose which data to keep</button>':'<button class="primary-btn" data-action="retry-sync">Retry cloud sync</button>')):''}<button class="secondary-btn" data-action="signout">Sign out</button>`:'<button class="primary-btn" data-action="signin">Connect Google</button>'}</div>${renderSyncChoiceCard()}${lastSyncError?`<p class="sync-issue-line">Cloud sync is paused with <code>${esc(firebaseErrorCode(lastSyncError))}</code>. <button type="button" class="text-btn" data-action="sync-details">See sync details</button></p>`:''}<div class="privacy-note"><span>♧</span><span>Only sign in on a device you trust. Cloud access is intended to be restricted to your own user ID by Firestore security rules. Use fictional data until you confirm your rules are published and tested.</span></div></section>
+function renderSettings(){const counts=[['Accounts',data.accounts.length],['Transactions',data.transactions.length],['Budgets',data.budgets.length],['Goals',data.goals.length],['Purchases',data.purchases.length],['Recurring',(data.recurring||[]).length]];return `${pageHeading('Settings')}<div class="settings-layout"><section class="panel"><div class="panel-head"><div><h2>Cloud sync & account</h2><p>Optional Google sign-in for this device and your other devices.</p></div><span class="category-pill">${user?(cloudLoaded&&!lastSyncError?'Cloud active':'Sync needs attention'):'Local only'}</span></div><div class="setting-action"><div><strong>${user?esc(user.displayName||user.email||'Google account'):'Connect Google'}</strong><p>${user?(cloudLoaded&&!lastSyncError?'Your finance data loaded from Firestore and cloud saves are enabled.':'Google sign-in succeeded, but Northstar has not confirmed a successful cloud sync. Your changes stay in this browser until the cloud copy is confirmed. Sync diagnostics below shows the code, and Check cloud access tests Firestore directly.'):'Your entries stay in this browser until you connect Google and sync them.'}</p></div>${user?`${(!cloudLoaded||lastSyncError)?(syncNeedsChoice()?'<button class="primary-btn" data-action="choose-sync-data">Choose which data to keep</button>':'<button class="primary-btn" data-action="retry-sync">Retry cloud sync</button>'):''}<button class="secondary-btn" data-action="signout">Sign out</button>`:'<button class="primary-btn" data-action="signin">Connect Google</button>'}</div>${lastSyncError?`<p class="sync-issue-line">Cloud sync is paused with <code>${esc(firebaseErrorCode(lastSyncError))}</code>. <button type="button" class="text-btn" data-action="sync-details">See sync details</button></p>`:''}<div class="privacy-note"><span>♧</span><span>Only sign in on a device you trust. Cloud access is intended to be restricted to your own user ID by Firestore security rules. Use fictional data until you confirm your rules are published and tested.</span></div></section>
 ${renderSyncIssuePanel()}
 ${renderVaultPanel()}
 <section class="panel"><div class="panel-head"><div><h2>Saved Guide profile</h2><p>Your previous Guide profile and saved note are still available.</p></div></div><div class="setting-action"><div><strong>Northstar Guide</strong><p>Review or edit your saved planning preferences and graph. The Guide is a local rules-based planner.</p></div><button class="secondary-btn" data-action="page" data-page="Guide">Open saved Guide ↗</button></div></section>
@@ -2787,12 +2824,12 @@ function trapWelcomeTab(e){
  }
  return false;
 }
-function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-recurring':openModal('recurring');break;case'edit-recurring':{const r=(data.recurring||[]).find(t=>t.id===itemId);if(r)openModal('recurring',r);else showToast('This recurring item could not be found.');break}case'post-recurring':postRecurring(itemId);break;case'skip-recurring':skipRecurring(itemId);break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'export-csv':exportTransactionsCsv();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'choose-sync-data':chooseSyncData();break;case'answer-sync-choice':answerSyncChoice(b.dataset.value);break;case'check-cloud-access':checkCloudAccess();break;case'sync-details':showSyncDetailsDialog();break;case'dismiss-sync-issue':syncIssueDismissed=true;renderSyncIssueBanner();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();undoState=null;break;case'undo-delete':undoDelete();break;}}
+function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-recurring':openModal('recurring');break;case'edit-recurring':{const r=(data.recurring||[]).find(t=>t.id===itemId);if(r)openModal('recurring',r);else showToast('This recurring item could not be found.');break}case'post-recurring':postRecurring(itemId);break;case'skip-recurring':skipRecurring(itemId);break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'export-csv':exportTransactionsCsv();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'choose-sync-data':chooseSyncData();break;case'answer-sync-choice':answerSyncChoice(b.dataset.value);break;case'minimize-sync-choice':minimizeSyncChoice();break;case'expand-sync-choice':expandSyncChoice();break;case'check-cloud-access':checkCloudAccess();break;case'sync-details':showSyncDetailsDialog();break;case'dismiss-sync-issue':syncIssueDismissed=true;renderSyncIssueBanner();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();undoState=null;break;case'undo-delete':undoDelete();break;}}
 document.addEventListener('keydown',e=>{if(trapWelcomeTab(e))return;const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&setDockMore(false,true)){e.preventDefault();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
 document.addEventListener('click',e=>{
  const option=e.target.closest('[data-confirm-index]');
- if(option&&confirmResolver){e.preventDefault();e.stopPropagation();if(Date.now()<confirmArmedAt)return;const index=Number(option.dataset.confirmIndex);settleNorthstarDialog(Number.isInteger(index)&&confirmChoices[index]?confirmChoices[index].value:null);return}
- if(e.target.classList?.contains('confirm-backdrop')&&Date.now()>=confirmArmedAt){settleNorthstarDialog(null)}
+ if(option&&confirmResolver){e.preventDefault();e.stopPropagation();const index=Number(option.dataset.confirmIndex);settleNorthstarDialog(Number.isInteger(index)&&confirmChoices[index]?confirmChoices[index].value:null);return}
+ if(e.target.classList?.contains('confirm-backdrop')){settleNorthstarDialog(null)}
 });
 window.addEventListener('beforeunload',e=>{if(modalHasUnsavedChanges()||(vault.state==='unlocked'&&(vault.editSeq!==vault.savedSeq||(cloudLoaded&&$('syncStatus')?.textContent.startsWith('Saving'))))){e.preventDefault();e.returnValue=''}});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b)return;const action=b.dataset.action;if(b.tagName==='SELECT'||b.tagName==='INPUT')return;if(action==='backdrop-close'&&e.target!==b)return;e.preventDefault();openByAction(action,b)});
@@ -3172,7 +3209,7 @@ async function onAuthChanged(current){
   if(pendingDevice&&(sourceRaw!==pendingDevice.sourceRaw||sourceLegacyKey!==pendingDevice.sourceLegacyKey||sourceLegacyRaw!==pendingDevice.sourceLegacyRaw))sourceChanged();
   if((pendingDevice||(hasRecords(userLocal)&&hasRecords(anonymousData)))&&dataSignature(userLocal)!==dataSignature(anonymousData)){
    const accountCopy=describeWorkspace(userLocal),localCopy=describeWorkspace(anonymousData);
-   const localChoice=await askSyncChoice({title:'Choose a device workspace',message:`This browser has different local and Google-account device copies. The Google-account copy has ${accountCopy}. The local workspace has ${localCopy}.${accountCopy===localCopy?' The counts match, so the difference is in details such as amounts, dates or settings.':''}`,detail:'The selected copy may replace the account’s device copy. Cloud conflicts are checked next. Decide later shows the account device copy with sync paused; other device copies are kept. Export backups if you might need both.',icon:'☁',label:'DEVICE COPIES DIFFER',guarded:true,cardNote:'The selected copy may replace the account’s device copy. Cloud conflicts are checked next. Export a backup first if you might need both.',choices:[{value:'account',label:'Use account device copy',style:'primary'},{value:'local',label:'Use local workspace',style:'secondary'},{value:'cancel',label:'Decide later',style:'quiet',focus:true}]});
+   const localChoice=await askSyncChoice({title:'Choose a device workspace',message:`This browser has different local and Google-account device copies. The Google-account copy has ${accountCopy}. The local workspace has ${localCopy}.${accountCopy===localCopy?' The counts match, so the difference is in details such as amounts, dates or settings.':''}`,signature:dataSignature(userLocal)+'\n'+dataSignature(anonymousData),cardNote:'The selected copy may replace the account’s device copy. Cloud conflicts are checked next. Export a backup first if you might need both.',choices:[{value:'account',label:'Use account device copy'},{value:'local',label:'Use local workspace'}]});
    if(epoch!==cloudEpoch||user?.uid!==current.uid)return;
    checkDeviceCopy();
    if(localChoice==='account'){chosen=userLocal;deferredDeviceWorkspace=null}
@@ -3183,7 +3220,7 @@ async function onAuthChanged(current){
     // with the different local workspace before the choice is made.
     deferredDeviceWorkspace={uid:current.uid,data:anonymousData,sourceKey,sourceRaw,sourceLegacyKey,sourceLegacyRaw};data=userLocal;
     lastSyncError=syncConflict('Choose a device workspace to resume cloud sync.');reportSyncIssue(lastSyncError,'Cloud sync');setSync(`Sync conflict · action needed · ${firebaseErrorCode(lastSyncError)}`,'err');
-    showToast('Choice deferred. Showing the account device copy; your other copy was kept.');return;
+    showToast('Showing the account’s device copy until you choose. Your other copy was kept.');return;
    }
   }else if(pendingDevice)deferredDeviceWorkspace=null;
   // A previously protected device copy is never silently overwritten by cloud data.
@@ -3203,10 +3240,10 @@ async function onAuthChanged(current){
    const cloud=plainCloudData(raw);
    if(hasRecords(chosen)&&dataSignature(chosen)!==dataSignature(cloud)){
     const here=describeWorkspace(chosen),there=describeWorkspace(cloud);
-    const choice=await askSyncChoice({title:'Choose which data to keep',message:`Northstar found different finance data in your Google account and this browser. This browser has ${here}. Your Google account has ${there}${cloudSavedLabel(raw)}.${here===there?' The counts match, so the difference is in details such as amounts, dates or settings.':''}`,detail:'Using the cloud copy replaces what’s currently shown on this device. Keeping this device uploads the browser copy and replaces the cloud document. Not sure? Choose Decide later, export a backup from Settings, then tap Choose which data to keep.',icon:'☁',label:'SYNC CONFLICT',guarded:true,cardNote:'Use cloud copy replaces what this device shows with your Google account’s copy. Keep this device uploads this device’s copy and replaces the cloud document. Not sure? Use Export backup further down this page first, then come back here.',choices:[{value:'cloud',label:'Use cloud copy',style:'primary'},{value:'local',label:'Keep this device',style:'secondary'},{value:'cancel',label:'Decide later',style:'quiet',focus:true}]});
+    const choice=await askSyncChoice({title:'Choose which data to keep',message:`The two copies differ. This browser has ${here}. Your Google account has ${there}${cloudSavedLabel(raw)}.${here===there?' The counts match, so the difference is in details such as amounts, dates or settings.':''}`,signature:dataSignature(chosen)+'\n'+dataSignature(cloud),cardNote:'Use cloud copy replaces this device’s data with your account’s. Keep this device replaces your account’s data with this device’s. Not sure? Tap Later, then use Export backup in Settings.',choices:[{value:'cloud',label:'Use cloud copy'},{value:'local',label:'Keep this device'}]});
     if(epoch!==cloudEpoch||user?.uid!==current.uid)return;
     checkDeviceCopy();
-    if(choice==='cloud')data=cloud;else if(choice==='local'){data=chosen;await writeCloudNow()}else{data=chosen;lastSyncError=syncConflict('Choose which data to keep to resume cloud sync.');reportSyncIssue(lastSyncError,'Cloud sync');setSync(`Sync conflict · action needed · ${firebaseErrorCode(lastSyncError)}`,'err');showToast('Choice deferred. Nothing was changed. Tap Choose which data to keep when you are ready.');return}
+    if(choice==='cloud')data=cloud;else if(choice==='local'){data=chosen;await writeCloudNow()}else{data=chosen;lastSyncError=syncConflict('Choose which data to keep to resume cloud sync.');reportSyncIssue(lastSyncError,'Cloud sync');setSync(`Sync conflict · action needed · ${firebaseErrorCode(lastSyncError)}`,'err');return}
    }else data=cloud;
   }else{data=chosen;await writeCloudNow()}
   checkDeviceCopy();
@@ -3244,7 +3281,7 @@ async function syncProtected(current,epoch=cloudEpoch){
   try{cloud=normalizeData(await decryptLedger(raw,vault.key))}catch{throw syncConflict('The protected cloud copy could not be decrypted. No copy was overwritten.')}
   if(epoch!==cloudEpoch||user?.uid!==uid)return;
   if(dataSignature(cloud)!==dataSignature(data)){
-   const choice=await askSyncChoice({title:'Protected copies are different',message:'This device and your cloud contain different protected data.',detail:'Choose a copy only after making a backup if you might need both. Neither copy changes if you decide later.',icon:'⌑',label:'PROTECTED SYNC CONFLICT',guarded:true,cardNote:'Neither copy changes until you choose. Export a backup first if you might need both.',choices:[{value:'cloud',label:'Use cloud copy',style:'primary'},{value:'local',label:'Keep this device',style:'secondary'},{value:'cancel',label:'Decide later',style:'quiet',focus:true}]});
+   const choice=await askSyncChoice({title:'Protected copies are different',message:'This device and your cloud contain different protected data.',signature:dataSignature(cloud)+'\n'+dataSignature(data),cardNote:'Neither copy changes until you choose. Export a backup first if you might need both.',choices:[{value:'cloud',label:'Use cloud copy'},{value:'local',label:'Keep this device'}]});
    if(epoch!==cloudEpoch||user?.uid!==uid)return;
    if(choice==='local'){
     await flushProtectedLocal();await cloudWritePayload(JSON.parse(vault.localRaw),uid,epoch);
@@ -3409,7 +3446,7 @@ try{
   });
 }catch(e){}
 if(document.documentElement.classList.contains('northstar-seen')){const screen=$('welcomeScreen');screen?.classList.add('hidden');screen?.setAttribute('aria-hidden','true')}
-restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJourney();updateBackgroundAvailability();if(vault.state!=='locked'&&isWelcomeVisible())window.setTimeout(focusWelcomeEntry,140);
+restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJourney();initSyncChoiceLayout();updateBackgroundAvailability();if(vault.state!=='locked'&&isWelcomeVisible())window.setTimeout(focusWelcomeEntry,140);
 </script>
 <script>
 /* Each purchased tile animates once when it first enters view. Returning to it does not replay the mark. */
