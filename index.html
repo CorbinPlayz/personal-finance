@@ -4370,8 +4370,8 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     if (connStorageWarning) c.enabled = false;
     var retired = { gemini: 'gemini-2.0-flash', anthropic: 'claude-3-5-haiku-latest', groq: 'llama-3.3-70b-versatile', openrouter: 'meta-llama/llama-3.3-70b-instruct:free' };
     if (retired[c.provider] === c.model) c.model = PROVIDERS[c.provider].model;
-    // Nothing was ever set up (no key, not switched on): use the free hosted AI so no key is needed.
-    if (raw && !c.key && !c.enabled && !c.hostedOff && !connStorageWarning) { c.provider = 'northstar'; c.model = PROVIDERS.northstar.model; c.key = 'hosted'; c.enabled = true; }
+    // Not switched on (never set up, or an old key-based setup left off): use the free hosted AI so no key is needed.
+    if (raw && !c.enabled && !c.hostedOff && !connStorageWarning && (!c.key || c.provider !== 'northstar')) { c.provider = 'northstar'; c.model = PROVIDERS.northstar.model; c.key = 'hosted'; c.enabled = true; }
     return c;
   }
   function paintConnStorageWarning() {

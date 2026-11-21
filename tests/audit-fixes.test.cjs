@@ -170,3 +170,8 @@ test('Jarvis uses the hosted AI by default, unless the user disconnected it', ()
   assert.match(html, /!c\.hostedOff/);
   assert.equal((html.match(/conn\.hostedOff = true/g) || []).length, 2);
 });
+
+test('an old switched-off key setup is moved to the hosted AI, but a deliberate hosted off stays off', () => {
+  const html = require('node:fs').readFileSync(__dirname + '/../index.html', 'utf8');
+  assert.match(html, /if \(raw && !c\.enabled && !c\.hostedOff && !connStorageWarning && \(!c\.key \|\| c\.provider !== 'northstar'\)\)/);
+});
