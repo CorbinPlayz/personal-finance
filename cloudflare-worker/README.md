@@ -6,7 +6,7 @@ The [major update overview](../MAJOR-UPDATE.md) explains the completed purchase 
 
 ## What is included
 
-- Cloudflare Workers AI using `@cf/zai-org/glm-4.7-flash`.
+- Cloudflare Workers AI using `@cf/meta/llama-3.3-70b-instruct-fp8-fast` (the earlier GLM model was slow and often returned empty answers with a real finance summary).
 - Firebase ID-token verification before each request.
 - Browser origin restriction to `https://corbinplayz.github.io`.
 - Short request limits, no-store responses, and friendly free-quota errors.

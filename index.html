@@ -4345,9 +4345,9 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   /* ---------------- connections: bring your own key ---------------- */
   var CONN_KEY = 'northstar-jarvis-conn-v1';
   var PROVIDERS = {
-    northstar: { label: 'Northstar hosted AI', model: 'glm-4.7-flash', url: 'https://northstar-finance-ai.camc-cf76.workers.dev/', help: 'free, runs on your Cloudflare account; needs Google sign-in' }
+    northstar: { label: 'Northstar hosted AI', model: 'llama-3.3-70b-instruct-fp8-fast', url: 'https://northstar-finance-ai.camc-cf76.workers.dev/', help: 'free, runs on your Cloudflare account; needs Google sign-in' }
   };
-  var CONN_DEFAULT = { provider: 'northstar', model: 'glm-4.7-flash', key: 'hosted', base: '', remember: true, includeTx: false, enabled: true };
+  var CONN_DEFAULT = { provider: 'northstar', model: 'llama-3.3-70b-instruct-fp8-fast', key: 'hosted', base: '', remember: true, includeTx: false, enabled: true };
   var connStorageWarning = false;
   var conn = loadConn();
   if (conn.migrated) { delete conn.migrated; try { saveConn(); } catch (e) {} }

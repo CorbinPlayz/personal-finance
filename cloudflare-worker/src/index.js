@@ -1,5 +1,5 @@
 const ALLOWED_ORIGIN = "https://corbinplayz.github.io";
-const MODEL = "@cf/zai-org/glm-4.7-flash";
+const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const MAX_MESSAGE_CHARS = 2000;
 const MAX_CONTEXT_CHARS = 6000;
 
@@ -102,7 +102,7 @@ export default {
         max_tokens: 500,
         temperature: 0.4
       });
-      const answer = result && (result.response || result.result && result.result.response);
+      const answer = result && (result.response || result.result && result.result.response || result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content);
       if (typeof answer !== "string" || !answer.trim()) {
         return json({ error: "The AI returned an empty response. Please try again." }, 502);
       }
