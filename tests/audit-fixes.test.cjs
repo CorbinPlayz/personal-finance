@@ -202,3 +202,11 @@ test('Jarvis loads stock prices on demand from any page and drafts stock purchas
   assert.match(html, /NorthstarWarmMarket\(\)\)\.catch/);
   assert.match(html, /openActionDraft\('add-holding', stockValues\)/);
 });
+
+test('Jarvis reads pasted shop links through the Worker and drafts the form', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /function handleProductLink\(/);
+  assert.match(html, /mode: 'price'/);
+  const worker = fs.readFileSync(path.join(__dirname, '..', 'cloudflare-worker', 'src', 'index.js'), 'utf8');
+  assert.match(worker, /body\.mode === "price"/);
+});
