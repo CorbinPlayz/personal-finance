@@ -210,3 +210,13 @@ test('Jarvis reads pasted shop links through the Worker and drafts the form', ()
   const worker = fs.readFileSync(path.join(__dirname, '..', 'cloudflare-worker', 'src', 'index.js'), 'utf8');
   assert.match(worker, /body\.mode === "price"/);
 });
+
+test('motion layer is gated for reduced motion and never fades dialogs or blurred toasts in from nothing', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const block = html.slice(html.indexOf('motion layer v2'), html.indexOf('</style>', html.indexOf('motion layer v2')));
+  assert.match(block, /@media \(prefers-reduced-motion:no-preference\)/);
+  assert.doesNotMatch(block, /\.modal|confirm-dialog/, 'dialogs keep the no-animation fix for iPhone Safari');
+  assert.match(block, /@keyframes nsyToast\{from\{transform/, 'blurred toast animates by transform only');
+  assert.match(html, /function motionV2\(\)/);
+  assert.doesNotMatch(html, /function renderFundsAllocation\(/);
+});
