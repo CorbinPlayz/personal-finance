@@ -194,3 +194,11 @@ test('Jarvis gets the user’s holdings and watchlist prices, and the Worker pro
   assert.match(worker, /do not tell the user to buy or sell any specific stock/);
   assert.match(worker, /MAX_CONTEXT_CHARS = 9000/);
 });
+
+test('Jarvis loads stock prices on demand from any page and drafts stock purchases', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  assert.match(html, /window\.NorthstarWarmMarket=/);
+  assert.match(html, /page==='Stocks'\|\|marketWarm/);
+  assert.match(html, /NorthstarWarmMarket\(\)\)\.catch/);
+  assert.match(html, /openActionDraft\('add-holding', stockValues\)/);
+});
