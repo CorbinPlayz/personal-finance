@@ -70,6 +70,31 @@ function meta(html, names) {
 
 const clean = t => decodeEntities(t).replace(/\s+/g, " ").trim().slice(0, 120);
 
+/* Last resort for marketing pages: the first "From $1,099" / "Starting at $99" in the visible text.
+   Monthly instalment prices ("$45.79/mo") are skipped. The caller labels the result a guess. */
+export function textPrice(html) {
+  const text = decodeEntities(String(html || "").replace(/<(script|style|noscript)\b[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ");
+  for (const m of text.matchAll(/\b(?:from|starting at|starts at|only)\s*(?:US)?\$\s?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{2})?/gi)) {
+    const after = text.slice(m.index + m[0].length, m.index + m[0].length + 24).toLowerCase();
+    if (/^\s*(?:\/|per\s)?\s*(?:mo\b|month)/.test(after)) continue;
+    const p = parsePrice(m[1] + (m[2] || ""));
+    if (p) return p;
+  }
+  return null;
+}
+
+/* "$45.79/mo. for 24 mo." or "24 monthly payments of $45.79" on the page. */
+export function textFinance(html) {
+  const text = decodeEntities(String(html || "").replace(/<(script|style|noscript)\b[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ");
+  let m = text.match(/\$\s?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{2})?\s*(?:\/|per\s)\s*(?:mo\b|month)\.?[^$]{0,40}?\b(\d{1,3})\s*(?:mo\b|months?)/i);
+  let monthly = m && parsePrice(m[1] + (m[2] || "")), months = m && Number(m[3]);
+  if (!monthly) {
+    m = text.match(/\b(\d{1,3})\s*(?:monthly\s+)?(?:payments?|instal+ments?)\s+of\s+\$\s?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{2})?/i);
+    monthly = m && parsePrice(m[2] + (m[3] || "")); months = m && Number(m[1]);
+  }
+  return monthly && months >= 2 && months <= 120 ? { monthly, months } : null;
+}
+
 export function extractProduct(html) {
   html = String(html || "");
   let name = "", price = null, currency = "", source = "";
@@ -92,8 +117,14 @@ export function extractProduct(html) {
     const p = m && parsePrice(m[1]);
     if (p) { price = p; source = "page tags"; }
   }
+  let guess = false;
+  if (!price) {
+    const g = textPrice(html);
+    if (g) { price = g; source = "page text"; guess = true; }
+  }
   if (!name) name = clean(meta(html, ["og:title", "twitter:title"]) || (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "");
-  return { name, price, currency, source };
+  const finance = textFinance(html);
+  return { name, price, currency, source, guess, finance };
 }
 
 async function readLimited(res) {

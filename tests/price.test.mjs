@@ -47,3 +47,21 @@ test('search results are decoded, filtered and used to find a price', async () =
   assert.match((await searchPrice('x', f)).error, /what you want/);
   assert.match((await searchPrice('gta 6', async () => new Response('', { status: 503 }))).error, /503/);
 });
+
+import { textPrice } from '../cloudflare-worker/src/price.js';
+test('marketing pages: reads a From price, skips monthly instalments', () => {
+  assert.equal(textPrice('<p>iPhone 18 Pro</p><p>From $45.79/mo. for 24 mo. or $1099</p><p>From $1,099</p>'), 1099);
+  assert.equal(textPrice('<script>From $5</script><p>Starting at $99.00</p>'), 99);
+  assert.equal(textPrice('<p>From $20 per month</p>'), null);
+  assert.equal(extractProduct('<title>Phone</title><p>From $1,099</p>').guess, true);
+  assert.equal(extractProduct('<script type="application/ld+json">{"@type":"Product","name":"A","offers":{"price":5}}</script>').guess, false);
+});
+
+import { textFinance } from '../cloudflare-worker/src/price.js';
+test('finds monthly payment plans on a page', () => {
+  assert.deepEqual(textFinance('<p>From $45.79/mo. for 24 mo. or $1099</p>'), { monthly: 45.79, months: 24 });
+  assert.deepEqual(textFinance('<p>Pay in 12 monthly payments of $89.99</p>'), { monthly: 89.99, months: 12 });
+  assert.equal(textFinance('<p>From $1,099</p>'), null);
+  const r = extractProduct('<title>Phone</title><p>From $1,099 or $45.79/mo. for 24 mo.</p>');
+  assert.deepEqual([r.price, r.finance.monthly, r.finance.months], [1099, 45.79, 24]);
+});
