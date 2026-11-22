@@ -5694,6 +5694,51 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   }
   /* A pasted shop link: the hosted Worker reads the product name and price (no AI used),
      then the usual draft form opens pre-filled. Nothing is saved until the user taps Save. */
+  /* Paying over time vs paying in full. Said in the message, or asked when the page shows both. */
+  var pendingFinance = null;
+  function financeIntent(t) {
+    if (/\b(finance|financing|financed|installments?|instalments?|monthly payments?|payment plan|lease|leasing|per month|a month)\b/i.test(t)) return 'finance';
+    if (/\b(outright|in full|pay full|full price|all at once|cash|one[- ]time|upfront|up front)\b/i.test(t)) return 'outright';
+    return '';
+  }
+  function money2(n, cur) { return (cur && cur !== 'USD' ? cur + ' ' : '$') + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function finishFound(found, text, url, query, mode) {
+    var name = String(found.name || '').slice(0, 100), price = Number(found.price), fin = found.finance && found.finance.monthly > 0 && found.finance.months > 0 ? found.finance : null;
+    var rest = text.replace(url || '', ' ').replace(/\s+/g, ' ').trim();
+    var plan = /\b(plan|planning|save for|saving for|want|wishlist|wish list|later|someday)\b/i.test(rest);
+    var viaNote = (query ? ' (web search; prices vary by shop)' : '') + (found.guess ? ' (a “from” price on the page, so check it)' : '');
+    var msg;
+    if (fin && price > 0 && !mode) {
+      pendingFinance = { found: found, text: text, url: url, query: query };
+      msg = '“' + name + '” is ' + money2(price, found.currency) + ' outright, or ' + money2(fin.monthly, found.currency) + '/month for ' + fin.months + ' months (' + money2(fin.monthly * fin.months, found.currency) + ' total). ' + (plan ? 'Are you planning to pay outright or finance it? ' : 'Did you pay outright or finance it? ') + 'Reply “outright” or “finance”.';
+    } else if (fin && (mode === 'finance' || (!price && !mode))) {
+      var total = fin.monthly * fin.months, label = name + ' (financed, ' + fin.months + ' mo)';
+      if (plan) {
+        msg = openActionDraft('add-purchase', { name: label.slice(0, 100), price: total.toFixed(2) })
+          ? 'I drafted a purchase plan for “' + name + '” financed at ' + money2(fin.monthly, found.currency) + '/month × ' + fin.months + ' = ' + money2(total, found.currency) + ' total (from ' + found.host + ')' + viaNote + '. Interest and fees may change the total, so check it, then save.'
+          : 'Close the form you’re editing first. I won’t replace unsaved changes.';
+      } else {
+        var r2 = routeMoneyAction('spent $' + fin.monthly.toFixed(2) + ' ' + rest.replace(/\b(buy|bought|purchase|purchased|add|log|record|finance|financed|financing)\b/ig, ' '));
+        var f2 = document.getElementById('modalForm');
+        if (f2 && f2.elements.namedItem('description')) { var d2 = f2.elements.namedItem('description'); d2.value = (name + ' – monthly payment (' + fin.months + ' mo)').slice(0, 120); d2.dispatchEvent(new Event('input', { bubbles: true })); }
+        msg = f2 ? 'I drafted this month’s payment of ' + money2(fin.monthly, found.currency) + ' for “' + name + '” (' + fin.months + ' months, ' + money2(total, found.currency) + ' total)' + viaNote + '. Check the account, then save. Add each later payment the same way, or set it up as a recurring bill.' : (r2 || 'Close the form you’re editing first. I won’t replace unsaved changes.');
+      }
+    } else if (!(price > 0)) {
+      msg = 'I found “' + (name || 'that page') + '” but no price on it' + (found.host ? ' (' + found.host + ')' : '') + '. Tell me the price, like “spent $25 on ' + (name || 'it') + '”.';
+    } else if (plan) {
+      msg = openActionDraft('add-purchase', { name: name, price: price.toFixed(2) })
+        ? 'I read “' + name + '” at ' + money2(price, found.currency) + ' from ' + found.host + viaNote + ' and drafted a purchase plan. Check the price, then save.'
+        : 'Close the form you’re editing first. I won’t replace unsaved changes.';
+    } else {
+      var routed = routeMoneyAction('spent $' + price.toFixed(2) + ' ' + rest.replace(/\b(buy|bought|purchase|purchased|add|log|record|outright)\b/ig, ' '));
+      var f = document.getElementById('modalForm');
+      if (f && name && f.elements.namedItem('description')) { var d = f.elements.namedItem('description'); d.value = name; d.dispatchEvent(new Event('input', { bubbles: true })); }
+      msg = f ? 'I read “' + name + '” at ' + money2(price, found.currency) + ' from ' + found.host + viaNote + ' and drafted the transaction. Check the price, edition and account, then save.' : (routed || 'Close the form you’re editing first. I won’t replace unsaved changes.');
+    }
+    addMsgWithSource(msg, query ? 'Web search · price read from a shop page' : 'Shop link · price read from the page');
+    pushTurn(text, msg);
+  }
+
   function handleProductLink(text, url, query) {
     if (!connReady()) { typeThen(cloudNeededText(), 'Cloud unavailable'); return; }
     var typing = makeTyping(), generation = chatGeneration;
@@ -5707,24 +5752,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     .then(function (found) {
       if (generation !== chatGeneration || window.NorthstarVaultLocked) return;
       typing.remove();
-      var name = String(found.name || '').slice(0, 100), price = Number(found.price);
-      var rest = text.replace(url || '', ' ').replace(/\s+/g, ' ').trim();
-      var plan = /\b(plan|planning|save for|saving for|want|wishlist|wish list|later|someday)\b/i.test(rest);
-      var msg;
-      if (!price || !(price > 0)) {
-        msg = 'I found “' + (name || 'that page') + '” but no price on it' + (found.host ? ' (' + found.host + ')' : '') + '. Tell me the price, like “spent $25 on ' + (name || 'it') + '”.';
-      } else if (plan) {
-        msg = openActionDraft('add-purchase', { name: name, price: price.toFixed(2) })
-          ? 'I read “' + name + '” at ' + (found.currency && found.currency !== 'USD' ? found.currency + ' ' : '$') + price.toFixed(2) + ' from ' + found.host + (query ? ' (web search; prices vary by shop)' : '') + ' and drafted a purchase plan. Check the price, then save.'
-          : 'Close the form you’re editing first. I won’t replace unsaved changes.';
-      } else {
-        var routed = routeMoneyAction('spent $' + price.toFixed(2) + ' ' + rest.replace(/\b(buy|bought|purchase|purchased|add|log|record)\b/ig, ' '));
-        var f = document.getElementById('modalForm');
-        if (f && name && f.elements.namedItem('description')) { var d = f.elements.namedItem('description'); d.value = name; d.dispatchEvent(new Event('input', { bubbles: true })); }
-        msg = (f ? 'I read “' + name + '” at ' + (found.currency && found.currency !== 'USD' ? found.currency + ' ' : '$') + price.toFixed(2) + ' from ' + found.host + (query ? ' (web search; prices vary by shop)' : '') + ' and drafted the transaction. Check the price, edition and account, then save.' : (routed || 'Close the form you’re editing first. I won’t replace unsaved changes.'));
-      }
-      addMsgWithSource(msg, query ? 'Web search · price read from a shop page' : 'Shop link · price read from the page');
-      pushTurn(text, msg);
+      finishFound(found, text, url, query, financeIntent(text));
     }).catch(function (err) {
       if (generation !== chatGeneration) return;
       typing.remove();
@@ -5751,6 +5779,13 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     addMsg(text, 'me');
     try { if (window.NorthstarFX && window.NorthstarFX.sound) window.NorthstarFX.sound.tap(); } catch (e) {}
 
+    if (pendingFinance) {
+      var pf = pendingFinance;
+      if (/^(?:cancel|never ?mind|nevermind|stop)\s*[.!]?$/i.test(text)) { pendingFinance = null; typeThen('Cancelled. No financial changes were made.', 'Local action draft'); return; }
+      var pick = /\b(finance|financed|financing|monthly|installments?|payments?)\b/i.test(text) ? 'finance' : /\b(outright|full|cash|buy|bought|all|once|upfront|up front)\b/i.test(text) ? 'outright' : '';
+      if (pick) { pendingFinance = null; finishFound(pf.found, pf.text, pf.url, pf.query, pick); return; }
+      pendingFinance = null;
+    }
     var linkMatch = text.match(/https?:\/\/[^\s<>"']+/i);
     if (linkMatch && !workspaceBlocked()) { handleProductLink(text, linkMatch[0].replace(/[.,;)\]]+$/, '')); return; }
     var wanted = !pendingAction && connReady() && productQuery(text);
