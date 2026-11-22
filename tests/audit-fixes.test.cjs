@@ -171,3 +171,26 @@ test('Jarvis only offers the free hosted AI, on by default, with no key fields',
   for (const gone of ['gemini', 'Gemini', 'groq', 'openrouter', 'api.openai.com', 'api.anthropic.com', 'id="nsjKey"', 'id="nsjProvider"', 'id="nsjClear"']) assert.ok(!html.includes(gone), gone + ' should be removed');
   assert.match(html, /<b>SMART ANSWERS<\/b>/);
 });
+
+test('portfolio tracker is wired into the Stocks page, the ledger and the price feed', () => {
+  const html = require('node:fs').readFileSync(__dirname + '/../index.html', 'utf8');
+  const view = require('node:fs').readFileSync(__dirname + '/../stock-watchlist-view.mjs', 'utf8');
+  assert.match(html, /from '\.\/portfolio\.mjs'/);
+  assert.match(html, /holdings:cleanHoldings\(x\.holdings\),portfolioHistory:cleanHistory\(x\.portfolioHistory\)/);
+  assert.match(html, /\.\.\.\(data\.holdings\|\|\[\]\)\.map\(h=>h\.symbol\)/);
+  assert.match(html, /portfolioHtml:renderPortfolioPanel\(\)/);
+  assert.match(view, /\$\{options\.portfolioHtml \|\| ''\}/);
+  assert.match(html, /case'add-holding':openModal\('holding'\)/);
+  assert.match(html, /data-section="holdings"/);
+});
+
+test('Jarvis gets the user’s holdings and watchlist prices, and the Worker prompt limits stock talk to them', () => {
+  const html = require('node:fs').readFileSync(__dirname + '/../index.html', 'utf8');
+  const worker = require('node:fs').readFileSync(__dirname + '/../cloudflare-worker/src/index.js', 'utf8');
+  assert.match(html, /window\.NorthstarMarketBrief=\(\)=>/);
+  assert.match(html, /out\.stockPortfolio = mkt\.portfolio/);
+  assert.match(html, /out\.watchlistPrices = mkt\.watchlist/);
+  assert.match(worker, /not that are not in the context|that are not in the context/);
+  assert.match(worker, /do not tell the user to buy or sell any specific stock/);
+  assert.match(worker, /MAX_CONTEXT_CHARS = 9000/);
+});
