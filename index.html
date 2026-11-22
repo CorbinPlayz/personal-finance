@@ -3090,7 +3090,7 @@ window.addEventListener('storage',e=>{
  }
 });
 
-async function initFirebase(){try{const [appSdk,authSdk,storeSdk]=await Promise.all([import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`)]);const app=(appSdk.getApps().length?appSdk.getApps()[0]:appSdk.initializeApp(firebaseConfig));const auth=authSdk.getAuth(app),db=storeSdk.getFirestore(app);fb={...appSdk,...authSdk,...storeSdk,app,auth,db};authSdk.onAuthStateChanged(auth,async current=>{await onAuthChanged(current)});authSdk.getRedirectResult(auth).catch(redirectError=>{if(firebaseErrorCode(redirectError)==='auth/no-auth-event')return;console.warn('Northstar redirect sign-in failed.',redirectError);reportSyncIssue(redirectError,'Google sign-in');showToast(firebaseErrorDetails(redirectError,'Google sign-in'))});authReady=true}catch(e){console.warn('Firebase SDK could not initialize; local mode remains available.',e);lastSyncError=e;authReady=true;setSync(vault.state==='locked'?'Protected workspace locked':vault.state==='unlocked'?'Protected device · cloud unavailable':`Firebase unavailable · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Firebase SDK initialization'))}}
+async function initFirebase(){try{const [appSdk,authSdk,storeSdk]=await Promise.all([import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`)]);const app=(appSdk.getApps().length?appSdk.getApps()[0]:appSdk.initializeApp(firebaseConfig));const auth=authSdk.getAuth(app),db=storeSdk.getFirestore(app);fb={...appSdk,...authSdk,...storeSdk,app,auth,db};authSdk.onAuthStateChanged(auth,async current=>{await onAuthChanged(current)});authSdk.getRedirectResult(auth).then(result=>{let pending=false;try{pending=sessionStorage.getItem('northstar-redirect-pending')==='1';sessionStorage.removeItem('northstar-redirect-pending')}catch(x){}if(pending&&!result&&!auth.currentUser)showToast('Sign-in did not finish. Open Northstar in your browser (not the home-screen app) and tap Connect again.')}).catch(redirectError=>{if(firebaseErrorCode(redirectError)==='auth/no-auth-event')return;console.warn('Northstar redirect sign-in failed.',redirectError);reportSyncIssue(redirectError,'Google sign-in');showToast(firebaseErrorDetails(redirectError,'Google sign-in'))});authReady=true}catch(e){console.warn('Firebase SDK could not initialize; local mode remains available.',e);lastSyncError=e;authReady=true;setSync(vault.state==='locked'?'Protected workspace locked':vault.state==='unlocked'?'Protected device · cloud unavailable':`Firebase unavailable · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Firebase SDK initialization'))}}
 function docRef(uid=user?.uid){return fb.doc(fb.db,'users',uid,'northstar','financeData')}
 function cloudValue(snap){return snap.exists()?snap.data():null}
 /* Firestore maps can come from a different JS realm. Do not mistake SDK values
@@ -3416,18 +3416,20 @@ function queueCloudSave(){
    popup, and a blocked popup used to leave the header saying only that sync
    needed attention. Prefer a redirect there, and fall back to one elsewhere. */
 function prefersRedirectSignIn(){
+ /* Redirect sign-in comes back with no user in Safari and other browsers that
+    partition storage between github.io and firebaseapp.com, which looked like
+    "connect loads, then I am logged out". Use a popup in every normal browser
+    tab; keep redirect only for an installed home-screen app, which has no popups. */
  const nav=window.navigator||{};if(nav.standalone===true)return true;
  try{if(window.matchMedia?.('(display-mode: standalone)')?.matches)return true}catch(e){}
- const agent=String(nav.userAgent||'');
- const ios=/iPad|iPhone|iPod/.test(agent)||(nav.platform==='MacIntel'&&nav.maxTouchPoints>1);
- return ios&&!/CriOS|FxiOS|EdgiOS|OPiOS/.test(agent);
+ return false;
 }
 async function handleGoogleSignIn(){
  if(!fb){showToast('Firebase has not initialized. Check the Firebase unavailable status and reload the page.');return}
  if(signingIn)return;signingIn=true;
  const provider=new fb.GoogleAuthProvider();
  try{
-  if(prefersRedirectSignIn()){await fb.signInWithRedirect(fb.auth,provider);return}
+  if(prefersRedirectSignIn()){try{sessionStorage.setItem('northstar-redirect-pending','1')}catch(x){}await fb.signInWithRedirect(fb.auth,provider);return}
   await fb.signInWithPopup(fb.auth,provider);
  }catch(e){
   const code=firebaseErrorCode(e);
