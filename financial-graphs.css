@@ -30,6 +30,12 @@
 .ns-graph-enter { animation: nsGraphArrive .6s ease-out both; }
 .ns-graph-enter .ns-flow-bar,.ns-graph-enter .ns-list-fill,.ns-graph-enter .ns-mix-track span,.ns-graph-enter .ns-donut svg,.ns-graph-enter .ns-goal-ring svg { animation: nsGraphTint .6s ease-out both; }
 @keyframes nsGraphArrive { from { opacity: .68; } to { opacity: 1; } }
+.ns-graph-enter .ns-flow-bar { transform-origin:50% 100%; animation: nsGraphTint .6s ease-out both, nsGraphGrowY .8s cubic-bezier(.16,1,.3,1) both; animation-delay:0s, calc(var(--ns-i,0) * 38ms + 80ms); }
+.ns-graph-enter .ns-list-fill,.ns-graph-enter .ns-mix-track span { transform-origin:0 50%; animation: nsGraphTint .6s ease-out both, nsGraphGrowX .9s cubic-bezier(.16,1,.3,1) both; animation-delay:0s, calc(var(--ns-i,0) * 70ms + 80ms); }
+.ns-graph-enter .ns-donut svg,.ns-graph-enter .ns-goal-ring svg { animation: nsGraphTint .6s ease-out both, nsGraphSpin .95s cubic-bezier(.16,1,.3,1) both; }
+@keyframes nsGraphGrowY { from { transform:scaleY(0); } to { transform:scaleY(1); } }
+@keyframes nsGraphGrowX { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+@keyframes nsGraphSpin { from { transform:rotate(-28deg) scale(.88); opacity:.4; } to { transform:none; opacity:1; } }
 @keyframes nsGraphTint { from { filter: saturate(.7) brightness(1.12); } to { filter: none; } }
 .ns-sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); clip-path:inset(50%); white-space:nowrap; border:0; }
 .ns-graph-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:19px; }
