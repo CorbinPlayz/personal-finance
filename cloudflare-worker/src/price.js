@@ -95,6 +95,22 @@ export function textFinance(html) {
   return monthly && months >= 2 && months <= 120 ? { monthly, months } : null;
 }
 
+/* When no price is certain: the dollar amounts on the page with a few words of context, so the user can pick. */
+export function textAmounts(html, limit = 5) {
+  const text = decodeEntities(String(html || "").replace(/<(script|style|noscript)\b[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ");
+  const out = [], seen = new Set();
+  for (const m of text.matchAll(/\$\s?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{2})?/g)) {
+    const p = parsePrice(m[1] + (m[2] || ""));
+    if (!p || p < 1 || seen.has(p)) continue;
+    const after = text.slice(m.index + m[0].length, m.index + m[0].length + 10).toLowerCase();
+    if (/^\s*(?:\/|per\s)?\s*(?:mo\b|month)/.test(after)) continue;
+    seen.add(p);
+    out.push({ price: p, context: text.slice(Math.max(0, m.index - 28), m.index + m[0].length + 14).trim() });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 export function extractProduct(html) {
   html = String(html || "");
   let name = "", price = null, currency = "", source = "";
@@ -124,7 +140,9 @@ export function extractProduct(html) {
   }
   if (!name) name = clean(meta(html, ["og:title", "twitter:title"]) || (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1] || "");
   const finance = textFinance(html);
-  return { name, price, currency, source, guess, finance };
+  const out = { name, price, currency, source, guess, finance };
+  if (!price) out.amounts = textAmounts(html);
+  return out;
 }
 
 async function readLimited(res) {

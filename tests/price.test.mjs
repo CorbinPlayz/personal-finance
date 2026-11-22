@@ -65,3 +65,10 @@ test('finds monthly payment plans on a page', () => {
   const r = extractProduct('<title>Phone</title><p>From $1,099 or $45.79/mo. for 24 mo.</p>');
   assert.deepEqual([r.price, r.finance.monthly, r.finance.months], [1099, 45.79, 24]);
 });
+
+import { textAmounts } from '../cloudflare-worker/src/price.js';
+test('lists dollar amounts with context when no price is clear', () => {
+  const a = textAmounts('<p>iPhone 18 Pro <b>From $1,099</b></p><p>$45.79/mo.</p><p>Trade in up to $630</p><p>From $1,099 again</p>');
+  assert.deepEqual(a.map(x => x.price), [1099, 630]);
+  assert.match(a[0].context, /From \$1,099/);
+});
