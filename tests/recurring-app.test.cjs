@@ -181,7 +181,7 @@ test('deleting a recurring item removes only that item', async () => {
 
 test('loading and importing keep valid recurring items and drop malformed ones', async () => {
   const lib = await import('../recurring.mjs');
-  const ctx = vm.createContext({ cleanRecurring: lib.cleanRecurring, cleanSplit: raw => ({ enabled: false, parts: [] }), blankData: () => ({ recurring: [], settings: { profile: {} } }) });
+  const ctx = vm.createContext({ cleanRecurring: lib.cleanRecurring, cleanHoldings: lib2 => [], cleanHistory: lib2 => [], cleanSplit: raw => ({ enabled: false, parts: [] }), blankData: () => ({ recurring: [], settings: { profile: {} } }) });
   vm.runInContext(section('function normalizeData(input){', 'function migrateSimpleTransactions('), ctx);
   const result = ctx.normalizeData({ accounts: [], transactions: [], budgets: [], goals: [], purchases: [], recurring: [bill(), { id: 'bad', amount: -1 }, null, 'x'] });
   assert.deepEqual(Array.from(result.recurring, r => r.id), ['rent']);
