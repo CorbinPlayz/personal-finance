@@ -5694,7 +5694,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   }
   /* A pasted shop link: the hosted Worker reads the product name and price (no AI used),
      then the usual draft form opens pre-filled. Nothing is saved until the user taps Save. */
-  function handleProductLink(text, url) {
+  function handleProductLink(text, url, query) {
     if (!connReady()) { typeThen(cloudNeededText(), 'Cloud unavailable'); return; }
     var typing = makeTyping(), generation = chatGeneration;
     var getToken = window.NorthstarGetIdToken;
@@ -5702,34 +5702,45 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
       if (typeof getToken !== 'function') throw new Error('Sign in with Google to read shop links.');
       return getToken();
     }).then(function (idToken) {
-      return fetch(PROVIDERS.northstar.url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken }, body: JSON.stringify({ mode: 'price', url: url }) });
+      return fetch(PROVIDERS.northstar.url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken }, body: JSON.stringify(query ? { mode: 'search', query: query } : { mode: 'price', url: url }) });
     }).then(function (res) { return res.json().catch(function () { return {}; }).then(function (j) { if (!res.ok) throw new Error(j.error || ('Price check failed (' + res.status + ')')); return j; }); })
     .then(function (found) {
       if (generation !== chatGeneration || window.NorthstarVaultLocked) return;
       typing.remove();
       var name = String(found.name || '').slice(0, 100), price = Number(found.price);
-      var rest = text.replace(url, ' ').replace(/\s+/g, ' ').trim();
+      var rest = text.replace(url || '', ' ').replace(/\s+/g, ' ').trim();
       var plan = /\b(plan|planning|save for|saving for|want|wishlist|wish list|later|someday)\b/i.test(rest);
       var msg;
       if (!price || !(price > 0)) {
         msg = 'I found “' + (name || 'that page') + '” but no price on it' + (found.host ? ' (' + found.host + ')' : '') + '. Tell me the price, like “spent $25 on ' + (name || 'it') + '”.';
       } else if (plan) {
         msg = openActionDraft('add-purchase', { name: name, price: price.toFixed(2) })
-          ? 'I read “' + name + '” at ' + (found.currency && found.currency !== 'USD' ? found.currency + ' ' : '$') + price.toFixed(2) + ' from ' + found.host + ' and drafted a purchase plan. Check the price, then save.'
+          ? 'I read “' + name + '” at ' + (found.currency && found.currency !== 'USD' ? found.currency + ' ' : '$') + price.toFixed(2) + ' from ' + found.host + (query ? ' (web search; prices vary by shop)' : '') + ' and drafted a purchase plan. Check the price, then save.'
           : 'Close the form you’re editing first. I won’t replace unsaved changes.';
       } else {
         var routed = routeMoneyAction('spent $' + price.toFixed(2) + ' ' + rest.replace(/\b(buy|bought|purchase|purchased|add|log|record)\b/ig, ' '));
         var f = document.getElementById('modalForm');
         if (f && name && f.elements.namedItem('description')) { var d = f.elements.namedItem('description'); d.value = name; d.dispatchEvent(new Event('input', { bubbles: true })); }
-        msg = (f ? 'I read “' + name + '” at ' + (found.currency && found.currency !== 'USD' ? found.currency + ' ' : '$') + price.toFixed(2) + ' from ' + found.host + ' and drafted the transaction. Check the price and account, then save.' : (routed || 'Close the form you’re editing first. I won’t replace unsaved changes.'));
+        msg = (f ? 'I read “' + name + '” at ' + (found.currency && found.currency !== 'USD' ? found.currency + ' ' : '$') + price.toFixed(2) + ' from ' + found.host + (query ? ' (web search; prices vary by shop)' : '') + ' and drafted the transaction. Check the price, edition and account, then save.' : (routed || 'Close the form you’re editing first. I won’t replace unsaved changes.'));
       }
-      addMsgWithSource(msg, 'Shop link · price read from the page');
+      addMsgWithSource(msg, query ? 'Web search · price read from a shop page' : 'Shop link · price read from the page');
       pushTurn(text, msg);
     }).catch(function (err) {
       if (generation !== chatGeneration) return;
       typing.remove();
-      addMsgWithSource('I couldn’t read that link: ' + errText(err) + ' Cart and checkout pages are private to you, so share the product page instead, or just tell me the price.', 'Shop link');
+      addMsgWithSource(query ? 'I couldn’t find a price online: ' + errText(err) + ' Tell me the price, like “spent $25 on ' + query + '”.' : 'I couldn’t read that link: ' + errText(err) + ' Cart and checkout pages are private to you, so share the product page instead, or just tell me the price.', query ? 'Web search' : 'Shop link');
     });
+  }
+
+  /* "buy gta 6 standard edition": a purchase with a product name but no amount. Returns the name to search for. */
+  function productQuery(text) {
+    var t = String(text || '').trim();
+    if (!t || /[?]\s*$/.test(t) || /\$|\busd\b|\d\s*(?:dollars|bucks)\b/i.test(t)) return null;
+    if (/\b(shares?|stocks?|portfolio|balance|budget|goal|transfer|income|paycheck|salary)\b/i.test(t)) return null;
+    var m = t.match(/^(?:please\s+)?(?:i\s+)?(?:(?:just|want to|wanna|need to|plan to|planning to)\s+)*(?:buy|bought|purchase|purchased|order|ordered|get|got)\s+(?:me\s+)?(?:a|an|the|some)?\s*(.{3,100})$/i);
+    if (!m) return null;
+    var name = m[1].replace(/\b(?:today|yesterday|tomorrow)\b/ig, ' ').replace(/\s+(?:with|using|from|on|in)\s+(?:my\s+)?[\w' -]*$/i, function (x) { return accountMentions(x, snapshot()).length ? ' ' : x; }).replace(/\s+/g, ' ').trim();
+    return name.length >= 3 && name.split(' ').length <= 12 ? name : null;
   }
 
   function send(raw) {
@@ -5742,6 +5753,8 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
 
     var linkMatch = text.match(/https?:\/\/[^\s<>"']+/i);
     if (linkMatch && !workspaceBlocked()) { handleProductLink(text, linkMatch[0].replace(/[.,;)\]]+$/, '')); return; }
+    var wanted = !pendingAction && connReady() && productQuery(text);
+    if (wanted && !workspaceBlocked()) { handleProductLink(text, '', wanted); return; }
     var actionAnswer = routeMoneyAction(text);
     if (actionAnswer) { pushTurn(text, actionAnswer); typeThen(actionAnswer, 'Local action draft'); return; }
     if (!connReady()) {
