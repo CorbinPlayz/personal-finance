@@ -5723,6 +5723,9 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         if (f2 && f2.elements.namedItem('description')) { var d2 = f2.elements.namedItem('description'); d2.value = (name + ' – monthly payment (' + fin.months + ' mo)').slice(0, 120); d2.dispatchEvent(new Event('input', { bubbles: true })); }
         msg = f2 ? 'I drafted this month’s payment of ' + money2(fin.monthly, found.currency) + ' for “' + name + '” (' + fin.months + ' months, ' + money2(total, found.currency) + ' total)' + viaNote + '. Check the account, then save. Add each later payment the same way, or set it up as a recurring bill.' : (r2 || 'Close the form you’re editing first. I won’t replace unsaved changes.');
       }
+    } else if (!(price > 0) && found.amounts && found.amounts.length) {
+      pendingFinance = { found: found, text: text, url: url, query: query, pick: true };
+      msg = 'I found “' + (name || 'that page') + '” but no single clear price. These amounts are on the page:\n' + found.amounts.map(function (a, i) { return (i + 1) + '. ' + money2(a.price) + '  (…' + a.context + '…)'; }).join('\n') + '\nReply with the number (1–' + found.amounts.length + ') or type the price yourself.';
     } else if (!(price > 0)) {
       msg = 'I found “' + (name || 'that page') + '” but no price on it' + (found.host ? ' (' + found.host + ')' : '') + '. Tell me the price, like “spent $25 on ' + (name || 'it') + '”.';
     } else if (plan) {
@@ -5781,10 +5784,18 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
 
     if (pendingFinance) {
       var pf = pendingFinance;
+      if (pf.pick) {
+        var pickText = text.trim(), chosen = null, idx = /^\d$/.test(pickText) ? Number(pickText) : 0;
+        if (idx >= 1 && idx <= pf.found.amounts.length) chosen = pf.found.amounts[idx - 1].price;
+        else { var typed = pickText.match(/^\$?\s?(\d[\d,]*(?:\.\d{1,2})?)\s*$/); if (typed) chosen = Number(typed[1].replace(/,/g, '')); }
+        if (chosen > 0) { pendingFinance = null; finishFound(Object.assign({}, pf.found, { price: chosen, amounts: null }), pf.text, pf.url, pf.query, financeIntent(pf.text)); return; }
+        pendingFinance = null;
+      }
+      if (pf.pick) { pendingFinance = null; } else {
       if (/^(?:cancel|never ?mind|nevermind|stop)\s*[.!]?$/i.test(text)) { pendingFinance = null; typeThen('Cancelled. No financial changes were made.', 'Local action draft'); return; }
       var pick = /\b(finance|financed|financing|monthly|installments?|payments?)\b/i.test(text) ? 'finance' : /\b(outright|full|cash|buy|bought|all|once|upfront|up front)\b/i.test(text) ? 'outright' : '';
       if (pick) { pendingFinance = null; finishFound(pf.found, pf.text, pf.url, pf.query, pick); return; }
-      pendingFinance = null;
+      pendingFinance = null; }
     }
     var linkMatch = text.match(/https?:\/\/[^\s<>"']+/i);
     if (linkMatch && !workspaceBlocked()) { handleProductLink(text, linkMatch[0].replace(/[.,;)\]]+$/, '')); return; }
