@@ -183,3 +183,14 @@ test('portfolio tracker is wired into the Stocks page, the ledger and the price 
   assert.match(html, /case'add-holding':openModal\('holding'\)/);
   assert.match(html, /data-section="holdings"/);
 });
+
+test('Jarvis gets the user’s holdings and watchlist prices, and the Worker prompt limits stock talk to them', () => {
+  const html = require('node:fs').readFileSync(__dirname + '/../index.html', 'utf8');
+  const worker = require('node:fs').readFileSync(__dirname + '/../cloudflare-worker/src/index.js', 'utf8');
+  assert.match(html, /window\.NorthstarMarketBrief=\(\)=>/);
+  assert.match(html, /out\.stockPortfolio = mkt\.portfolio/);
+  assert.match(html, /out\.watchlistPrices = mkt\.watchlist/);
+  assert.match(worker, /not that are not in the context|that are not in the context/);
+  assert.match(worker, /do not tell the user to buy or sell any specific stock/);
+  assert.match(worker, /MAX_CONTEXT_CHARS = 9000/);
+});

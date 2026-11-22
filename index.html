@@ -2351,6 +2351,12 @@ function paintPortfolio(){
  const sum=portfolioSummary(data.holdings||[],stockFeed.quoteFor),now=Date.now();
  if(sum.lots&&!sum.unpriced&&now-lastSnapshotAt>15*60000){const nextHist=recordSnapshot(data.portfolioHistory,isoToday(),sum);if(nextHist){lastSnapshotAt=now;data={...data,portfolioHistory:nextHist};persist()}}
 }
+window.NorthstarMarketBrief=()=>{try{
+ const holdings=data.holdings||[],sum=portfolioSummary(holdings,stockFeed.quoteFor),quote=sym=>{const q=stockFeed.quoteFor(sym);return q&&q.price>0?{symbol:sym,price:Math.round(q.price*100)/100,todayPct:q.previousClose>0?Math.round((q.price/q.previousClose-1)*10000)/100:null}:null};
+ const watchlist=watchlistSymbols(data.settings).map(quote).filter(Boolean).slice(0,25);
+ const portfolio=sum.lots?{purchases:sum.lots,moneyInvested:sum.invested,currentValue:sum.priced?sum.value:null,gainLoss:sum.priced?sum.gain:null,gainLossPct:sum.gainPct,todayChange:sum.day,purchasesWithoutPrice:sum.unpriced,positions:sum.positions.slice(0,12).map(p=>({symbol:p.symbol,shares:p.shares,moneyInvested:p.cost,currentValue:p.priced?p.value:null,percentOfPortfolio:p.share}))}:null;
+ return {portfolio,watchlist,pricesAvailable:watchlist.length>0||sum.priced>0}
+}catch(e){return null}};
 function isoToday(){const t=new Date();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`}
 function fxVolumePercent(){try{const v=JSON.parse(localStorage.getItem('northstar-fx-v1')||'{}').vol;return Math.round((typeof v==='number'&&v>=0&&v<=1?v:.55)*100)}catch(e){return 55}}
 function renderSplitPanel(){
@@ -4484,6 +4490,12 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         note: 'Recurring items are reminders; they only become transactions when the user posts them.'
       };
     }
+    var mkt = typeof window.NorthstarMarketBrief === 'function' ? window.NorthstarMarketBrief() : null;
+    if (mkt) {
+      if (mkt.portfolio) out.stockPortfolio = mkt.portfolio;
+      if (mkt.watchlist && mkt.watchlist.length) out.watchlistPrices = mkt.watchlist;
+      if (mkt.portfolio && !mkt.pricesAvailable) out.stockNote = 'Current stock prices are only loaded after the Stocks page is opened with a Finnhub key connected.';
+    }
     var split = d.settings && d.settings.split;
     if (split && split.enabled && Array.isArray(split.parts) && split.parts.length) out.incomeSplitEnabled = true;
     if (opts.includeTx) {
@@ -4514,6 +4526,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
       '- Be concise: under 90 words unless asked for depth. No markdown headings, no bullet spam.\n' +
       '- Do the arithmetic you can do from the brief, and show the number.\n' +
       '- Goals and plans may include dueDate, monthsLeft and neededPerMonth: use them to say whether the person is on track. Recurring bills and income are reminders until posted.\n' +
+      '- Stock data covers only the user’s own holdings (stockPortfolio) and watchlist prices (watchlistPrices). Do not state prices or news for any other ticker and do not browse. Describe gains, losses, and concentration; do not tell the user to buy or sell a specific stock.\n' +
       '- Never treat combined tracked accounts as spendable cash. Ask for a specific funding account and note that minimums, purchase allocations, savings and future bills are not all in this brief.\n' +
       '- Never present regulated financial advice as certainty; be direct and practical anyway.\n' +
       '- Amounts are in ' + ((s.d && s.d.settings && s.d.settings.currency) || 'USD') + '.\n\n' +
@@ -4552,7 +4565,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         var nres = await fetch(PROVIDERS.northstar.url, {
           method: 'POST', signal: ctrl.signal,
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
-          body: JSON.stringify({ message: String(userText).slice(0, 2000), context: String(sys).slice(0, 6000) })
+          body: JSON.stringify({ message: String(userText).slice(0, 2000), context: String(sys).slice(0, 9000) })
         });
         var nj = await nres.json().catch(function () { return null; });
         if (!nres.ok) { var nerr = new Error((nj && nj.error) || ('Hosted AI error (' + nres.status + ')')); nerr.status = nres.status; throw nerr; }
@@ -5085,7 +5098,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
       '<div class="nsj-sheet" id="nsjSheet" aria-hidden="true">' +
         '<div class="nsj-sheet-head"><b>SMART ANSWERS</b><span>free, no key</span><button type="button" class="nsj-close" id="nsjSheetClose" aria-label="Close settings">' + icon('<path d="M6 6l12 12M18 6 6 18"/>') + '</button></div>' +
         '<div class="nsj-sheet-body">' +
-          '<div class="nsj-row"><div class="nsj-row-text"><b>Smart answers</b><small>On: your questions and a summary of your finances go to Northstar’s free hosted AI. Needs Google sign-in. Off: built-in answers only.</small></div><button type="button" class="nsj-switch" id="nsjEnabled" role="switch" aria-checked="false" aria-label="Smart answers"></button></div>' +
+          '<div class="nsj-row"><div class="nsj-row-text"><b>Smart answers</b><small>On: your questions and a summary of your finances, stocks you hold and your watchlist prices go to Northstar’s free hosted AI. Needs Google sign-in. Off: built-in answers only.</small></div><button type="button" class="nsj-switch" id="nsjEnabled" role="switch" aria-checked="false" aria-label="Smart answers"></button></div>' +
           '<div class="nsj-row"><div class="nsj-row-text"><b>Share account names and recent transactions</b><small>Lets the AI see account balances, bills and your last 8 entries.</small></div><button type="button" class="nsj-switch" id="nsjTx" role="switch" aria-checked="false" aria-label="Share account names and recent transactions"></button></div>' +
           '<div class="nsj-actions"><button type="button" class="nsj-mini primary" id="nsjSave">Check connection</button><button type="button" class="nsj-mini" id="nsjPreview">See what is sent</button></div>' +
           '<div class="nsj-status-line" id="nsjConnStatus"><i></i><span>Checking…</span></div>' +
