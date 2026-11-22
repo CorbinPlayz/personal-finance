@@ -35,3 +35,15 @@ test('lookup follows safe redirects only and reports problems plainly', async ()
   assert.match((await lookupPrice('http://a.com', async () => mk(200))).error, /https/);
   assert.match((await lookupPrice('https://a.com', async () => mk(403))).error, /403/);
 });
+
+import { parseSearchResults, searchPrice } from '../cloudflare-worker/src/price.js';
+test('search results are decoded, filtered and used to find a price', async () => {
+  const ddg = '<a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.shop.com%2Fgta6&amp;rut=1">GTA</a><a class="result__a" href="https://en.wikipedia.org/wiki/GTA">w</a><a class="result__a" href="https://127.0.0.1/x">bad</a><a class="result__a" href="https://store.other.com/gta">o</a>';
+  assert.deepEqual(parseSearchResults(ddg), ['https://www.shop.com/gta6', 'https://store.other.com/gta']);
+  const page = '<script type="application/ld+json">{"@type":"Product","name":"GTA VI Standard","offers":{"price":"69.99","priceCurrency":"USD"}}</script>';
+  const f = async u => u.includes('duckduckgo') ? new Response(ddg, { status: 200 }) : u.includes('shop.com') ? new Response('<title>none</title>', { status: 200, headers: { 'content-type': 'text/html' } }) : new Response(page, { status: 200, headers: { 'content-type': 'text/html' } });
+  const r = await searchPrice('gta 6 standard edition', f);
+  assert.deepEqual([r.name, r.price, r.host, r.viaSearch], ['GTA VI Standard', 69.99, 'store.other.com', true]);
+  assert.match((await searchPrice('x', f)).error, /what you want/);
+  assert.match((await searchPrice('gta 6', async () => new Response('', { status: 503 }))).error, /503/);
+});

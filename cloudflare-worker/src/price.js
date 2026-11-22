@@ -133,3 +133,41 @@ export async function lookupPrice(rawUrl, fetchImpl = fetch) {
   }
   return { error: "That link redirected too many times." };
 }
+
+const SKIP_HOSTS = /(^|\.)(duckduckgo\.com|google\.[a-z.]+|bing\.com|wikipedia\.org|reddit\.com|youtube\.com|facebook\.com|instagram\.com|tiktok\.com|x\.com|twitter\.com|pinterest\.com|quora\.com|ign\.com|gamespot\.com)$/i;
+
+export function parseSearchResults(html) {
+  const out = [];
+  for (const m of String(html || "").matchAll(/class="result__a"[^>]*href="([^"]+)"/gi)) {
+    let href = decodeEntities(m[1]);
+    if (href.startsWith("//")) href = "https:" + href;
+    try {
+      const u = new URL(href);
+      if (/duckduckgo\.com$/.test(u.hostname) && u.searchParams.get("uddg")) href = u.searchParams.get("uddg");
+    } catch { continue; }
+    const u = checkUrl(href);
+    if (!u || SKIP_HOSTS.test(u.hostname) || out.includes(u.toString())) continue;
+    out.push(u.toString());
+  }
+  return out;
+}
+
+export async function searchPrice(query, fetchImpl = fetch) {
+  const q = String(query || "").replace(/\s+/g, " ").trim().slice(0, 120);
+  if (q.length < 3) return { error: "Tell me what you want to buy." };
+  let html = "";
+  try {
+    const res = await fetchImpl("https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q + " buy price"), {
+      signal: AbortSignal.timeout(6000),
+      headers: { "user-agent": "Mozilla/5.0 (compatible; NorthstarPriceCheck/1.0)", "accept": "text/html", "accept-language": "en-US,en;q=0.9" }
+    });
+    if (!res.ok) return { error: "The web search didn't answer (" + res.status + ")." };
+    html = await readLimited(res);
+  } catch { return { error: "The web search didn't answer." }; }
+  const links = parseSearchResults(html).slice(0, 4);
+  if (!links.length) return { error: "The web search found nothing I could read." };
+  const results = await Promise.all(links.map(l => lookupPrice(l, fetchImpl).catch(() => ({ error: "x" }))));
+  const hit = results.find(r => r && r.price);
+  if (!hit) return { error: "I found shops but none showed a price I could read." };
+  return { ...hit, viaSearch: true };
+}
