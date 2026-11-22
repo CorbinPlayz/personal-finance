@@ -4435,6 +4435,9 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     return !connStorageWarning;
   }
   function providerLabel(id) { return (PROVIDERS[id] || PROVIDERS.custom).label; }
+  /* Turned off, not removed: the built-in offline answers. Set to true to bring them back. */
+  var LOCAL_BRAIN_ENABLED = false;
+  function cloudNeededText(err) { return 'I need the cloud to answer that' + (err ? ' (' + errText(err) + ')' : '') + '. Sign in with Google, check your connection, and try again.'; }
   function connReady() {
     if (!conn.enabled || !conn.key || !conn.model) return false;
     return true;
@@ -5107,7 +5110,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         '<button type="button" class="nsj-btn send" id="nsjSend" aria-label="Send">' + icon('<path d="M5 12h13M13 6.5 18.5 12 13 17.5"/>') + '</button>' +
       '</div>' +
       '<div class="nsj-busy" id="nsjBusy" aria-live="polite"></div>' +
-      '<div class="nsj-footnote" id="nsjFootnote">Assistant answers run locally</div>' +
+      '<div class="nsj-footnote" id="nsjFootnote">Answers come from the cloud · drafts open forms for you to review</div>' +
       '<div class="nsj-sheet" id="nsjSheet" aria-hidden="true">' +
         '<div class="nsj-sheet-head"><b>SMART ANSWERS</b><span>free, no key</span><button type="button" class="nsj-close" id="nsjSheetClose" aria-label="Close settings">' + icon('<path d="M6 6l12 12M18 6 6 18"/>') + '</button></div>' +
         '<div class="nsj-sheet-body">' +
@@ -5271,11 +5274,11 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     if (!el) return;
     var s = snapshot();
     var base = s.ok ? s.accounts.length + ' acct · ' + s.txCount + ' tx' : 'No ledger found';
-    el.textContent = (connReady() ? 'Smart AI ' + (cloudVerified ? 'connected' : 'on') + ' · ' : 'Built-in answers · ') + base;
+    el.textContent = (connReady() ? 'Smart AI ' + (cloudVerified ? 'connected' : 'on') + ' · ' : (LOCAL_BRAIN_ENABLED ? 'Built-in answers · ' : 'Smart AI off · ')) + base;
     var fn = panel.querySelector('#nsjFootnote');
     if (fn) fn.textContent = connReady()
       ? (cloudVerified ? 'Smart answers are working · free hosted AI' : 'Smart answers are on · free hosted AI (sign in with Google)')
-      : 'Smart answers are off · using built-in answers';
+      : (LOCAL_BRAIN_ENABLED ? 'Smart answers are off · using built-in answers' : 'Smart answers are switched off in settings');
   }
 
   function addMsg(text, who) {
@@ -5700,8 +5703,8 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     var actionAnswer = routeMoneyAction(text);
     if (actionAnswer) { pushTurn(text, actionAnswer); typeThen(actionAnswer, 'Local action draft'); return; }
     if (!connReady()) {
-      var localAnswer = reply(text);
-      pushTurn(text, localAnswer);
+      var localAnswer = LOCAL_BRAIN_ENABLED ? reply(text) : cloudNeededText();
+      if (LOCAL_BRAIN_ENABLED) pushTurn(text, localAnswer);
       typeThen(localAnswer);
       return;
     }
@@ -5719,6 +5722,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     }).catch(function (err) {
       if (generation !== chatGeneration || controller.signal.aborted || window.NorthstarVaultLocked) return;
       typing.remove(); cloudVerified = false; refreshStatus();
+      if (!LOCAL_BRAIN_ENABLED) { addMsgWithSource(cloudNeededText(err), 'Cloud unavailable'); return; }
       var fallback = reply(text);
       addMsgWithSource(fallback, 'Local fallback · ' + errText(err));
       pushTurn(text, fallback); speak(fallback);
