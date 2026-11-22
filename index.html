@@ -2204,7 +2204,7 @@ function stockSaveSuffix(){
 }
 function syncStockFeed(){
  stockFeed.setSymbols([...new Set([...watchlistSymbols(data.settings),...(data.holdings||[]).map(h=>h.symbol)])].slice(0,200));
- const active=page==='Stocks'&&!document.hidden&&!syncLoading&&!window.NorthstarVaultLocked&&!isWelcomeVisible();
+ const active=(page==='Stocks'||marketWarm)&&!document.hidden&&!syncLoading&&!window.NorthstarVaultLocked&&!isWelcomeVisible();
  stockFeed.setActive(active);if(!active)clearStockLabelTimer();
 }
 function clearStockLabelTimer(){if(stockLabelTimer!==null)clearTimeout(stockLabelTimer);stockLabelTimer=null;stockLabelDeadline=null}
@@ -2351,6 +2351,17 @@ function paintPortfolio(){
  const sum=portfolioSummary(data.holdings||[],stockFeed.quoteFor),now=Date.now();
  if(sum.lots&&!sum.unpriced&&now-lastSnapshotAt>15*60000){const nextHist=recordSnapshot(data.portfolioHistory,isoToday(),sum);if(nextHist){lastSnapshotAt=now;data={...data,portfolioHistory:nextHist};persist()}}
 }
+let marketWarm=false,marketWarmP=null;
+window.NorthstarWarmMarket=()=>{
+ if(marketWarmP)return marketWarmP;
+ const syms=[...new Set([...watchlistSymbols(data.settings),...(data.holdings||[]).map(h=>h.symbol)])].slice(0,200);
+ if(!syms.length||!stockFeed.getState().hasKey||!user)return Promise.resolve();
+ const have=()=>syms.slice(0,40).every(x=>{const q=stockFeed.quoteFor(x);return q&&q.price>0});
+ if(have())return Promise.resolve();
+ marketWarm=true;syncStockFeed();
+ marketWarmP=new Promise(done=>{let n=0;const t=setInterval(()=>{n++;if(have()||n>=24){clearInterval(t);marketWarm=false;marketWarmP=null;syncStockFeed();done()}},250)});
+ return marketWarmP;
+};
 window.NorthstarMarketBrief=()=>{try{
  const holdings=data.holdings||[],sum=portfolioSummary(holdings,stockFeed.quoteFor),quote=sym=>{const q=stockFeed.quoteFor(sym);return q&&q.price>0?{symbol:sym,price:Math.round(q.price*100)/100,todayPct:q.previousClose>0?Math.round((q.price/q.previousClose-1)*10000)/100:null}:null};
  const watchlist=watchlistSymbols(data.settings).map(quote).filter(Boolean).slice(0,25);
@@ -4496,7 +4507,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     if (mkt) {
       if (mkt.portfolio) out.stockPortfolio = mkt.portfolio;
       if (mkt.watchlist && mkt.watchlist.length) out.watchlistPrices = mkt.watchlist;
-      if (mkt.portfolio && !mkt.pricesAvailable) out.stockNote = 'Current stock prices are only loaded after the Stocks page is opened with a Finnhub key connected.';
+      if (mkt.portfolio && !mkt.pricesAvailable) out.stockNote = 'Live prices are not available right now (no Finnhub key connected, or the price service did not answer). Say so, and answer from the purchase prices only.';
     }
     var split = d.settings && d.settings.split;
     if (split && split.enabled && Array.isArray(split.parts) && split.parts.length) out.incomeSplitEnabled = true;
@@ -5448,6 +5459,17 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
       pendingAction = null;
     }
     var t = text.toLowerCase();
+    var stockBuy = text.match(/\b(?:buy|bought|purchase|purchased|add)\s+(\d[\d,]*(?:\.\d+)?)\s+(?:(?:shares?|stocks?)\s+(?:of\s+)?)?([A-Za-z][A-Za-z.\-]{0,9})\b(?:\s+(?:shares?|stock)\b)?(?:\s+(?:at|for|@)\s+\$?\s*(\d[\d,]*(?:\.\d+)?))?/i);
+    if (stockBuy && !/[?]\s*$/.test(t) && (/\b(shares?|stocks?|portfolio)\b/i.test(text) || /^[A-Z][A-Z.\-]{0,9}$/.test(stockBuy[2]))) {
+      var shareCount = Number(stockBuy[1].replace(/,/g, '')), ticker = stockBuy[2].toUpperCase();
+      if (shareCount > 0 && !/^(OF|THE|MY|AT|FOR|SHARES?|STOCKS?)$/.test(ticker)) {
+        var stockValues = { symbol: ticker, shares: String(shareCount) };
+        if (stockBuy[3]) stockValues.buyPrice = stockBuy[3].replace(/,/g, '');
+        stockValues.buyDate = isoToday();
+        if (!openActionDraft('add-holding', stockValues)) return 'Close the form you’re editing first. I won’t replace unsaved changes.';
+        return 'I drafted ' + shareCount + ' share' + (shareCount === 1 ? '' : 's') + ' of ' + ticker + (stockBuy[3] ? ' at $' + stockBuy[3] : '') + (stockBuy[3] ? '' : ' · add the price you paid') + '. This only records it in your portfolio tracker (no real trade). Review the form, then save.';
+      }
+    }
     var amount = actionAmount(text, s), accounts = forcedAccount ? [forcedAccount] : accountMentions(text, s);
     var names = (s.accounts || []).map(function (a) { return a.name; }).join(', ');
     var hasBalance = /\bbalance\b/.test(t);
@@ -5688,7 +5710,8 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     var typing = makeTyping(), generation = chatGeneration;
     var provider = providerLabel(conn.provider), model = conn.model;
     var controller = new AbortController(); cloudController = controller; setAssistantBusy(true);
-    callCloud(text, history.slice(), snap, { signal: controller.signal }).then(function (answer) {
+    var warm = typeof window.NorthstarWarmMarket === 'function' ? Promise.resolve(window.NorthstarWarmMarket()).catch(function () {}) : Promise.resolve();
+    warm.then(function () { return callCloud(text, history.slice(), snapshot(), { signal: controller.signal }); }).then(function (answer) {
       if (generation !== chatGeneration || window.NorthstarVaultLocked) return;
       typing.remove(); cloudVerified = true; refreshStatus();
       addMsgWithSource(answer, 'Cloud · ' + provider + ' · ' + model);
