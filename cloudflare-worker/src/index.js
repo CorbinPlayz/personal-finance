@@ -1,3 +1,4 @@
+import { lookupPrice } from "./price.js";
 const ALLOWED_ORIGIN = "https://corbinplayz.github.io";
 const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const MAX_MESSAGE_CHARS = 2000;
@@ -73,6 +74,10 @@ export default {
       body = await request.json();
     } catch {
       return json({ error: "Request body must be valid JSON." }, 400);
+    }
+    if (body && body.mode === "price") {
+      const found = await lookupPrice(typeof body.url === "string" ? body.url.slice(0, 2000) : "");
+      return json(found, found.error ? 422 : 200);
     }
     const question = typeof body.message === "string" ? body.message.trim() : "";
     const context = typeof body.context === "string" ? body.context.slice(0, MAX_CONTEXT_CHARS) : "";
