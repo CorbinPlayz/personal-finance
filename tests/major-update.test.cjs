@@ -70,10 +70,11 @@ test('assistant status distinguishes local answers from a provider request', () 
     cloudVerified: false,
     conn: { provider: 'test', model: 'test-model' },
     providerLabel: () => 'Selected provider',
+    LOCAL_BRAIN_ENABLED: false,
   });
   vm.runInContext(section('  function refreshStatus() {', '\n  function addMsg('), context);
   context.refreshStatus();
-  assert.match(footnote.textContent, /Smart answers are off/);
+  assert.match(footnote.textContent, /Smart answers are switched off/);
   context.connReady = () => true;
   context.refreshStatus();
   assert.match(footnote.textContent, /Smart answers are on/);
