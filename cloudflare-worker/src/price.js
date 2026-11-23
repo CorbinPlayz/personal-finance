@@ -74,7 +74,7 @@ const clean = t => decodeEntities(t).replace(/\s+/g, " ").trim().slice(0, 120);
    Monthly instalment prices ("$45.79/mo") are skipped. The caller labels the result a guess. */
 export function textPrice(html) {
   const text = decodeEntities(String(html || "").replace(/<(script|style|noscript)\b[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ");
-  for (const m of text.matchAll(/\b(?:from|starting at|starts at|only)\s*(?:US)?\$\s?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{2})?/gi)) {
+  for (const m of text.matchAll(/\b(?:from|starting at|starts at|only|purchase price of|priced at|price of|price:)\s*(?:US)?\$\s?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{2})?/gi)) {
     const after = text.slice(m.index + m[0].length, m.index + m[0].length + 24).toLowerCase();
     if (/^\s*(?:\/|per\s)?\s*(?:mo\b|month)/.test(after)) continue;
     const p = parsePrice(m[1] + (m[2] || ""));
@@ -102,6 +102,8 @@ export function textAmounts(html, limit = 5) {
   for (const m of text.matchAll(/\$\s?(\d{1,3}(?:,\d{3})+|\d+)(\.\d{2})?/g)) {
     const p = parsePrice(m[1] + (m[2] || ""));
     if (!p || p < 1 || seen.has(p)) continue;
+    const around = text.slice(Math.max(0, m.index - 60), m.index).toLowerCase();
+    if (/trade[- ]?in|autopay|credit|plan of|rebate|gift card|off\b|save up to|per line/.test(around)) continue;
     const after = text.slice(m.index + m[0].length, m.index + m[0].length + 10).toLowerCase();
     if (/^\s*(?:\/|per\s)?\s*(?:mo\b|month)/.test(after)) continue;
     seen.add(p);
