@@ -192,7 +192,7 @@ test('Jarvis gets the user’s holdings and watchlist prices, and the Worker pro
   assert.match(html, /out\.watchlistPrices = mkt\.watchlist/);
   assert.match(worker, /not that are not in the context|that are not in the context/);
   assert.match(worker, /do not tell the user to buy or sell any specific stock/);
-  assert.match(worker, /MAX_CONTEXT_CHARS = 9000/);
+  assert.match(worker, /MAX_CONTEXT_CHARS = 14000/);
 });
 
 test('Jarvis loads stock prices on demand from any page and drafts stock purchases', () => {

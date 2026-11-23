@@ -69,6 +69,12 @@ test('finds monthly payment plans on a page', () => {
 import { textAmounts } from '../cloudflare-worker/src/price.js';
 test('lists dollar amounts with context when no price is clear', () => {
   const a = textAmounts('<p>iPhone 18 Pro <b>From $1,099</b></p><p>$45.79/mo.</p><p>Trade in up to $630</p><p>From $1,099 again</p>');
-  assert.deepEqual(a.map(x => x.price), [1099, 630]);
+  assert.deepEqual(a.map(x => x.price), [1099]);
   assert.match(a[0].context, /From \$1,099/);
+});
+
+test('Apple-style footnote price is found, trade-in amounts are skipped', () => {
+  const html = '<p>For an iPhone 18 Pro 256GB with a purchase price of $1,199 (excluding taxes and any trade-in credit), the typical monthly</p><p>trade-in of $900 or $350</p>';
+  assert.equal(textPrice(html), 1199);
+  assert.deepEqual(textAmounts(html).map(a => a.price), [1199]);
 });

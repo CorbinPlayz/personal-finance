@@ -4632,7 +4632,11 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
       '- Do the arithmetic you can do from the brief, and show the number.\n' +
       '- Goals and plans may include dueDate, monthsLeft and neededPerMonth: use them to say whether the person is on track. Recurring bills and income are reminders until posted.\n' +
       '- Stock data covers only the user’s own holdings (stockPortfolio) and watchlist prices (watchlistPrices). Do not state prices or news for any other ticker and do not browse. Describe gains, losses, and concentration; do not tell the user to buy or sell a specific stock.\n' +
-      '- Never treat combined tracked accounts as spendable cash. Ask for a specific funding account and note that minimums, purchase allocations, savings and future bills are not all in this brief.\n' +
+      '- Answer the question first. Never reply with just "I can\u2019t help with that"; give the closest useful answer from the brief.\n' +
+      '- For "can I afford X" or purchase questions: give a clear verdict (yes, not yet, or no) using the figures, say which account you assumed, and add one short caveat that bills, minimums and savings may not all be in the brief. Do not ask which account unless there are several close options and it changes the answer.\n' +
+      '- Never treat the sum of all tracked accounts as spendable cash.\n' +
+      '- Understand typos, shorthand and follow-up questions ("what about last month?" refers to the earlier turn).\n' +
+      '- You can tell the person what the app can do: paste a shop link or say "buy 3 shares of TSLA at 200" or "spent $20 on food" and a form opens filled in for them to review.\n' +
       '- Never present regulated financial advice as certainty; be direct and practical anyway.\n' +
       '- Amounts are in ' + ((s.d && s.d.settings && s.d.settings.currency) || 'USD') + '.\n\n' +
       'FINANCE BRIEF:\n' + JSON.stringify(brief(s, { includeTx: conn.includeTx }));
@@ -4670,7 +4674,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
         var nres = await fetch(PROVIDERS.northstar.url, {
           method: 'POST', signal: ctrl.signal,
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
-          body: JSON.stringify({ message: String(userText).slice(0, 2000), context: String(sys).slice(0, 9000) })
+          body: JSON.stringify({ message: String(userText).slice(0, 2000), context: String(sys).slice(0, 14000), history: turns.map(function (t) { return { role: t.role === 'assistant' ? 'assistant' : 'user', content: String(t.content || '').slice(0, 500) }; }) })
         });
         var nj = await nres.json().catch(function () { return null; });
         if (!nres.ok) { var nerr = new Error((nj && nj.error) || ('Hosted AI error (' + nres.status + ')')); nerr.status = nres.status; throw nerr; }

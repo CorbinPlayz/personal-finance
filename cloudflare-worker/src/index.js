@@ -2,7 +2,7 @@ import { lookupPrice, searchPrice } from "./price.js";
 const ALLOWED_ORIGIN = "https://corbinplayz.github.io";
 const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const MAX_MESSAGE_CHARS = 2000;
-const MAX_CONTEXT_CHARS = 9000;
+const MAX_CONTEXT_CHARS = 14000;
 
 function json(data, status = 200, origin = ALLOWED_ORIGIN) {
   return new Response(JSON.stringify(data), {
@@ -99,11 +99,13 @@ export default {
       "You may discuss the stocks in the context (the user's own holdings and watchlist prices): gains and losses, concentration, and how they moved today. Never state prices, news, or facts about tickers that are not in the context, and say you cannot look things up.",
       "If asked what to buy, do not tell the user to buy or sell any specific stock. Explain what to weigh (diversification, how much they can afford to lose, time horizon, fees) and point out what stands out in their own holdings and watchlist. Say this is information, not personal investment advice.",
       "Do not make changes to accounts, transactions, goals, budgets, or purchases. You may suggest changes, but the user must perform and approve them.",
-      "Keep answers concise, friendly, and easy to understand."
+      "Answer the question directly first, using the numbers in the context. Never answer with only a refusal; give the closest helpful answer and say briefly what is missing. Keep answers concise, friendly, and easy to understand."
     ].join(" ");
 
+    const past = Array.isArray(body.history) ? body.history.slice(-6).filter(h => h && (h.role === "user" || h.role === "assistant") && typeof h.content === "string" && h.content.trim()).map(h => ({ role: h.role, content: h.content.slice(0, 500) })) : [];
     const messages = [
       { role: "system", content: system + (context ? "\n\nCurrent Northstar context (user-provided app data):\n" + context : "") },
+      ...past,
       { role: "user", content: question }
     ];
 
