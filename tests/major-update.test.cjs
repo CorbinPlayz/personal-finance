@@ -30,6 +30,15 @@ test('the major-update overview has two sections and describes protection limits
   assert.match(update, /mocked Firebase SDK/);
 });
 
+test('the latest major update is described first and the earlier one is kept', () => {
+  const latest = update.indexOf('## What is new'), earlier = update.indexOf('# Earlier major update'), page1 = update.indexOf('## Page 1 —');
+  assert.ok(latest > 0 && earlier > latest && page1 > earlier, 'latest release first, PR #21 overview after it');
+  const top = update.slice(0, earlier);
+  for (const needle of [/PRs? .*#29 to #51|#29 to #51/, /redeploy the Worker/i, /Llama 3\.3 70B/, /5-year/i, /steps up on the day you add shares/i, /pinch/i, /only the ticker/i, /switched off/i, /not checked/i, /Stooq/, /Yahoo/])
+    assert.match(top, needle);
+  assert.doesNotMatch(top, /AIza|sk-[A-Za-z0-9]{10}/, 'no keys in release notes');
+});
+
 test('project notes link to the release overview', () => {
   assert.match(read('README.md'), /\]\(MAJOR-UPDATE\.md\)/);
   assert.match(read('cloudflare-worker/README.md'), /\]\(\.\.\/MAJOR-UPDATE\.md\)/);
@@ -58,7 +67,8 @@ test('Settings renders the major-update link with safe external-link attributes'
   assert.match(anchor, /rel="noopener noreferrer"/);
   assert.match(anchor, /aria-label="[^"]*opens in a new tab"/);
   assert.match(markup, /Major update/);
-  assert.match(markup, /Protection is off by default/);
+  assert.match(markup, /Passphrase protection is switched off/);
+  assert.match(markup, /5-year stock charts/);
 });
 
 test('assistant status distinguishes local answers from a provider request', () => {

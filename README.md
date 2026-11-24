@@ -2,11 +2,11 @@
 
 Northstar is a static, mobile-friendly personal finance planner with an animated compass-themed welcome journey.
 
-## Major update — purchases and optional protection
+## Major update — Jarvis AI, stock charts and shop-link prices
 
-Recorded expenses now appear as completed purchase tiles, with explicitly linked plans shown once. This update also adds completed-purchase search, safer editing and sync, responsive refinements, and optional passphrase protection for the active device and cloud workspace. [Read the two-page major update](MAJOR-UPDATE.md) for what changed and how it affects your data.
+Jarvis now runs on a free hosted AI (your own Cloudflare Worker, no API keys) that reads your accounts, goals, watchlist and portfolio, drafts transactions and stock purchases for you to confirm, and reads prices from shop links or a web search. The Stocks tab opens with a portfolio value chart that steps up when you add shares, and tapping a stock shows a zoomable 5-year price chart on desktop and phone. This release also adds recurring bills, an income split, CSV export, undo after delete, a second motion layer and sign-in and sync fixes. [Read the major update overview](MAJOR-UPDATE.md). The earlier major update (completed purchase tiles and optional passphrase protection) is described further down the same file.
 
-**Protection is off by default.** Before enabling cloud protection, publish and test the updated Firestore rules separately. A lost passphrase can make encrypted data unrecoverable; older copies may remain readable. Live Firebase behavior and an independent security review are still unverified.
+**Redeploy the Worker once** so the 5-year charts and clearer error messages work. Passphrase setup is switched off in this version (the code is kept). Live Stooq/Yahoo data, real Safari and live shop pages have not been tested.
 
 ## Included features
 
