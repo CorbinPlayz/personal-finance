@@ -1,4 +1,5 @@
 import { lookupPrice, searchPrice } from "./price.js";
+import { fetchHistory } from "./history.js";
 const ALLOWED_ORIGIN = "https://corbinplayz.github.io";
 const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const MAX_MESSAGE_CHARS = 2000;
@@ -77,6 +78,10 @@ export default {
     }
     if (body && body.mode === "price") {
       const found = await lookupPrice(typeof body.url === "string" ? body.url.slice(0, 2000) : "");
+      return json(found, found.error ? 422 : 200);
+    }
+    if (body && body.mode === "history") {
+      const found = await fetchHistory(typeof body.symbol === "string" ? body.symbol : "");
       return json(found, found.error ? 422 : 200);
     }
     if (body && body.mode === "search") {
