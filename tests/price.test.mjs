@@ -78,3 +78,31 @@ test('Apple-style footnote price is found, trade-in amounts are skipped', () => 
   assert.equal(textPrice(html), 1199);
   assert.deepEqual(textAmounts(html).map(a => a.price), [1199]);
 });
+
+test('failures say which step failed', async () => {
+  const html = (body, status = 200) => new Response(body, { status, headers: { 'content-type': 'text/html' } });
+  const boom = name => async () => { const e = new Error('x'); e.name = name; throw e; };
+  const slow = await lookupPrice('https://a.com/x', boom('TimeoutError'));
+  assert.equal(slow.code, 'timeout'); assert.match(slow.error, /too long/);
+  const dropped = await lookupPrice('https://a.com/x', boom('TypeError'));
+  assert.equal(dropped.code, 'open-failed');
+  const blocked = await lookupPrice('https://www.a.com/x', async () => html('', 403));
+  assert.equal(blocked.code, 'blocked'); assert.match(blocked.error, /403, a\.com.*blocking automatic readers/);
+  const empty = await lookupPrice('https://a.com/x', async () => html('<p>hi</p>'));
+  assert.equal(empty.code, 'no-product'); assert.match(empty.error, /JavaScript/);
+});
+
+test('search says why it failed and which shops were tried', async () => {
+  const ddg = '<a class="result__a" href="https://one.com/p">1</a><a class="result__a" href="https://two.com/p">2</a>';
+  assert.equal((await searchPrice('gta 6', async () => new Response('', { status: 202 }))).code, 'search-blocked');
+  assert.equal((await searchPrice('gta 6', async () => new Response('', { status: 503 }))).code, 'search-down');
+  const t = new Error('t'); t.name = 'TimeoutError';
+  assert.equal((await searchPrice('gta 6', async () => { throw t; })).code, 'search-timeout');
+  assert.equal((await searchPrice('gta 6', async () => new Response('<p>Unusual traffic, captcha</p>', { status: 200 }))).code, 'search-blocked');
+  assert.equal((await searchPrice('gta 6', async () => new Response('<p>nothing</p>', { status: 200 }))).code, 'search-empty');
+  const f = async u => u.includes('duckduckgo') ? new Response(ddg, { status: 200 }) : u.includes('one.com') ? new Response('', { status: 403 }) : new Response('<title>x</title><p>hi</p>', { status: 200, headers: { 'content-type': 'text/html' } });
+  const r = await searchPrice('gta 6', f);
+  assert.equal(r.code, 'no-price');
+  assert.match(r.error, /opened 2 shops.*one\.com \(blocked\), two\.com \(no price\)/);
+  assert.equal(r.tried.length, 2);
+});
