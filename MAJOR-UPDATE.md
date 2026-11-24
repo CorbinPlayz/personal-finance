@@ -1,5 +1,60 @@
 # Northstar Personal Finance — Major Update
 
+**Latest: a real AI assistant, stock charts you can zoom, shop-link prices, recurring bills and a smoother look**
+
+This is the second major update. It is 23 pull requests, [#29 to #51](https://github.com/CorbinPlayz/personal-finance/pulls?q=is%3Apr+is%3Amerged), merged between November 15 and November 24, 2026. The first major update ([PR #21](https://github.com/CorbinPlayz/personal-finance/pull/21): completed-purchase tiles and optional protection) is kept below, unchanged.
+
+**Do this once:** redeploy the Worker `northstar-finance-ai` in your Cloudflare account. The 5-year stock charts and the clearer shop-link and search messages need the new Worker code. Without it the site still works, but the charts will say they could not load history.
+
+## What is new
+
+### Jarvis is now a real AI assistant
+
+- **Free and keyless.** Jarvis runs on your own Cloudflare Worker with Cloudflare's Llama 3.3 70B model. There are no API keys. The old key-based providers (Gemini, OpenAI, Anthropic, Groq, OpenRouter, custom) were removed, and old setups move to the hosted AI with the saved key dropped. Settings are two switches plus **Check connection** and **See what is sent**.
+- **It reads your data.** Jarvis sees your accounts, goals, watchlist prices and portfolio holdings, from any page. It remembers the recent turns of the chat, so a follow-up like "and the cheaper one?" keeps its context.
+- **It always uses the cloud.** The old offline answers are switched off (`LOCAL_BRAIN_ENABLED=false`). The code is kept, so they can be turned back on. Form drafts still work without the AI.
+- **It drafts, you confirm.** "Buy 3 shares of TSLA at 200" opens a prefilled portfolio form. Nothing is saved until you press save.
+- **Shop links.** Paste a product link and the Worker reads the price from the page's product data (no AI, public https sites only, redirects checked). Jarvis opens a prefilled transaction or purchase plan. If the page shows a finance plan as well as a full price, Jarvis asks whether you mean outright or finance. If a page lists several amounts, it lists them so you can pick one.
+- **"Buy <product>".** Jarvis searches the web for a price, reads the shop pages it finds, and drafts the transaction with that price.
+- **Clear reasons when it fails.** Instead of a vague message, Jarvis says what went wrong: the shop blocked the page, the page took too long, the search engine blocked the Worker, no shops were found, or shops were opened but none showed a price (and which ones).
+
+### Stocks tab
+
+- **Watchlist.** A curated list of 100 U.S.-listed tickers you can search, add to and remove from, saved with your workspace.
+- **Portfolio tracker.** Holdings with shares, price paid and optional purchase date, gain or loss, total value, and daily value history, using the prices the page already loads.
+- **Portfolio value chart (new).** The top of the tab shows your portfolio value over time, from your first purchase date, with a dashed line for the money you put in. The line **steps up on the day you add shares**, and a dot marks each purchase. Hover or tap to read any day. This chart is read-only by design.
+- **Zoomable 5-year chart per stock (new).** Tap a stock to open its share price for the past five years. On a computer: scroll wheel or trackpad pinch to zoom, drag to move, double-click to zoom in, plus 1M / 6M / 1Y / 5Y, +, − and Reset buttons, and the keyboard (+, −, arrows, Home). On an iPhone or Android phone: pinch, drag, double-tap and the same buttons, sized for thumbs. The sheet opens above the Jarvis button and panel. The price axis refits to what you are looking at, and your own purchases show as dots.
+- **Where the history comes from.** The Worker fetches daily closing prices (split-adjusted) from Stooq, with Yahoo Finance as a backup, and asks nothing about you except the ticker. Purchases without a date start "today" and the chart tells you so. A ticker with no history is counted at the price you paid.
+
+### Everyday money tools
+
+Recurring bills; a money split for new income across the accounts you choose (a confirm dialog asks first, and the percents must add up to 100); CSV export; undo after delete; goal end dates on the Goals and Plan charts; richer sounds; and your Finnhub key saved to your account.
+
+### Look and feel
+
+A second motion layer: cards enter in a stagger, bars, lists and rings grow in, tap feedback is springy, portfolio values flash when they change, new rows glow, and toasts slide. Everything respects the system "reduce motion" setting, and dialogs are left alone so the Safari fix stays.
+
+### Sign-in and sync you can trust
+
+Sign-in uses a popup in normal browser tabs, because the redirect version could loop back with no user where browser storage is partitioned. A paused sync now shows the real reason, watchlist edits say where they went, and the "which data to keep" question is easy to answer on a phone and hard to dismiss by accident.
+
+## Privacy: what leaves your device
+
+- **Jarvis:** your question and a short summary of the relevant finance data go to your Cloudflare Worker and Cloudflare's model. **See what is sent** shows it first. Do not type passwords or card numbers.
+- **Shop links and "buy":** the link, or the product words you typed, are sent to your Worker, which contacts the shop or a search engine.
+- **Stock history:** only the ticker symbol is sent, along with your sign-in token. No amounts, accounts or holdings.
+- **Passphrase protection is switched off in this version.** Setup is blocked (`PASSPHRASE_SETUP_AVAILABLE=false`) and the code is kept so it can be turned back on. Unless protection was already turned on earlier, data is stored as readable text on your device and in your cloud workspace.
+
+## What was checked, and what was not
+
+- **Checked:** the Node test suite passes (250 tests). For the new charts, 19 headless Chromium checks passed at desktop and iPhone size, including real touch pinch, one-finger drag and double-tap, with the Worker and Firebase faked. Screenshots were reviewed at both sizes.
+- **Not checked:** live Stooq or Yahoo data (this build environment cannot reach them), a real iPhone running Safari, and live shop pages. Apple pages often show no clean price, and the web search has not been tested live. If something is wrong, Jarvis now says which step failed, which makes it easy to report.
+- **Known limits:** prices can be delayed or missing, the 100-ticker watchlist is curated and other tickers are not validated against an exchange, and nothing here is investment advice. Northstar does not connect to banks.
+
+---
+
+# Earlier major update — completed purchases and optional protection (PR #21)
+
 **What changed: completed purchases, optional protection, and everyday polish**
 
 This two-page overview describes the major update merged in [PR #21](https://github.com/CorbinPlayz/personal-finance/pull/21). It explains what is different, what stays under your control, and what still needs verification. Publishing these notes does not enable encryption or move your data.
