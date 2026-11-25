@@ -1,0 +1,202 @@
+/* ============================================================
+   NORTHSTAR 1.0 — "Black vinyl" design layer
+   Black and white only. Ink swirled in glossy black, quiet grooves,
+   hairline borders, large calm type. Loaded last so it wins.
+   ============================================================ */
+:root{
+  --ink:#f5f5f6;
+  --paper:#0c0c0e;
+  --canvas:#050506;
+  --line:rgba(255,255,255,.08);
+  --line-strong:rgba(255,255,255,.16);
+  --text:#f2f2f3;
+  --text-2:#a3a3a8;
+  --text-3:#6f6f75;
+  --muted:#a3a3a8;
+  --border:rgba(255,255,255,.08);
+  --navy:#f5f5f6;
+  --accent:#ffffff;
+  --green:#8fd6ab;
+  --red:#f0897d;
+  --orange:#a3a3a8;
+  --purple:#a3a3a8;
+  --danger:#f0897d;
+  --danger-soft:rgba(240,137,125,.08);
+  --glass:rgba(14,14,16,.72);
+  --glass-solid:rgba(10,10,12,.94);
+  --glass-line:rgba(255,255,255,.09);
+  --shadow-card:0 1px 0 rgba(255,255,255,.04) inset;
+  --shadow-lift:0 24px 60px rgba(0,0,0,.55);
+  --r-card:18px;
+  --r-ctl:12px;
+  color-scheme:dark;
+}
+html,html body{background:#050506!important;color:var(--text)}
+::selection{background:#fff;color:#000}
+*{scrollbar-color:#2a2a2e transparent}
+::-webkit-scrollbar-thumb{background:#2a2a2e;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:#3d3d42;background-clip:content-box}
+
+/* ---------- background: ink in black vinyl ---------- */
+.nsx-ambient,.nsx-ink-wash{display:none!important}
+body::before{
+  content:"";position:fixed;inset:-12%;z-index:0;pointer-events:none;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1400' height='1000'%3E%3Cfilter id='i' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.0032 .0075' numOctaves='4' seed='11'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 4.2 -2.6 0 0 -.55'/%3E%3CfeGaussianBlur stdDeviation='1.6'/%3E%3C/filter%3E%3Crect width='1400' height='1000' filter='url(%23i)'/%3E%3C/svg%3E") center/cover no-repeat;
+  opacity:.2;mix-blend-mode:screen;
+  -webkit-mask-image:radial-gradient(ellipse 70% 55% at 78% 8%,#000 15%,transparent 72%);mask-image:radial-gradient(ellipse 70% 55% at 78% 8%,#000 15%,transparent 72%);
+  animation:ns1Drift 90s ease-in-out infinite alternate;
+}
+body::after{
+  content:"";position:fixed;z-index:0;pointer-events:none;
+  width:min(120vw,1500px);aspect-ratio:1;right:-34vw;top:-46vw;border-radius:50%;
+  background:
+    radial-gradient(circle,#050506 0 7%,rgba(255,255,255,.07) 7.2% 7.6%,transparent 8% 100%),
+    repeating-radial-gradient(circle,rgba(255,255,255,.045) 0 1px,transparent 1px 6px),
+    conic-gradient(from 210deg,transparent 0 12%,rgba(255,255,255,.07) 20%,transparent 30% 56%,rgba(255,255,255,.05) 66%,transparent 76% 100%);
+  -webkit-mask-image:radial-gradient(circle,#000 32%,transparent 70%);mask-image:radial-gradient(circle,#000 32%,transparent 70%);
+  opacity:.9;animation:ns1Spin 240s linear infinite;
+}
+@keyframes ns1Drift{from{transform:translate3d(-1.5%,0,0) scale(1)}to{transform:translate3d(1.5%,1%,0) scale(1.05)}}
+@keyframes ns1Spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){body::before,body::after{animation:none}}
+.app-shell{position:relative;z-index:2}
+
+/* ---------- shell ---------- */
+.topbar{background:rgba(5,5,6,.72)!important;border-bottom:1px solid var(--line)!important;-webkit-backdrop-filter:blur(22px) saturate(1.2);backdrop-filter:blur(22px) saturate(1.2);box-shadow:none!important}
+.breadcrumb,.breadcrumb strong{color:var(--text-2)}
+.breadcrumb strong{color:var(--text)}
+.sync-state{color:var(--text-3)}
+.avatar{background:#17171a;color:#fff;border:1px solid var(--line-strong)}
+.icon-btn{color:var(--text-2)}.icon-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+
+/* ---------- type ---------- */
+.eyebrow,.page-kicker,.kicker{color:var(--text-3);letter-spacing:.16em}
+h1,h2,h3,h4,.panel-head h2,.metric-value,.page-title{color:#fff}
+.page-head h1,.content h1{font-weight:700;letter-spacing:-.035em}
+p,.muted,.subtle,.metric-note,.panel-head p{color:var(--text-2)}
+a{color:#fff;text-decoration-color:rgba(255,255,255,.3)}
+strong{color:#fff}
+
+/* ---------- surfaces ---------- */
+.panel,.metric-card,.card,.stock-row,.account-card,.account-balance-tile,.goal-card,.purchase-card,.budget-card,.tx-row,.settings-card,.pf-panel,.portfolio-panel,.nsj-card{
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.018)) , #0b0b0d!important;
+  background-blend-mode:normal;
+  border:1px solid var(--line)!important;
+  border-radius:var(--r-card)!important;
+  box-shadow:var(--shadow-card),0 18px 44px rgba(0,0,0,.35)!important;
+  color:var(--text);
+  -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+}
+.panel:hover,.metric-card:hover{border-color:var(--line-strong)!important}
+.metric-icon,.welcome-icon,.account-balance-tile-icon{background:rgba(255,255,255,.07)!important;color:#fff!important;border:1px solid var(--line)}
+.metric-value{letter-spacing:-.04em}
+hr,.rule,.divider{border-color:var(--line)!important;background:var(--line)}
+
+/* ---------- controls ---------- */
+.primary-btn{background:#fff!important;color:#050506!important;border:1px solid #fff!important;box-shadow:0 10px 30px rgba(255,255,255,.12)!important;font-weight:650}
+.primary-btn:hover{background:#e9e9ea!important}
+.secondary-btn,.action-btn,.bought-btn{background:rgba(255,255,255,.04)!important;color:#fff!important;border:1px solid var(--line-strong)!important}
+.secondary-btn:hover,.action-btn:hover,.bought-btn:hover{background:rgba(255,255,255,.10)!important;border-color:rgba(255,255,255,.28)!important}
+.text-btn{color:#fff}
+.danger-btn,.btn-danger{color:var(--red)!important;border-color:rgba(240,137,125,.35)!important;background:rgba(240,137,125,.06)!important}
+input,select,textarea{background:rgba(255,255,255,.04)!important;color:#fff!important;border:1px solid var(--line-strong)!important;border-radius:var(--r-ctl)!important}
+input::placeholder,textarea::placeholder{color:var(--text-3)}
+input:focus,select:focus,textarea:focus{border-color:#fff!important;box-shadow:0 0 0 3px rgba(255,255,255,.12)!important;outline:none}
+select option{background:#101012;color:#fff}
+label,.field-label{color:var(--text-2)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+/* ---------- dock ---------- */
+.mobile-dock,.nsx-dock,.dock{background:rgba(14,14,16,.78)!important;border:1px solid var(--line-strong)!important;box-shadow:0 20px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.08)!important;-webkit-backdrop-filter:blur(24px) saturate(1.3);backdrop-filter:blur(24px) saturate(1.3)}
+.dock-item{color:var(--text-3)}
+.dock-item:hover{color:#fff}
+.dock-item.active,.dock-item[aria-current="page"]{background:#fff!important;color:#050506!important;box-shadow:0 6px 22px rgba(255,255,255,.18)!important}
+
+/* ---------- lists, tables, chips ---------- */
+table,th,td{border-color:var(--line)!important}
+th{color:var(--text-3)}
+tbody tr:hover{background:rgba(255,255,255,.03)}
+.chip,.pill,.badge,.status-pill,.sync-pill{background:rgba(255,255,255,.07)!important;color:#fff!important;border:1px solid var(--line)!important}
+.progress,.progress-track,.account-balance-meter,.bar-track{background:rgba(255,255,255,.08)!important}
+.progress-fill,.account-balance-fill.available{background:#fff!important}
+.account-balance-fill.purchase-allocated{background:#6f6f75!important}
+.chart-grid line,.axis line{stroke:rgba(255,255,255,.08)}
+text{fill:var(--text-2)}
+
+/* ---------- modal & toast ---------- */
+.modal,.dialog,.confirm-dialog{background:#0c0c0e!important;color:#fff;border:1px solid var(--line-strong)!important;border-radius:22px!important;box-shadow:0 40px 100px rgba(0,0,0,.7)!important}
+.modal-backdrop{background:rgba(0,0,0,.66)!important;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+
+/* ---------- Jarvis orb ---------- */
+.nsj-orb{background:radial-gradient(circle at 30% 25%,#5a5a60,#0d0d0f 70%)!important;border:1px solid var(--line-strong)!important;box-shadow:0 14px 40px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.04)!important}
+.nsj-panel{background:#0c0c0e!important;color:#fff;border:1px solid var(--line-strong)!important}
+
+/* ---------- component pass: everything that was still light ---------- */
+html body .metric-icon,html body .metric-icon.blue,html body .metric-icon.green,html body .metric-icon.orange,html body .metric-icon.purple,html body .metric-icon.red{background:rgba(255,255,255,.07)!important;color:#fff!important;border:1px solid var(--line)!important}
+html body .welcome-strip,html body .disclaimer,html body .privacy-note,html body .stock-disclosure,html body .recurring-summary,html body .purchase-sort-note,html body .stock-list-meta,html body .stock-save-status{background:rgba(255,255,255,.035)!important;border:1px solid var(--line)!important;color:var(--text-2)!important;box-shadow:none!important}
+html body .welcome-strip strong,html body .disclaimer strong{color:#fff}
+html body .ns-graph{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015)),#0b0b0d!important;border:1px solid var(--line)!important;border-radius:var(--r-card)!important;color:var(--text)!important;box-shadow:0 18px 44px rgba(0,0,0,.35)!important}
+html body .ns-graph h2,html body .ns-graph strong{color:#fff!important}
+html body .ns-graph p,html body .ns-graph span,html body .ns-graph small,html body .ns-graph caption{color:var(--text-2)}
+html body .ns-graph-kicker{color:var(--text-3)!important}
+html body .ns-graph-kicker i{background:#fff!important;box-shadow:0 0 0 3px rgba(255,255,255,.12)!important}
+html body .ns-graph-tag,html body .ns-mix-item,html body .ns-goal-orbit,html body .ns-graph-empty{background:rgba(255,255,255,.04)!important;border:1px solid var(--line)!important;color:#fff!important}
+html body .ns-graph-empty-icon{background:rgba(255,255,255,.07)!important;border-color:var(--line)!important;color:#fff!important}
+html body .ns-flow-plot{border-color:rgba(255,255,255,.08)!important;background:linear-gradient(to bottom,transparent calc(50% - .5px),rgba(255,255,255,.07) 50%,transparent calc(50% + .5px))!important}
+html body .ns-flow-bar.is-in,html body .ns-mix-track .is-in{background:linear-gradient(180deg,#e9e9ea,#9a9aa0)!important;box-shadow:0 0 18px rgba(255,255,255,.12)!important}
+html body .ns-flow-bar.is-out{background:linear-gradient(180deg,#5a5a60,#2a2a2e)!important;box-shadow:none!important}
+html body .ns-flow-bar.is-a{background:linear-gradient(180deg,#ddd,#888)!important}
+html body .ns-flow-bar.is-b{background:linear-gradient(180deg,#666,#333)!important}
+html body .ns-mix-track,html body .ns-list-track{background:rgba(255,255,255,.08)!important}
+html body .ns-list-fill{background:linear-gradient(90deg,#8e8e94,#f2f2f3)!important}
+html body .ns-list-fill.is-over{background:linear-gradient(90deg,#8f3a30,#f0897d)!important}
+html body .ns-legend-dot{background:var(--dot,#bbb)}
+html body .ns-scenario-controls input,html body .ns-scenario-controls select{background:rgba(255,255,255,.04)!important;border-color:var(--line-strong)!important;color:#fff!important}
+html body .ns-graph svg text{fill:#a3a3a8}
+html body .ns-graph svg line,html body .ns-graph svg path.grid{stroke:rgba(255,255,255,.1)}
+html body .ns-graph table,html body .ns-graph th,html body .ns-graph td{color:var(--text-2)!important;border-color:var(--line)!important;background:transparent!important}
+html body .purchase-tile,html body .add-account-card,html body .stock-list-panel,html body .search-box,html body .purchase-completed-search{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015)),#0b0b0d!important;border:1px solid var(--line)!important;color:#fff!important;box-shadow:none!important}
+html body .purchase-tile h3{color:#fff!important}
+html body .purchase-tile-open,html body .purchase-group-count{background:rgba(255,255,255,.08)!important;border-color:var(--line)!important;color:#fff!important}
+html body .purchase-tile-meta{border-top-color:var(--line)!important}
+html body .stk-btn,html body .stock-heading-tag{background:rgba(255,255,255,.05)!important;border:1px solid var(--line-strong)!important;color:#fff!important}
+html body .stock-row{background:rgba(255,255,255,.025)!important}
+html body .stock-row+.stock-row{border-top:1px solid var(--line)!important}
+html body th{background:transparent!important}
+html body div.welcome-strip,html body .page-footer{color:var(--text-2)}
+html body .nsj-mini.primary{background:#fff!important;color:#050506!important}
+
+html body h1,html body .page-title,html body .content h1{color:#fff!important;-webkit-text-fill-color:#fff!important;background:none!important}
+html body .metric-top>.metric-icon{background:rgba(255,255,255,.07)!important;color:#fff!important;border:1px solid var(--line)!important}
+html body .metric-top>.metric-icon svg{color:#fff!important;stroke:#fff}
+html body .ns-legend-dot{background:#f2f2f3!important}
+html body .ns-legend-item:nth-child(2) .ns-legend-dot,html body .ns-legend>*:nth-child(2) .ns-legend-dot{background:#6f6f75!important}
+html body .stock-hero,html body .stock-intro,html body .guide-hero,html body [class*="hero"]:not(.welcome-hero):not(.welcome-art){background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.015)),#0b0b0d!important;border:1px solid var(--line)!important;color:#fff!important}
+html body [class*="hero"] h2,html body [class*="hero"] strong{color:#fff!important}
+html body .content{padding-bottom:140px}
+
+html body .goal-card h3,html body .goal-card .goal-numbers strong,html body .goal-card .goal-numbers,html body .account-card h3,html body .budget-card h3,html body .tx-row strong,html body article h3,html body article strong{color:#fff!important}
+html body .goal-card .muted,html body .goal-card .goal-numbers span{color:var(--text-2)!important}
+html body .goal-icon,html body .account-icon,html body .purchase-icon{background:rgba(255,255,255,.07)!important;color:#fff!important;border:1px solid var(--line)!important}
+html body .goal-progress-track{background:rgba(255,255,255,.1)!important}
+html body .goal-progress-fill,html body .progress-fill{background:linear-gradient(90deg,#8e8e94,#fff)!important}
+html body .goal-progress-marker{background:#fff!important;border-color:#050506!important}
+html body td,html body td *:not(button):not(.chip):not(.pill){color:var(--text)}
+html body td .muted,html body td small{color:var(--text-2)}
+html body .content strong,html body .panel strong,html body article strong{color:#fff}
+html body .purchase-complete-label{background:rgba(255,255,255,.08)!important;color:#fff!important}
+html body .tx-amount.income,html body .amount.income,html body .income-amt{color:#8fd6ab!important}
+html body .tx-amount.expense,html body .amount.expense{color:#f2f2f3!important}
+html body .tx-icon,html body .mini-account-icon,html body .upcoming-icon,html body .tx-icon.income,html body .tx-icon.expense,html body .tx-icon.transfer{background:rgba(255,255,255,.07)!important;color:#fff!important;border:1px solid var(--line)}
+html body .recurring-item,html body .tx-row,html body .list-row,html body li{border-color:var(--line)!important}
+html body .recurring-item{border-bottom:1px solid var(--line)!important}
+html body .recurring-summary b,html body .recurring-summary strong,html body .recurring-summary span{color:var(--text-2)!important}
+html body .ns-legend-dot[style*="278365"],html body .ns-flow-bar.is-in+*{background:#f2f2f3!important}
+html body .ns-legend-dot[style*="b75a49"]{background:#6f6f75!important}
+html body .ns-legend-dot[style*="254d46"]{background:#f2f2f3!important}
+html body .ns-legend-dot[style*="6575a9"]{background:#6f6f75!important}
+html body .ns-mix-track>*{background:#6f6f75!important}
+html body .ns-mix-track>.is-in{background:#f2f2f3!important}
+html body .ns-mix-track>*:nth-child(3){background:#3d3d42!important}
+html body .money-in,html body .pos,html body .amount-in{color:#8fd6ab!important}
