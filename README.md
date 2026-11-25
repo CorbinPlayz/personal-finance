@@ -8,6 +8,10 @@ Jarvis now runs on a free hosted AI (your own Cloudflare Worker, no API keys) th
 
 **Redeploy the Worker once** so the 5-year charts and clearer error messages work. Passphrase setup is switched off in this version (the code is kept). Live Stooq/Yahoo data, real Safari and live shop pages have not been tested.
 
+## Getting ready for 1.0 — required sign-in
+
+Northstar now opens on a sign-in screen in the same dark design as the welcome page. Nothing from the app (accounts, goals, stocks, Jarvis) is shown until Google sign-in finishes. While Firebase answers it says "Checking your sign-in…"; if Firebase cannot load it shows a Try again button and no way in; signing out returns to the sign-in screen. The old intro no longer opens by itself (replay it in Settings). Test: `node tests/login-gate-browser.cjs`.
+
 ## Included features
 
 - Overview, transactions, accounts, budgets, savings goals, and planned purchases.

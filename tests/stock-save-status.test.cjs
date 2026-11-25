@@ -178,6 +178,6 @@ test('the page wires the save line without storing, uploading or reading the pro
     assert.doesNotMatch(source, /stockKey|stockApiKey|localStorage|sessionStorage|apiKey/i, name);
   }
   assert.match(moduleScript, /renderStockPage\(watchlistSymbols\(data\.settings\),stockFeed\.getState\(\),stockFeed\.quoteFor,stockFeed\.issueFor,stockQuery,\{save:stockSaveState\(\),portfolioHtml:renderPortfolioPanel\(\),chartHtml:portfolioChartShell\(\)\}\)/);
-  assert.match(moduleScript, /authResolved=true;\n if\(\(user\?\.uid\|\|null\)!==\(current\?\.uid\|\|null\)\)/, 'the first auth report marks sign-in as resolved');
+  assert.match(moduleScript, /authResolved=true;setGate\(current\?'open':'login'\);\n if\(\(user\?\.uid\|\|null\)!==\(current\?\.uid\|\|null\)\)/, 'the first auth report marks sign-in as resolved');
   assert.equal((moduleScript.match(/clearTimeout\(saveTimer\)/g) || []).length, 2, 'only cancelCloudSave and queueCloudSave touch the save timer');
 });
