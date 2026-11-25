@@ -46,7 +46,7 @@ const fixture = { version: 1, accounts: [{ id: 'a1', name: 'Checking', type: 'Ch
 (async () => {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
-  const browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
+  let browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const errors = []; let passed = 0;
   async function check(name, fn) { try { await fn(); console.log('PASS', name); passed++; } catch (e) { console.error('FAIL', name); throw e; } }
   async function open({ phone = false, seen = [] } = {}) {
@@ -139,12 +139,27 @@ const fixture = { version: 1, accounts: [{ id: 'a1', name: 'Checking', type: 'Ch
     await p.mouse.click(200, 200);
     await p.waitForFunction(() => window.__audio.made >= 1);
     await p.clock.runFor(200);
-    const a = await p.evaluate(() => ({ ...window.__audio, fx: JSON.parse(localStorage.getItem('northstar-fx-v2') || '{}') }));
+    const a = await p.evaluate(() => ({ ...window.__audio, fx: JSON.parse(localStorage.getItem('northstar-fx-v3') || '{}') }));
     assert.ok(a.sources >= 1, 'the soft ambience started');
     await signIn(p); await p.clock.runFor(500);
     assert.equal(await p.evaluate(() => window.__chimes), 1, 'welcome chime played once');
     assert.ok((await p.evaluate(() => window.__audio.oscillators)) >= 3, 'chime notes were scheduled');
     assert.notEqual(a.fx.muted, true);
+  });
+  await check('sound: a sign-in chime that browsers block is played on the very next tap, and the Settings test button plays a sound', async () => {
+    const strict = await chromium.launch(); const real = browser; browser = strict;
+    try {
+      const p = await open();
+      await signIn(p); await p.clock.runFor(500);
+      const before = await p.evaluate(() => window.__audio.oscillators);
+      await p.mouse.click(200, 200); await p.clock.runFor(500);
+      assert.ok((await p.evaluate(() => window.__audio.oscillators)) >= before + 3, 'the waiting chime played after the tap');
+      const n = await p.evaluate(() => window.__audio.oscillators);
+      await p.evaluate(() => document.querySelector('[data-page="Settings"]').click());
+      await p.waitForFunction(() => document.querySelector('#content')?.dataset.page === 'Settings');
+      await p.locator('[data-action="test-sound"]').click(); await p.clock.runFor(300);
+      assert.ok((await p.evaluate(() => window.__audio.oscillators)) >= n + 3, 'test sound played');
+    } finally { browser = real; await strict.close(); }
   });
   await check('no page errors', async () => { assert.deepEqual(errors, []); });
   console.log(`${passed} tour and sound checks passed`);
