@@ -2480,7 +2480,7 @@ window.NorthstarMarketBrief=()=>{try{
  return {portfolio,watchlist,pricesAvailable:watchlist.length>0||sum.priced>0}
 }catch(e){return null}};
 function isoToday(){const t=new Date();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`}
-function fxVolumePercent(){try{const v=JSON.parse(localStorage.getItem('northstar-fx-v1')||'{}').vol;return Math.round((typeof v==='number'&&v>=0&&v<=1?v:.55)*100)}catch(e){return 55}}
+function fxVolumePercent(){try{const v=JSON.parse(localStorage.getItem('northstar-fx-v3')||'{}').vol;return Math.round((typeof v==='number'&&v>=0&&v<=1?v:.85)*100)}catch(e){return 85}}
 function renderSplitPanel(){
  const split=cleanSplit(data.settings?.split),ids=data.accounts.map(a=>a.id),byId=Object.fromEntries(split.parts.map(p=>[p.accountId,p.percent]));
  if(data.accounts.length<2)return `<section class="panel split-panel"><div class="panel-head"><div><h2>Money split</h2><p>Automatically divide new income between your accounts.</p></div></div><p class="form-hint">Create at least two accounts first, then come back to set up a split.</p></section>`;
@@ -2709,7 +2709,7 @@ ${renderVaultPanel()}
 <section class="panel"><div class="panel-head"><div><h2>Backup & restore</h2><p>Keep a private backup before making major changes.</p></div></div><div class="setting-action"><div><strong>Export backup</strong><p>${vault.state==='unlocked'?'Download an encrypted JSON backup of this workspace. Keep your passphrase safe.':'Download a readable, unencrypted JSON backup. Store it privately.'}</p></div><button class="secondary-btn" data-action="export">↓ Export backup</button></div><div class="setting-action"><div><strong>Export transactions (CSV)</strong><p>Download a readable spreadsheet file of your recorded transactions. It is not encrypted, even in a protected workspace.</p></div><button class="secondary-btn" data-action="export-csv">↓ Export CSV</button></div><div class="setting-action"><div><strong>Restore backup</strong><p>Replace the current data with a plaintext or encrypted Northstar JSON backup.</p></div><button class="secondary-btn" data-action="import">↑ Choose file</button></div>${renderWorkspaceCountGraph(counts,esc)}</section>
 <section class="panel"><div class="panel-head"><div><h2>Data management</h2><p>Clear this Northstar dataset if you need a fresh start.</p></div></div><div class="setting-action"><div><strong>Clear all financial data</strong><p>This deletes accounts, transactions, budgets, recurring items, goals, purchase plans, saved Guide information, and your custom stock list from the active dataset. Export a backup first if you may need the information.</p></div><button class="danger-btn" data-action="clear-data">Clear data</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Your Northstar experience</h2><p>Revisit the welcome screen and compass animation any time.</p></div></div><div class="setting-action"><div><strong>Welcome screen</strong><p>See the Northstar introduction and animated compass again.</p></div><button class="secondary-btn" data-action="welcome-again">Replay welcome ↗</button> <button class="secondary-btn" data-action="replay-tour">Replay Jarvis tour</button></div></section>
-<section class="panel"><div class="panel-head"><div><h2>Sound & celebrations</h2><p>Celebrate a savings milestone with a short chime and animation.</p></div></div><label class="checkbox-line"><input id="goalSoundsToggle" type="checkbox" ${data.settings.goalSounds!==false?"checked":""}> Play goal-completion sounds</label><p class="form-hint">Sound plays only when you reach a goal after using the app. You can turn it off here.</p><label class="fx-volume-line" for="fxVolume"><span>App sound volume</span><input id="fxVolume" type="range" min="0" max="100" step="5" value="${fxVolumePercent()}" aria-label="App sound volume"><output id="fxVolumeOut">${fxVolumePercent()}%</output></label><p class="form-hint">Taps, saves, income coins and deletes each have their own soft sound. The speaker in the top bar mutes everything.</p></section>${renderSplitPanel()}
+<section class="panel"><div class="panel-head"><div><h2>Sound & celebrations</h2><p>Celebrate a savings milestone with a short chime and animation.</p></div></div><label class="checkbox-line"><input id="goalSoundsToggle" type="checkbox" ${data.settings.goalSounds!==false?"checked":""}> Play goal-completion sounds</label><p class="form-hint">Sound plays only when you reach a goal after using the app. You can turn it off here.</p><label class="fx-volume-line" for="fxVolume"><span>App sound volume</span><input id="fxVolume" type="range" min="0" max="100" step="5" value="${fxVolumePercent()}" aria-label="App sound volume"><output id="fxVolumeOut">${fxVolumePercent()}%</output></label> <button class="secondary-btn" type="button" data-action="test-sound">Play test sound</button><p class="form-hint">Taps, saves, income coins and deletes each have their own soft sound. The speaker in the top bar mutes everything.</p></section>${renderSplitPanel()}
 <section class="panel"><div class="panel-head"><div><h2>About Northstar</h2><p>What this app does — and does not do.</p></div><span class="category-pill">Major update</span></div><div class="setting-action"><div><strong>What's new</strong><p>A real AI assistant, zoomable 5-year stock charts, shop-link prices, recurring bills and a smoother look. Passphrase protection is switched off.</p></div><a class="secondary-btn small" href="https://github.com/CorbinPlayz/personal-finance/blob/main/MAJOR-UPDATE.md" target="_blank" rel="noopener noreferrer" aria-label="Read the major update on GitHub, opens in a new tab" style="text-decoration:none">Read update ↗</a></div><p class="muted" style="font-size:12px;line-height:1.7;margin:0">Northstar is a manual personal finance tracker. It does not connect to bank accounts, process payments, or provide financial advice. Data is readable unless passphrase protection is explicitly enabled. Protection covers the active workspace, not every older copy or an unlocked device. Do not commit financial records or private credentials to GitHub. Publish and test the Firestore rules for cloud access.</p></section></div>`}
 function openModal(kind,item=null){modalState={kind,id:item?.id||null,initial:item?JSON.parse(JSON.stringify(item)):{},baselineSnapshot:null};renderModal();setTimeout(()=>{const f=$('modalForm');f?.querySelector('input:not([type=checkbox]),select,textarea')?.focus()},0)}
 function modalFormSnapshot(form=$('modalForm')){if(!form)return '';return JSON.stringify(Array.from(form.elements).filter(el=>el.name&&!el.disabled).map(el=>[el.name,(el.type==='checkbox'||el.type==='radio')?(el.checked?el.value:''):el.value]))}
@@ -2976,7 +2976,7 @@ function trapWelcomeTab(e){
  }
  return false;
 }
-function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'replay-tour':replayTour();break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-holding':openModal('holding');break;case'edit-holding':{const h=(data.holdings||[]).find(t=>t.id===itemId);if(h)openModal('holding',h);else showToast('This purchase could not be found.');break}case'add-recurring':openModal('recurring');break;case'edit-recurring':{const r=(data.recurring||[]).find(t=>t.id===itemId);if(r)openModal('recurring',r);else showToast('This recurring item could not be found.');break}case'post-recurring':postRecurring(itemId);break;case'skip-recurring':skipRecurring(itemId);break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'export-csv':exportTransactionsCsv();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'choose-sync-data':chooseSyncData();break;case'answer-sync-choice':answerSyncChoice(b.dataset.value);break;case'minimize-sync-choice':minimizeSyncChoice();break;case'expand-sync-choice':expandSyncChoice();break;case'check-cloud-access':checkCloudAccess();break;case'sync-details':showSyncDetailsDialog();break;case'dismiss-sync-issue':syncIssueDismissed=true;renderSyncIssueBanner();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-chart':openStockChartFor(b.dataset.symbol,b);break;case'pf-chart-retry':pfSig='';ensurePortfolioChart();break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();undoState=null;break;case'undo-delete':undoDelete();break;}}
+function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'replay-tour':replayTour();break;case'test-sound':window.NorthstarSound?.welcome?.();break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-holding':openModal('holding');break;case'edit-holding':{const h=(data.holdings||[]).find(t=>t.id===itemId);if(h)openModal('holding',h);else showToast('This purchase could not be found.');break}case'add-recurring':openModal('recurring');break;case'edit-recurring':{const r=(data.recurring||[]).find(t=>t.id===itemId);if(r)openModal('recurring',r);else showToast('This recurring item could not be found.');break}case'post-recurring':postRecurring(itemId);break;case'skip-recurring':skipRecurring(itemId);break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'export-csv':exportTransactionsCsv();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'choose-sync-data':chooseSyncData();break;case'answer-sync-choice':answerSyncChoice(b.dataset.value);break;case'minimize-sync-choice':minimizeSyncChoice();break;case'expand-sync-choice':expandSyncChoice();break;case'check-cloud-access':checkCloudAccess();break;case'sync-details':showSyncDetailsDialog();break;case'dismiss-sync-issue':syncIssueDismissed=true;renderSyncIssueBanner();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-chart':openStockChartFor(b.dataset.symbol,b);break;case'pf-chart-retry':pfSig='';ensurePortfolioChart();break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();undoState=null;break;case'undo-delete':undoDelete();break;}}
 document.addEventListener('keydown',e=>{if(trapWelcomeTab(e))return;const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&setDockMore(false,true)){e.preventDefault();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
 document.addEventListener('click',e=>{
  const option=e.target.closest('[data-confirm-index]');
@@ -3600,7 +3600,7 @@ function setGate(state){
  if(open||state==='error')window.clearTimeout(gateTimer);
  const wasGated=window.NorthstarGated;window.NorthstarGated=!open;
  if(!open){try{jarvisTour.stop()}catch(e){}}
- if(open&&wasGated){try{window.NorthstarSound?.welcome?.()}catch(e){}scheduleTour(1400)}
+ if(open&&wasGated){try{window.NorthstarSound?.welcomeWhenReady?.()}catch(e){}scheduleTour(1400)}
  if(!open){const target=state==='error'?$('loginRetry'):state==='login'?$('loginGoogle'):null;if(target&&!gate.contains(document.activeElement))window.setTimeout(()=>target.focus({preventScroll:true}),60)}
  else if(gate.contains(document.activeElement))document.activeElement.blur();
 }
@@ -3723,26 +3723,28 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
 (function () {
   'use strict';
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var FX_KEY = 'northstar-fx-v2'; /* v2: everyone starts with sound and the soft ambience on again */
+  var FX_KEY = 'northstar-fx-v3'; /* v3: everyone starts with louder sound and the soft ambience on again */
 
   function read(key, fallback) {
     try { var raw = localStorage.getItem(key); return raw ? Object.assign({}, fallback, JSON.parse(raw)) : fallback; }
     catch (e) { return fallback; }
   }
-  var fx = read(FX_KEY, { muted: false, vol: 0.55, ambience: true, grain: true });
+  var fx = read(FX_KEY, { muted: false, vol: 0.85, ambience: true, grain: true });
   function save() { try { localStorage.setItem(FX_KEY, JSON.stringify(fx)); } catch (e) {} }
 
   /* ---------------- sound engine ---------------- */
   var actx = null, master = null, noiseBuf = null, ambienceNode = null;
 
+  /* Phones play quiet tones from tiny speakers, so the slider's 100% is twice the raw level (a compressor stops clipping). */
+  function level() { return fx.muted ? 0 : fx.vol * 2; }
   function ensureAudio() {
     if (actx) { if (actx.state === 'suspended') actx.resume(); return actx; }
     var AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     actx = new AC();
     master = actx.createGain();
-    master.gain.value = fx.muted ? 0 : fx.vol;
-    master.connect(actx.destination);
+    master.gain.value = level();
+    var comp = actx.createDynamicsCompressor(); master.connect(comp); comp.connect(actx.destination);
     var len = Math.floor(actx.sampleRate * 1.2);
     noiseBuf = actx.createBuffer(1, len, actx.sampleRate);
     var data = noiseBuf.getChannelData(0);
@@ -3752,7 +3754,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   function gate() {
     if (fx.muted) return false;
     if (!ensureAudio()) return false;
-    if (master && Math.abs(master.gain.value - fx.vol) > 0.001) master.gain.value = fx.vol;
+    if (master && Math.abs(master.gain.value - level()) > 0.001) master.gain.value = level();
     return true;
   }
   function tone(o) {
@@ -3799,7 +3801,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     needle: function () { noise({ dur: 0.55, gain: 0.09, f: 900, f2: 170, type: 'lowpass' }); tone({ f: 88, f2: 54, dur: 0.42, gain: 0.09 }); },
     setMuted: function (m) {
       fx.muted = !!m; save();
-      if (master) master.gain.value = m ? 0 : fx.vol;
+      if (master) master.gain.value = level();
       if (!m) { ensureAudio(); Sound.tick(); }
       paintSound();
     },
@@ -3810,7 +3812,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
       if (ambienceNode || !gate()) return;
       var src = actx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
       var lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
-      var g = actx.createGain(); g.gain.value = 0.012;
+      var g = actx.createGain(); g.gain.value = 0.03;
       src.connect(lp); lp.connect(g); g.connect(master); src.start();
       ambienceNode = src;
     }
@@ -3819,18 +3821,31 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   /* ---------------- first gesture unlock ---------------- */
   /* Browsers keep audio silent until a tap or key press. Keep listening until the
      context is really running, then start the ambience; the login button is the first gesture. */
-  var unlocked = false;
+  var unlocked = false, silentEl = null, pendingChime = false;
+  /* iPhone: the ring/silent switch mutes Web Audio unless the page plays "media". A silent looping clip
+     started from a tap switches the audio session to playback so the tones are heard. */
+  function iosPlayback() {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    if (silentEl) return;
+    try {
+      silentEl = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
+      silentEl.loop = true; silentEl.volume = 0.01; silentEl.setAttribute('playsinline', ''); silentEl.play().catch(function () { silentEl = null; });
+    } catch (e) { silentEl = null; }
+  }
   function unlock() {
-    ensureAudio();
+    iosPlayback(); ensureAudio();
     if (!actx || actx.state !== 'running') { if (actx) actx.resume(); return; }
     if (unlocked) return;
     unlocked = true;
+    if (pendingChime) { pendingChime = false; Sound.welcome(); }
     ['pointerdown', 'keydown', 'touchstart', 'click'].forEach(function (evt) { window.removeEventListener(evt, unlock, true); });
     if (fx.ambience && !fx.muted) Sound.setAmbience(true);
   }
   ['pointerdown', 'keydown', 'touchstart', 'click'].forEach(function (evt) {
     window.addEventListener(evt, unlock, { capture: true, passive: true });
   });
+  /* The sign-in chime: play now if audio is running, otherwise on the very next tap. */
+  Sound.welcomeWhenReady = function () { if (actx && actx.state === 'running') Sound.welcome(); else { pendingChime = true; ensureAudio(); } };
   window.NorthstarSound = Sound;
 
   /* ---------------- sound on interaction ---------------- */
@@ -3861,7 +3876,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   document.addEventListener('input', function (e) {
     if (!e.target || e.target.id !== 'fxVolume') return;
     fx.vol = Math.max(0, Math.min(1, Number(e.target.value) / 100)); save();
-    if (master) master.gain.value = fx.muted ? 0 : fx.vol;
+    if (master) master.gain.value = level();
     var out = document.getElementById('fxVolumeOut'); if (out) out.textContent = Math.round(fx.vol * 100) + '%';
   });
   document.addEventListener('change', function (e) {
