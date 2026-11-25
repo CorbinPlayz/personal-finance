@@ -32,7 +32,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0b0b0b">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%23081730'/%3E%3Cstop offset='1' stop-color='%233a6cf4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='url(%23b)'/%3E%3Ccircle cx='32' cy='32' r='23' fill='none' stroke='%23a9eafa' stroke-opacity='.42'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='%23a9eafa' stroke-opacity='.45' stroke-dasharray='2 4'/%3E%3Cpath d='M32 5 37 26 59 32 37 37 32 59 27 37 5 32 27 26Z' fill='%23c4f7ff' stroke='%23f4fdff' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpath d='M32 5 32 59 37 37 59 32 37 26Z' fill='%234d8cff' fill-opacity='.48'/%3E%3Ccircle cx='32' cy='32' r='4' fill='white'/%3E%3C/svg%3E">
 <meta name="apple-mobile-web-app-title" content="Northstar">
-<script>document.documentElement.classList.add('northstar-gated','northstar-seen');try{if(localStorage.getItem('northstar-vault-active-v1'))document.documentElement.classList.add('northstar-vault-locked')}catch(e){}</script>
+<script>window.NORTHSTAR_PREVIEW=/\/test-branch(\/|$)/.test(location.pathname);if(window.NORTHSTAR_PREVIEW){var nm=document.createElement('meta');nm.name='robots';nm.content='noindex,nofollow';document.head.appendChild(nm)}document.documentElement.classList.add('northstar-gated','northstar-seen');try{if(localStorage.getItem('northstar-vault-active-v1'))document.documentElement.classList.add('northstar-vault-locked')}catch(e){}</script>
 <title>Northstar | Personal Finance</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
@@ -1858,7 +1858,7 @@ let cloudSavedAt=0,cloudSaving=false,cloudSaveTicket=0,authResolved=false;
 // Quotes and the visitor-supplied provider key never enter the finance ledger.
 let stockQuery='',stockPaintFrame=null,stockPaintAll=false,stockLabelTimer=null,stockLabelDeadline=null;const stockDirty=new Set();
 const stockFeed=createStockFeed({onQuote:symbol=>scheduleStockPaint(symbol),onStatus:()=>scheduleStockPaint()});
-function localKey(key){return `northstar-finance-v1:${key}`}
+function localKey(key){return window.NORTHSTAR_PREVIEW?`northstar-preview-v1:${key}`:`northstar-finance-v1:${key}`}
 function dataSignature(value){return cloudSignature(removeUndefinedValues(normalizeData(value)))}
 function normalizeData(input){
  if(Array.isArray(input)){return migrateSimpleTransactions(input)}
@@ -3341,6 +3341,11 @@ async function onAuthChanged(current){
   await syncProtected(current,epoch);return;
  }
  if(!current){const wasSignedIn=!!user;user=null;lastSyncError=null;setCloudLoading(false);if(wasSignedIn)data=loadLocal('local');setSync('Local only','');render();return}
+ if(window.NORTHSTAR_PREVIEW){
+  /* Test branch: never read or write the real cloud copy; show a realistic demo ledger instead. */
+  const {buildDemoLedger}=await import('./demo-data.mjs');
+  user=current;lastSyncError=null;data=normalizeData(buildDemoLedger(new Date()));cloudLoaded=false;setCloudLoading(false);setSync('Test branch · demo data','ok');render();return;
+ }
  const pendingDevice=deferredDeviceWorkspace?.uid===current.uid?deferredDeviceWorkspace:null;
  const sourceKey=pendingDevice?.sourceKey||localKey(user?.uid||'local');
  const anonymousData=pendingDevice?pendingDevice.data:data,userLocal=loadLocal(current.uid);let chosen=hasRecords(userLocal)?userLocal:anonymousData,sourceRaw,sourceLegacyKey,sourceLegacyRaw;
@@ -3627,6 +3632,7 @@ function setGate(state){
 function gateFail(message){const text=$('loginErrorText');if(text&&message)text.textContent=message;setGate('error')}
 function initLoginGate(){
  const gate=$('loginGate');if(!gate)return;
+ if(window.NORTHSTAR_PREVIEW){document.title='Northstar · test branch';const r=document.createElement('div');r.className='preview-ribbon';r.textContent='TEST BRANCH · DEMO DATA · NOT THE LIVE SITE';document.body.appendChild(r)}
  $('loginGoogle')?.addEventListener('click',async()=>{try{window.NorthstarSound?.tap?.()}catch(e){}primeSpeech();const b=$('loginGoogle'),st=$('loginStatus');b.disabled=true;st.textContent='Opening Google sign-in…';try{await handleGoogleSignIn()}finally{b.disabled=false;if($('loginGate').dataset.state==='login')st.textContent=''}});
  $('loginRetry')?.addEventListener('click',()=>window.location.reload());
  gate.addEventListener('keydown',e=>{if(e.key!=='Tab')return;const items=[...gate.querySelectorAll('button')].filter(b=>b.offsetParent!==null&&!b.disabled);if(!items.length){e.preventDefault();return}const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}});
