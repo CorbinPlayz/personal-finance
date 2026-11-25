@@ -1570,6 +1570,20 @@ html{scroll-padding-top:72px}
 }
 </style>
 <style id="vault-design">
+/* Jarvis tour: a gliding guide plus a caption; the page underneath stays usable. */
+.nstour{position:fixed;inset:0;z-index:3600;pointer-events:none}
+html.northstar-gated .nstour{visibility:hidden}
+.nstour-ring{position:absolute;left:0;top:0;border:2px solid #fff;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.28),0 0 28px #ffffff55;opacity:0;transition:transform .7s cubic-bezier(.3,.7,.2,1),width .7s,height .7s,opacity .3s}
+.nstour-orb{position:absolute;left:0;top:0;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;color:#fff;background:radial-gradient(circle at 30% 25%,#4a4a4a,#111);border:1px solid #ffffff55;box-shadow:0 12px 34px #00000066,0 0 24px #ffffff33;transition:transform .8s cubic-bezier(.3,.7,.2,1);animation:nsTourFloat 2.4s ease-in-out infinite}
+.nstour-card{position:absolute;left:0;top:0;box-sizing:border-box;padding:14px 16px 12px;border-radius:16px;background:#0d0d0dee;color:#f2f2f2;border:1px solid #ffffff2e;box-shadow:0 18px 50px #00000070;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);pointer-events:auto;transition:transform .7s cubic-bezier(.3,.7,.2,1),width .4s}
+.nstour-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px}
+.nstour-head strong{letter-spacing:.06em}.nstour-title{color:#a8a8a8;flex:1}
+.nstour-skip{min-height:30px;padding:4px 10px;border:1px solid #ffffff44;border-radius:8px;background:transparent;color:#fff;font:600 12px/1 inherit;cursor:pointer}
+.nstour-skip:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.nstour-text{margin:0 0 10px;font-size:14px;line-height:1.5}
+.nstour-bar{height:3px;border-radius:3px;background:#ffffff26;overflow:hidden}.nstour-bar i{display:block;height:100%;width:0;background:#fff}
+@keyframes nsTourFloat{50%{margin-top:-4px}}
+@media(prefers-reduced-motion:reduce){.nstour-ring,.nstour-orb,.nstour-card{transition:none}.nstour-orb{animation:none}}
 /* Login gate: the whole app stays hidden until Google sign-in finishes. */
 html.northstar-gated .app-shell,html.northstar-gated #welcomeScreen,html.northstar-gated .mobile-dock,
 html.northstar-gated .nsj-orb,html.northstar-gated .nsj-panel,html.northstar-gated .nsj-tour,
@@ -1702,7 +1716,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
     <button class="login-google" id="loginGoogle" type="button"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>Continue with Google</button>
     <button class="login-retry" id="loginRetry" type="button">Try again</button>
     <p class="login-status" id="loginStatus" role="status" aria-live="polite"></p>
-    <p class="login-fine">SIGN-IN IS REQUIRED · NOTHING SHOWS UNTIL YOU ARE IN</p>
+    <p class="login-fine">SIGN-IN IS REQUIRED · SOUND IS ON, MUTE IT ANYTIME FROM THE TOP BAR</p>
   </div>
 </section>
 <section class="welcome-screen" id="welcomeScreen" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
@@ -1764,6 +1778,7 @@ import { FREQUENCIES, parseDate, cleanRecurring, dueItems, dueCount, upcomingOcc
 import { renderCashFlowGraph, renderCategoryGraph, renderTransactionGraph, renderAccountGraph, renderBudgetGraph, renderGoalGraph, renderPurchaseGraph, renderWorkspaceCountGraph, renderGuideProfileGraph, renderPriceChecksGraph, renderScenarioPanel, renderScenarioResult } from './financial-graphs-view.mjs';
 import { createStockFeed, watchlistSymbols, starterSymbols, normalizeSymbol, stockName, MAX_WATCHLIST } from './stock-watchlist.mjs';
 import { createHistoryLoader, portfolioSeries } from './stock-history.mjs';
+import { createTour } from './jarvis-tour.mjs';
 import { portfolioChartShell, portfolioChartMessage, mountPortfolioChart, openStockChart } from './stock-chart-view.mjs';
 import { renderStockPage, renderStockQuote, renderStockSaveStatus, stockSaveStatus, stockStatusText, stockConnectionLabel, nextStockLabelChange } from './stock-watchlist-view.mjs';
 const FIREBASE_VERSION='13.1.0';
@@ -2264,7 +2279,7 @@ function render(){
  const reminderCount=getReminders().length;$('reminderCount').textContent=reminderCount;$('reminderCount').classList.toggle('hidden',!reminderCount);$('mobileDock')?.querySelector('.dock-item[data-page="Purchases"]')?.setAttribute('aria-label','Plan'+(reminderCount?' '+reminderCount+' reminder'+(reminderCount===1?'':'s'):'')+' · Purchase planner');
  const main=$('content');main.dataset.page=page;main.innerHTML=page==='Overview'?renderOverview():page==='Transactions'?renderTransactions():page==='Accounts'?renderAccounts():page==='Budgets'?renderBudgets():page==='Goals'?renderGoals():page==='Purchases'?renderPurchases():page==='Stocks'?renderStockPage(watchlistSymbols(data.settings),stockFeed.getState(),stockFeed.quoteFor,stockFeed.issueFor,stockQuery,{save:stockSaveState(),portfolioHtml:renderPortfolioPanel(),chartHtml:portfolioChartShell()}):page==='Guide'?renderGuide():renderSettings();renderDock();if(page==='Stocks')ensurePortfolioChart();
  if(page==='Stocks')filterStocks(stockQuery);syncStockFeed();
- renderModal();
+ renderModal();scheduleTour();
 }
 /* Stock symbols are workspace data. Provider prices and the key are transient;
    showing or refreshing prices must never change balances or finance records. */
@@ -2693,7 +2708,7 @@ ${renderVaultPanel()}
 <section class="panel"><div class="panel-head"><div><h2>Preferences</h2><p>Personalize how your numbers are displayed.</p></div></div><label class="field-label" style="max-width:360px">Display currency<select id="currencySelect">${options(['USD','CAD','GBP','EUR','AUD','NZD','JPY'],data.settings.currency||'USD')}</select></label><p class="form-hint">Changing currency changes display formatting only. Northstar does not perform exchange-rate conversion.</p></section>
 <section class="panel"><div class="panel-head"><div><h2>Backup & restore</h2><p>Keep a private backup before making major changes.</p></div></div><div class="setting-action"><div><strong>Export backup</strong><p>${vault.state==='unlocked'?'Download an encrypted JSON backup of this workspace. Keep your passphrase safe.':'Download a readable, unencrypted JSON backup. Store it privately.'}</p></div><button class="secondary-btn" data-action="export">↓ Export backup</button></div><div class="setting-action"><div><strong>Export transactions (CSV)</strong><p>Download a readable spreadsheet file of your recorded transactions. It is not encrypted, even in a protected workspace.</p></div><button class="secondary-btn" data-action="export-csv">↓ Export CSV</button></div><div class="setting-action"><div><strong>Restore backup</strong><p>Replace the current data with a plaintext or encrypted Northstar JSON backup.</p></div><button class="secondary-btn" data-action="import">↑ Choose file</button></div>${renderWorkspaceCountGraph(counts,esc)}</section>
 <section class="panel"><div class="panel-head"><div><h2>Data management</h2><p>Clear this Northstar dataset if you need a fresh start.</p></div></div><div class="setting-action"><div><strong>Clear all financial data</strong><p>This deletes accounts, transactions, budgets, recurring items, goals, purchase plans, saved Guide information, and your custom stock list from the active dataset. Export a backup first if you may need the information.</p></div><button class="danger-btn" data-action="clear-data">Clear data</button></div></section>
-<section class="panel"><div class="panel-head"><div><h2>Your Northstar experience</h2><p>Revisit the welcome screen and compass animation any time.</p></div></div><div class="setting-action"><div><strong>Welcome screen</strong><p>See the Northstar introduction and animated compass again.</p></div><button class="secondary-btn" data-action="welcome-again">Replay welcome ↗</button></div></section>
+<section class="panel"><div class="panel-head"><div><h2>Your Northstar experience</h2><p>Revisit the welcome screen and compass animation any time.</p></div></div><div class="setting-action"><div><strong>Welcome screen</strong><p>See the Northstar introduction and animated compass again.</p></div><button class="secondary-btn" data-action="welcome-again">Replay welcome ↗</button> <button class="secondary-btn" data-action="replay-tour">Replay Jarvis tour</button></div></section>
 <section class="panel"><div class="panel-head"><div><h2>Sound & celebrations</h2><p>Celebrate a savings milestone with a short chime and animation.</p></div></div><label class="checkbox-line"><input id="goalSoundsToggle" type="checkbox" ${data.settings.goalSounds!==false?"checked":""}> Play goal-completion sounds</label><p class="form-hint">Sound plays only when you reach a goal after using the app. You can turn it off here.</p><label class="fx-volume-line" for="fxVolume"><span>App sound volume</span><input id="fxVolume" type="range" min="0" max="100" step="5" value="${fxVolumePercent()}" aria-label="App sound volume"><output id="fxVolumeOut">${fxVolumePercent()}%</output></label><p class="form-hint">Taps, saves, income coins and deletes each have their own soft sound. The speaker in the top bar mutes everything.</p></section>${renderSplitPanel()}
 <section class="panel"><div class="panel-head"><div><h2>About Northstar</h2><p>What this app does — and does not do.</p></div><span class="category-pill">Major update</span></div><div class="setting-action"><div><strong>What's new</strong><p>A real AI assistant, zoomable 5-year stock charts, shop-link prices, recurring bills and a smoother look. Passphrase protection is switched off.</p></div><a class="secondary-btn small" href="https://github.com/CorbinPlayz/personal-finance/blob/main/MAJOR-UPDATE.md" target="_blank" rel="noopener noreferrer" aria-label="Read the major update on GitHub, opens in a new tab" style="text-decoration:none">Read update ↗</a></div><p class="muted" style="font-size:12px;line-height:1.7;margin:0">Northstar is a manual personal finance tracker. It does not connect to bank accounts, process payments, or provide financial advice. Data is readable unless passphrase protection is explicitly enabled. Protection covers the active workspace, not every older copy or an unlocked device. Do not commit financial records or private credentials to GitHub. Publish and test the Firestore rules for cloud access.</p></section></div>`}
 function openModal(kind,item=null){modalState={kind,id:item?.id||null,initial:item?JSON.parse(JSON.stringify(item)):{},baselineSnapshot:null};renderModal();setTimeout(()=>{const f=$('modalForm');f?.querySelector('input:not([type=checkbox]),select,textarea')?.focus()},0)}
@@ -2961,7 +2976,7 @@ function trapWelcomeTab(e){
  }
  return false;
 }
-function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-holding':openModal('holding');break;case'edit-holding':{const h=(data.holdings||[]).find(t=>t.id===itemId);if(h)openModal('holding',h);else showToast('This purchase could not be found.');break}case'add-recurring':openModal('recurring');break;case'edit-recurring':{const r=(data.recurring||[]).find(t=>t.id===itemId);if(r)openModal('recurring',r);else showToast('This recurring item could not be found.');break}case'post-recurring':postRecurring(itemId);break;case'skip-recurring':skipRecurring(itemId);break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'export-csv':exportTransactionsCsv();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'choose-sync-data':chooseSyncData();break;case'answer-sync-choice':answerSyncChoice(b.dataset.value);break;case'minimize-sync-choice':minimizeSyncChoice();break;case'expand-sync-choice':expandSyncChoice();break;case'check-cloud-access':checkCloudAccess();break;case'sync-details':showSyncDetailsDialog();break;case'dismiss-sync-issue':syncIssueDismissed=true;renderSyncIssueBanner();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-chart':openStockChartFor(b.dataset.symbol,b);break;case'pf-chart-retry':pfSig='';ensurePortfolioChart();break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();undoState=null;break;case'undo-delete':undoDelete();break;}}
+function openByAction(action,b){const itemId=b.dataset.id,item=b.dataset.section;switch(action){case'dismiss-welcome':dismissWelcome();break;case'welcome-scroll':scrollWelcomeJourney();break;case'welcome-again':showWelcome(b);break;case'replay-tour':replayTour();break;case'page':navigate(b.dataset.page);break;case'home-shortcut':navigateHomeShortcut();break;case'dock-more':setDockMore($('dockMoreMenu')?.hidden);break;case'add-transaction':openModal('transaction',null);if(b.dataset.prefill==='expense'){modalState.initial={type:'Expense',category:'Other'};renderModal()}break;case'add-account':openModal('account');break;case'add-budget':openModal('budget');break;case'add-holding':openModal('holding');break;case'edit-holding':{const h=(data.holdings||[]).find(t=>t.id===itemId);if(h)openModal('holding',h);else showToast('This purchase could not be found.');break}case'add-recurring':openModal('recurring');break;case'edit-recurring':{const r=(data.recurring||[]).find(t=>t.id===itemId);if(r)openModal('recurring',r);else showToast('This recurring item could not be found.');break}case'post-recurring':postRecurring(itemId);break;case'skip-recurring':skipRecurring(itemId);break;case'add-goal':openModal('goal');break;case'add-purchase':openModal('purchase');break;case'edit-transaction':{const tx=data.transactions.find(t=>t.id===itemId);if(tx)openModal('transaction',tx);else showToast('This transaction could not be found.');break;}case'edit-account':openModal('account',data.accounts.find(t=>t.id===itemId));break;case'edit-budget':openModal('budget',data.budgets.find(t=>t.id===itemId));break;case'edit-goal':openModal('goal',data.goals.find(t=>t.id===itemId));break;case'open-purchase':purchaseDetailId=itemId;render();window.scrollTo({top:0,behavior:'smooth'});break;case'back-to-purchases':try{globalThis.NorthstarMotion?.beforePurchaseList(purchaseDetailId)}catch(e){console.warn('Presentation animation was skipped.',e)}purchaseDetailId=null;render();try{globalThis.NorthstarMotion?.afterPurchaseList()}catch(e){console.warn('Presentation animation was skipped.',e)}window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});break;case'edit-purchase':openModal('purchase',data.purchases.find(t=>t.id===itemId));break;case'delete-item':deleteItem(item,itemId);break;case'purchase-bought':setPurchaseStatus(itemId,'Purchased');break;case'toggle-purchase-notes':{const note=b.previousElementSibling;if(note?.matches('[data-notes-preview]')){const collapsed=note.classList.toggle('is-collapsed');b.textContent=collapsed?'Expand description':'Collapse description';b.setAttribute('aria-expanded',String(!collapsed))}break;}case'close-modal':closeModal();break;case'backdrop-close':closeModal();break;case'export':exportBackup();break;case'export-csv':exportTransactionsCsv();break;case'import':$('backupFile').click();break;case'clear-data':clearAllFinancialData();break;case'signin':handleGoogleSignIn();break;case'retry-sync':retryCloudSync();break;case'choose-sync-data':chooseSyncData();break;case'answer-sync-choice':answerSyncChoice(b.dataset.value);break;case'minimize-sync-choice':minimizeSyncChoice();break;case'expand-sync-choice':expandSyncChoice();break;case'check-cloud-access':checkCloudAccess();break;case'sync-details':showSyncDetailsDialog();break;case'dismiss-sync-issue':syncIssueDismissed=true;renderSyncIssueBanner();break;case'enable-vault':enableVault();break;case'lock-vault':lockProtectedWorkspace();break;case'protect-cloud':protectCloudCopy();break;case'signout':handleGoogleSignOut();break;case'clear-guide-profile':clearGuideProfile();break;case'stock-remove':removeStock(b.dataset.symbol);break;case'stock-chart':openStockChartFor(b.dataset.symbol,b);break;case'pf-chart-retry':pfSig='';ensurePortfolioChart();break;case'stock-reset':resetStocks();break;case'stock-refresh':refreshStocks();break;case'stock-disconnect':disconnectStocks();break;case'dismiss-toast':$('toastRoot').replaceChildren();undoState=null;break;case'undo-delete':undoDelete();break;}}
 document.addEventListener('keydown',e=>{if(trapWelcomeTab(e))return;const purchaseTile=e.target.closest?.('.purchase-tile[role="button"]');if(purchaseTile&&['open-purchase','edit-transaction'].includes(purchaseTile.dataset.action)&&(e.key==='Enter'||e.key===' ')){e.preventDefault();purchaseTile.click();return}if(e.key==='Escape'&&confirmResolver){settleNorthstarDialog(null);return}if(e.key==='Escape'&&modalState){void closeModal();return}if(e.key==='Escape'&&setDockMore(false,true)){e.preventDefault();return}if(e.key==='Escape'&&!$('welcomeScreen')?.classList.contains('hidden')&&!document.documentElement.classList.contains('northstar-seen'))dismissWelcome()});
 document.addEventListener('click',e=>{
  const option=e.target.closest('[data-confirm-index]');
@@ -3561,6 +3576,20 @@ function maybeAutoRetrySync(){
 window.addEventListener('online',()=>maybeAutoRetrySync());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')maybeAutoRetrySync()});
 window.addEventListener('pageshow',event=>{if(event.persisted)maybeAutoRetrySync()});
+/* Jarvis tours: ~30 s auto-playing walk-through, once per person per section (see jarvis-tour.mjs). */
+const jarvisTour=createTour({doc:document,win:window,storage:localStorage,sound:()=>window.NorthstarSound,
+ shouldStop:key=>window.NorthstarGated||window.NorthstarVaultLocked||(key!=='Intro'&&tourKeyForPage()!==key)});
+const tourKeyForPage=()=>page==='Northstar Guide'?'Guide':page;
+let tourTimer=0;
+function scheduleTour(delay=900){
+ window.clearTimeout(tourTimer);
+ tourTimer=window.setTimeout(()=>{
+  const busy=!user||!authResolved||syncLoading||window.NorthstarGated||window.NorthstarVaultLocked||jarvisTour.isRunning()||isWelcomeVisible()||document.querySelector('#modalRoot .modal,#confirmRoot .modal,.modal-backdrop');
+  if(busy){return}
+  jarvisTour.maybeStart(page,user.uid);
+ },delay);
+}
+function replayTour(){const key=tourKeyForPage();if(!user)return;jarvisTour.start(key,user.uid)}
 /* Login gate: sign-in is required. States: checking -> login (signed out) | open (signed in) | error (Firebase could not load). */
 let gateTimer=0;
 function setGate(state){
@@ -3569,14 +3598,16 @@ function setGate(state){
  document.documentElement.classList.toggle('northstar-gated',!open);
  gate.dataset.state=open?'login':state;gate.setAttribute('aria-hidden',String(open));
  if(open||state==='error')window.clearTimeout(gateTimer);
- window.NorthstarGated=!open;
+ const wasGated=window.NorthstarGated;window.NorthstarGated=!open;
+ if(!open){try{jarvisTour.stop()}catch(e){}}
+ if(open&&wasGated){try{window.NorthstarSound?.welcome?.()}catch(e){}scheduleTour(1400)}
  if(!open){const target=state==='error'?$('loginRetry'):state==='login'?$('loginGoogle'):null;if(target&&!gate.contains(document.activeElement))window.setTimeout(()=>target.focus({preventScroll:true}),60)}
  else if(gate.contains(document.activeElement))document.activeElement.blur();
 }
 function gateFail(message){const text=$('loginErrorText');if(text&&message)text.textContent=message;setGate('error')}
 function initLoginGate(){
  const gate=$('loginGate');if(!gate)return;
- $('loginGoogle')?.addEventListener('click',async()=>{const b=$('loginGoogle'),st=$('loginStatus');b.disabled=true;st.textContent='Opening Google sign-in…';try{await handleGoogleSignIn()}finally{b.disabled=false;if($('loginGate').dataset.state==='login')st.textContent=''}});
+ $('loginGoogle')?.addEventListener('click',async()=>{try{window.NorthstarSound?.tap?.()}catch(e){}const b=$('loginGoogle'),st=$('loginStatus');b.disabled=true;st.textContent='Opening Google sign-in…';try{await handleGoogleSignIn()}finally{b.disabled=false;if($('loginGate').dataset.state==='login')st.textContent=''}});
  $('loginRetry')?.addEventListener('click',()=>window.location.reload());
  gate.addEventListener('keydown',e=>{if(e.key!=='Tab')return;const items=[...gate.querySelectorAll('button')].filter(b=>b.offsetParent!==null&&!b.disabled);if(!items.length){e.preventDefault();return}const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}});
  // If Firebase never answers, do not leave the person on a spinner forever.
@@ -3692,13 +3723,13 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
 (function () {
   'use strict';
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var FX_KEY = 'northstar-fx-v1';
+  var FX_KEY = 'northstar-fx-v2'; /* v2: everyone starts with sound and the soft ambience on again */
 
   function read(key, fallback) {
     try { var raw = localStorage.getItem(key); return raw ? Object.assign({}, fallback, JSON.parse(raw)) : fallback; }
     catch (e) { return fallback; }
   }
-  var fx = read(FX_KEY, { muted: false, vol: 0.55, ambience: false, grain: true });
+  var fx = read(FX_KEY, { muted: false, vol: 0.55, ambience: true, grain: true });
   function save() { try { localStorage.setItem(FX_KEY, JSON.stringify(fx)); } catch (e) {} }
 
   /* ---------------- sound engine ---------------- */
@@ -3764,6 +3795,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     error: function () { tone({ f: 196, f2: 110, dur: 0.24, gain: 0.1, type: 'triangle' }); noise({ dur: 0.14, gain: 0.035, type: 'lowpass', f: 700, f2: 200 }); },
     coin: function () { tone({ f: 1318.5, dur: 0.12, gain: 0.09, type: 'triangle' }); tone({ f: 1760, dur: 0.38, gain: 0.08, type: 'triangle', delay: 0.07 }); tone({ f: 2637, dur: 0.3, gain: 0.025, delay: 0.09 }); },
     undo: function () { tone({ f: 440, f2: 660, dur: 0.14, gain: 0.08, type: 'triangle' }); },
+    welcome: function () { tone({ f: 392, dur: 0.5, gain: 0.09 }); tone({ f: 587.33, dur: 0.6, gain: 0.08, delay: 0.12 }); tone({ f: 783.99, dur: 0.7, gain: 0.07, delay: 0.24 }); tone({ f: 1174.7, dur: 0.8, gain: 0.04, delay: 0.38 }); },
     needle: function () { noise({ dur: 0.55, gain: 0.09, f: 900, f2: 170, type: 'lowpass' }); tone({ f: 88, f2: 54, dur: 0.42, gain: 0.09 }); },
     setMuted: function (m) {
       fx.muted = !!m; save();
@@ -3775,7 +3807,7 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     setAmbience: function (on) {
       fx.ambience = !!on; save();
       if (!on) { if (ambienceNode) { try { ambienceNode.stop(); } catch (e) {} ambienceNode = null; } return; }
-      if (!gate()) return;
+      if (ambienceNode || !gate()) return;
       var src = actx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
       var lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
       var g = actx.createGain(); g.gain.value = 0.012;
@@ -3785,10 +3817,21 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   };
 
   /* ---------------- first gesture unlock ---------------- */
-  function unlock() { ensureAudio(); if (fx.ambience) Sound.setAmbience(true); }
-  ['pointerdown', 'keydown', 'touchstart'].forEach(function (evt) {
-    window.addEventListener(evt, unlock, { once: true, passive: true });
+  /* Browsers keep audio silent until a tap or key press. Keep listening until the
+     context is really running, then start the ambience; the login button is the first gesture. */
+  var unlocked = false;
+  function unlock() {
+    ensureAudio();
+    if (!actx || actx.state !== 'running') { if (actx) actx.resume(); return; }
+    if (unlocked) return;
+    unlocked = true;
+    ['pointerdown', 'keydown', 'touchstart', 'click'].forEach(function (evt) { window.removeEventListener(evt, unlock, true); });
+    if (fx.ambience && !fx.muted) Sound.setAmbience(true);
+  }
+  ['pointerdown', 'keydown', 'touchstart', 'click'].forEach(function (evt) {
+    window.addEventListener(evt, unlock, { capture: true, passive: true });
   });
+  window.NorthstarSound = Sound;
 
   /* ---------------- sound on interaction ---------------- */
   document.addEventListener('click', function (e) {

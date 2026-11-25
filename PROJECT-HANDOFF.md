@@ -634,7 +634,7 @@ Recent work includes local Jarvis review-before-save drafts (PR #12), the compac
 
 ## Required sign-in (getting ready for 1.0)
 
-`html.northstar-gated` (set by the first inline script) hides the app shell, welcome, Jarvis, dock, modals and sync banner via `visibility:hidden`; `#loginGate` (z-index 100000) shows instead. `setGate('checking'|'login'|'open'|'error')` is driven by `onAuthChanged` and the `initFirebase` catch; a 15 s timeout ends "checking" in the error state (Try again reloads). Passphrase code is untouched. Planned next: Jarvis auto-playing ~30 s tour per section (first visit per user).
+`html.northstar-gated` (set by the first inline script) hides the app shell, welcome, Jarvis, dock, modals and sync banner via `visibility:hidden`; `#loginGate` (z-index 100000) shows instead. `setGate('checking'|'login'|'open'|'error')` is driven by `onAuthChanged` and the `initFirebase` catch; a 15 s timeout ends "checking" in the error state (Try again reloads). Passphrase code is untouched. Tours: `jarvis-tour.mjs` (TOURS, planDurations sums to 30 000 ms, placeGuide, createTour); wired in index.html via `scheduleTour()` (end of render and when the gate opens); `window.NorthstarSound` is exposed by the sound engine.
 
 ## Stocks tab charts (5-year history)
 

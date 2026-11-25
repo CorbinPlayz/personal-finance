@@ -12,6 +12,10 @@ Jarvis now runs on a free hosted AI (your own Cloudflare Worker, no API keys) th
 
 Northstar now opens on a sign-in screen in the same dark design as the welcome page. Nothing from the app (accounts, goals, stocks, Jarvis) is shown until Google sign-in finishes. While Firebase answers it says "Checking your sign-in…"; if Firebase cannot load it shows a Try again button and no way in; signing out returns to the sign-in screen. The old intro no longer opens by itself (replay it in Settings). Test: `node tests/login-gate-browser.cjs`.
 
+### Jarvis tours and sound
+
+After sign-in Jarvis plays a 30-second intro that glides around the screen with captions (nothing to click), then a 30-second tour the first time each section opens. Skip button or Esc ends one; Settings → "Replay Jarvis tour" plays it again. Seen tours are remembered per person on that device; raising `TOUR_VERSION` in `jarvis-tour.mjs` shows every tour to everybody again (this release does that). Sound now starts on the first tap or key press (the Google button counts), plays a welcome chime on sign-in, and everyone starts unmuted with the soft ambience on (`northstar-fx-v2`); mute from the speaker in the top bar. Tests: `node tests/jarvis-tour-browser.cjs`, `tests/jarvis-tour.test.mjs`.
+
 ## Included features
 
 - Overview, transactions, accounts, budgets, savings goals, and planned purchases.
