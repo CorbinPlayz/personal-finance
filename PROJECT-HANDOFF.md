@@ -632,6 +632,10 @@ Recent work includes local Jarvis review-before-save drafts (PR #12), the compac
 - 2026-11-03: Full visual redesign to a monochrome design language. Added the `#mono-design` style layer, remapped every colour literal to a neutral ramp with a single oxblood danger accent, replaced Unicode glyphs with inline SVG line icons (nav, dock, metrics, transactions, accounts, goals, empty states, welcome benefits), rebuilt the monochrome brand marks, and added tabular numerals. Structure, data logic, persistence, sync, and the documented mobile scroll fixes were not changed; the only JS edits are icon/colour values plus the new `ICON` set.
 - 2026-11-03: Documented the important Cloudflare integration gap: a Worker backend exists, but the current Guide remains local/rules-based and does not call the Worker.
 
+## Required sign-in (getting ready for 1.0)
+
+`html.northstar-gated` (set by the first inline script) hides the app shell, welcome, Jarvis, dock, modals and sync banner via `visibility:hidden`; `#loginGate` (z-index 100000) shows instead. `setGate('checking'|'login'|'open'|'error')` is driven by `onAuthChanged` and the `initFirebase` catch; a 15 s timeout ends "checking" in the error state (Try again reloads). Passphrase code is untouched. Planned next: Jarvis auto-playing ~30 s tour per section (first visit per user).
+
 ## Stocks tab charts (5-year history)
 
 - **What the user sees.** Opening the Stocks tab shows "Portfolio value over time" at the top: daily closing prices of the user's holdings from their first purchase date, with a dashed "money you put in" line. Each purchase draws a vertical step (the old and new value share the same day) and a dot. This chart is read-only (hover or tap to read a day), not zoomable by design. Tapping any watchlist row (or its name button) opens a bottom sheet / dialog with that stock's 5-year share price, zoomable: wheel and trackpad pinch, drag, two-finger pinch, double-tap/double-click, +/− buttons, 1M/6M/1Y/5Y chips, Reset, and keys (+ − arrows Home).

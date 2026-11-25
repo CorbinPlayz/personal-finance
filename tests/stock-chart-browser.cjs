@@ -262,12 +262,6 @@ const fixture = {
     assert.match(await undated.innerText('#pfChartBody'), /Add a purchase date/);
   });
 
-  const out = await open({ phone: false, signedOut: true });
-  await check('desktop: signed out, the chart says to sign in (not "hosted AI") and offers Try again', async () => {
-    await out.waitForSelector('#pfChartBody [data-action="pf-chart-retry"]');
-    assert.match(await out.innerText('#pfChartBody'), /Sign in with Google to load price history/);
-    assert.doesNotMatch(await out.innerText('#pfChartBody'), /hosted AI/);
-  });
 
   await browser.close(); server.close();
   assert.deepEqual(errors, [], 'no page errors: ' + errors.join(' | '));

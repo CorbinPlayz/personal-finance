@@ -32,7 +32,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#0b0b0b">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%23081730'/%3E%3Cstop offset='1' stop-color='%233a6cf4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='url(%23b)'/%3E%3Ccircle cx='32' cy='32' r='23' fill='none' stroke='%23a9eafa' stroke-opacity='.42'/%3E%3Ccircle cx='32' cy='32' r='17' fill='none' stroke='%23a9eafa' stroke-opacity='.45' stroke-dasharray='2 4'/%3E%3Cpath d='M32 5 37 26 59 32 37 37 32 59 27 37 5 32 27 26Z' fill='%23c4f7ff' stroke='%23f4fdff' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpath d='M32 5 32 59 37 37 59 32 37 26Z' fill='%234d8cff' fill-opacity='.48'/%3E%3Ccircle cx='32' cy='32' r='4' fill='white'/%3E%3C/svg%3E">
 <meta name="apple-mobile-web-app-title" content="Northstar">
-<script>try{if(localStorage.getItem('northstar-welcome-seen-v1')==='1')document.documentElement.classList.add('northstar-seen');if(localStorage.getItem('northstar-vault-active-v1'))document.documentElement.classList.add('northstar-vault-locked')}catch(e){}</script>
+<script>document.documentElement.classList.add('northstar-gated','northstar-seen');try{if(localStorage.getItem('northstar-vault-active-v1'))document.documentElement.classList.add('northstar-vault-locked')}catch(e){}</script>
 <title>Northstar | Personal Finance</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
@@ -1570,6 +1570,34 @@ html{scroll-padding-top:72px}
 }
 </style>
 <style id="vault-design">
+/* Login gate: the whole app stays hidden until Google sign-in finishes. */
+html.northstar-gated .app-shell,html.northstar-gated #welcomeScreen,html.northstar-gated .mobile-dock,
+html.northstar-gated .nsj-orb,html.northstar-gated .nsj-panel,html.northstar-gated .nsj-tour,
+html.northstar-gated #modalRoot,html.northstar-gated #confirmRoot,
+html.northstar-gated #goalCelebrationRoot,html.northstar-gated #syncIssueRoot{visibility:hidden!important;pointer-events:none!important}
+.login-gate{display:none;z-index:100000;align-items:center;justify-content:center}
+html.northstar-gated .login-gate{display:flex}
+.login-gate .login-card{position:relative;z-index:1;width:min(100%,460px);margin:auto;text-align:center;animation:nsWelcomeRise .8s cubic-bezier(.2,.72,.2,1) both}
+.login-gate .welcome-art{min-height:250px}
+.login-gate h1{margin:6px 0 10px;font-size:clamp(28px,6vw,40px);line-height:1.1;font-weight:700;letter-spacing:-.02em;color:#fff}
+.login-gate h1 em{font-style:italic;font-weight:600;color:#d4d4d4}
+.login-gate .login-lead{margin:0 auto 22px;max-width:36ch;font-size:15px;line-height:1.55;color:#b8b8b8}
+.login-gate .login-google{display:inline-flex;align-items:center;justify-content:center;gap:11px;min-height:52px;width:min(100%,320px);padding:12px 18px;border:1px solid #fff;border-radius:12px;background:#fff;color:#111;font:700 14px/1.2 inherit;cursor:pointer;transition:transform .14s ease,box-shadow .2s ease}
+.login-gate .login-google:hover{transform:translateY(-1px);box-shadow:0 10px 30px #ffffff22}
+.login-gate .login-google:focus-visible,.login-gate .login-retry:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.login-gate .login-google[disabled]{opacity:.6;cursor:wait;transform:none}
+.login-gate .login-retry{display:none;min-height:48px;padding:10px 22px;border:1px solid #fff;border-radius:12px;background:#fff;color:#111;font:700 14px/1.2 inherit;cursor:pointer}
+.login-gate .login-status{min-height:22px;margin:16px 0 0;font-size:13px;color:#a8a8a8}
+.login-gate .login-fine{margin:22px 0 0;font-size:11px;letter-spacing:.04em;color:#8a8a8a}
+.login-gate .login-checking,.login-gate .login-error{display:none}
+.login-gate[data-state="checking"] .login-checking{display:block}
+.login-gate[data-state="checking"] .login-ready{display:none}
+.login-gate[data-state="error"] .login-ready,.login-gate[data-state="error"] .login-google{display:none}
+.login-gate[data-state="error"] .login-error{display:block}
+.login-gate[data-state="error"] .login-retry{display:inline-flex;align-items:center;justify-content:center}
+.login-gate .login-spinner{width:26px;height:26px;margin:0 auto 14px;border:2px solid #ffffff33;border-top-color:#fff;border-radius:50%;animation:nsGateSpin .9s linear infinite}
+@keyframes nsGateSpin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.login-gate .login-card{animation:none}.login-gate .login-spinner{animation:none}}
 html.northstar-vault-locked .app-shell,html.northstar-vault-locked #welcomeScreen,
 html.northstar-vault-locked .nsj-orb,html.northstar-vault-locked .nsj-panel,
 html.northstar-vault-locked #modalRoot,html.northstar-vault-locked #confirmRoot,
@@ -1661,6 +1689,22 @@ button:disabled{opacity:.55;cursor:not-allowed}
 </style>
 </head>
 <body>
+<section class="welcome-screen login-gate" id="loginGate" data-state="checking" role="dialog" aria-modal="true" aria-labelledby="loginTitle" aria-describedby="loginLead">
+  <div class="welcome-glow welcome-glow-a" aria-hidden="true"></div><div class="welcome-glow welcome-glow-b" aria-hidden="true"></div>
+  <div class="welcome-starfield" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="login-card">
+    <div class="welcome-art" aria-hidden="true"><span class="welcome-orbit welcome-orbit-outer"></span><span class="welcome-orbit welcome-orbit-inner"></span><span class="welcome-orbit welcome-orbit-tilt"></span><span class="welcome-orbit-dot"></span><span class="welcome-orbit-dot welcome-orbit-dot-two"></span><span class="welcome-hero-logo"><svg class="welcome-hero-logo" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs><linearGradient id="nsBgGate" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#242424"/><stop offset=".55" stop-color="#1a1a1a"/><stop offset="1" stop-color="#101010"/></linearGradient><linearGradient id="nsStarGate" x1=".15" y1="0" x2=".9" y2="1"><stop stop-color="#ffffff"/><stop offset=".48" stop-color="#e6e6e6"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient></defs><rect x="2" y="2" width="76" height="76" rx="22" fill="url(#nsBgGate)" stroke="#ffffff26" stroke-width="1"/><circle cx="40" cy="40" r="29" fill="none" stroke="#c9c9c9" stroke-opacity=".36" stroke-width="1.3"/><circle cx="40" cy="40" r="22" fill="none" stroke="#c9c9c9" stroke-opacity=".38" stroke-dasharray="2 5"/><path d="M40 6 46 32 73 40 46 46 40 74 34 46 7 40 34 32Z" fill="url(#nsStarGate)" stroke="#f2f2f2" stroke-opacity=".95" stroke-width="1.3" stroke-linejoin="round"/><path d="M40 6 40 74 46 46 73 40 46 32Z" fill="#999999" fill-opacity=".38"/><circle cx="40" cy="40" r="4.5" fill="#ffffff"/><circle cx="40" cy="40" r="7" fill="none" stroke="#a8a8a8" stroke-opacity=".7"/></svg></span><span class="welcome-cross-star star-a">✦</span><span class="welcome-cross-star star-b">✧</span><span class="welcome-cross-star star-c">·</span></div>
+    <div class="welcome-kicker" style="justify-content:center"><span class="welcome-kicker-dot"></span>NORTHSTAR</div>
+    <h1 id="loginTitle">Sign in to find your <em>North Star.</em></h1>
+    <p class="login-lead login-ready" id="loginLead">Your accounts, goals and stocks stay private to you. Sign in with Google to open them on any device.</p>
+    <div class="login-checking" role="status"><div class="login-spinner" aria-hidden="true"></div><p class="login-lead" style="margin:0 auto">Checking your sign-in…</p></div>
+    <div class="login-error" role="alert"><p class="login-lead" id="loginErrorText">Sign-in could not load. Check your connection and try again.</p></div>
+    <button class="login-google" id="loginGoogle" type="button"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.3l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.9l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>Continue with Google</button>
+    <button class="login-retry" id="loginRetry" type="button">Try again</button>
+    <p class="login-status" id="loginStatus" role="status" aria-live="polite"></p>
+    <p class="login-fine">SIGN-IN IS REQUIRED · NOTHING SHOWS UNTIL YOU ARE IN</p>
+  </div>
+</section>
 <section class="welcome-screen" id="welcomeScreen" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
   <div class="ns-garage" aria-hidden="true"><div class="ns-garage-door"><div class="ns-garage-stamp"><svg viewBox="0 0 80 80" focusable="false"><circle cx="40" cy="40" r="32" fill="none" stroke="currentColor" stroke-opacity=".45"/><path d="M40 8 46 32 72 40 46 46 40 72 34 46 8 40 34 32Z" fill="currentColor"/><circle cx="40" cy="40" r="4" fill="#151719"/></svg><strong>NORTHSTAR</strong><small>PERSONAL FINANCE</small></div></div></div>
   <div class="welcome-scroll-progress" aria-hidden="true"><span id="welcomeProgressBar"></span></div>
@@ -3153,7 +3197,7 @@ window.addEventListener('storage',e=>{
  }
 });
 
-async function initFirebase(){try{const [appSdk,authSdk,storeSdk]=await Promise.all([import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`)]);const app=(appSdk.getApps().length?appSdk.getApps()[0]:appSdk.initializeApp(firebaseConfig));const auth=authSdk.getAuth(app),db=storeSdk.getFirestore(app);fb={...appSdk,...authSdk,...storeSdk,app,auth,db};authSdk.onAuthStateChanged(auth,async current=>{await onAuthChanged(current)});authSdk.getRedirectResult(auth).then(result=>{let pending=false;try{pending=sessionStorage.getItem('northstar-redirect-pending')==='1';sessionStorage.removeItem('northstar-redirect-pending')}catch(x){}if(pending&&!result&&!auth.currentUser)showToast('Sign-in did not finish. Open Northstar in your browser (not the home-screen app) and tap Connect again.')}).catch(redirectError=>{if(firebaseErrorCode(redirectError)==='auth/no-auth-event')return;console.warn('Northstar redirect sign-in failed.',redirectError);reportSyncIssue(redirectError,'Google sign-in');showToast(firebaseErrorDetails(redirectError,'Google sign-in'))});authReady=true}catch(e){console.warn('Firebase SDK could not initialize; local mode remains available.',e);lastSyncError=e;authReady=true;setSync(vault.state==='locked'?'Protected workspace locked':vault.state==='unlocked'?'Protected device · cloud unavailable':`Firebase unavailable · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Firebase SDK initialization'))}}
+async function initFirebase(){try{const [appSdk,authSdk,storeSdk]=await Promise.all([import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`)]);const app=(appSdk.getApps().length?appSdk.getApps()[0]:appSdk.initializeApp(firebaseConfig));const auth=authSdk.getAuth(app),db=storeSdk.getFirestore(app);fb={...appSdk,...authSdk,...storeSdk,app,auth,db};authSdk.onAuthStateChanged(auth,async current=>{await onAuthChanged(current)});authSdk.getRedirectResult(auth).then(result=>{let pending=false;try{pending=sessionStorage.getItem('northstar-redirect-pending')==='1';sessionStorage.removeItem('northstar-redirect-pending')}catch(x){}if(pending&&!result&&!auth.currentUser)showToast('Sign-in did not finish. Open Northstar in your browser (not the home-screen app) and tap Connect again.')}).catch(redirectError=>{if(firebaseErrorCode(redirectError)==='auth/no-auth-event')return;console.warn('Northstar redirect sign-in failed.',redirectError);reportSyncIssue(redirectError,'Google sign-in');showToast(firebaseErrorDetails(redirectError,'Google sign-in'))});authReady=true}catch(e){console.warn('Firebase SDK could not initialize; sign-in is required.',e);gateFail('Sign-in could not load. Check your connection and try again.');lastSyncError=e;authReady=true;setSync(vault.state==='locked'?'Protected workspace locked':vault.state==='unlocked'?'Protected device · cloud unavailable':`Firebase unavailable · ${firebaseErrorCode(e)}`,'err');render();showToast(firebaseErrorDetails(e,'Firebase SDK initialization'))}}
 function docRef(uid=user?.uid){return fb.doc(fb.db,'users',uid,'northstar','financeData')}
 function cloudValue(snap){return snap.exists()?snap.data():null}
 /* Firestore maps can come from a different JS realm. Do not mistake SDK values
@@ -3264,7 +3308,7 @@ async function writeCloudNow(){
  return cloudWritePayload({data:safeData,updatedAt:Date.now(),schemaVersion:1},uid,epoch);
 }
 async function onAuthChanged(current){
- authResolved=true;
+ authResolved=true;setGate(current?'open':'login');
  if((user?.uid||null)!==(current?.uid||null)){
   // A provider key or deferred copy must not follow a different account.
   deferredDeviceWorkspace=null;stockFeed.disconnect();
@@ -3517,6 +3561,27 @@ function maybeAutoRetrySync(){
 window.addEventListener('online',()=>maybeAutoRetrySync());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')maybeAutoRetrySync()});
 window.addEventListener('pageshow',event=>{if(event.persisted)maybeAutoRetrySync()});
+/* Login gate: sign-in is required. States: checking -> login (signed out) | open (signed in) | error (Firebase could not load). */
+let gateTimer=0;
+function setGate(state){
+ const gate=$('loginGate');if(!gate)return;
+ const open=state==='open';
+ document.documentElement.classList.toggle('northstar-gated',!open);
+ gate.dataset.state=open?'login':state;gate.setAttribute('aria-hidden',String(open));
+ if(open||state==='error')window.clearTimeout(gateTimer);
+ window.NorthstarGated=!open;
+ if(!open){const target=state==='error'?$('loginRetry'):state==='login'?$('loginGoogle'):null;if(target&&!gate.contains(document.activeElement))window.setTimeout(()=>target.focus({preventScroll:true}),60)}
+ else if(gate.contains(document.activeElement))document.activeElement.blur();
+}
+function gateFail(message){const text=$('loginErrorText');if(text&&message)text.textContent=message;setGate('error')}
+function initLoginGate(){
+ const gate=$('loginGate');if(!gate)return;
+ $('loginGoogle')?.addEventListener('click',async()=>{const b=$('loginGoogle'),st=$('loginStatus');b.disabled=true;st.textContent='Opening Google sign-in…';try{await handleGoogleSignIn()}finally{b.disabled=false;if($('loginGate').dataset.state==='login')st.textContent=''}});
+ $('loginRetry')?.addEventListener('click',()=>window.location.reload());
+ gate.addEventListener('keydown',e=>{if(e.key!=='Tab')return;const items=[...gate.querySelectorAll('button')].filter(b=>b.offsetParent!==null&&!b.disabled);if(!items.length){e.preventDefault();return}const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}});
+ // If Firebase never answers, do not leave the person on a spinner forever.
+ gateTimer=window.setTimeout(()=>{if(!authResolved)gateFail('Sign-in is taking too long. Check your connection and try again.')},15000);
+}
 async function handleGoogleSignOut(){
  if(!fb)return;setCloudLoading(true);
  try{
@@ -3540,7 +3605,7 @@ try{
     }
   });
 }catch(e){}
-if(document.documentElement.classList.contains('northstar-seen')){const screen=$('welcomeScreen');screen?.classList.add('hidden');screen?.setAttribute('aria-hidden','true')}
+{const screen=$('welcomeScreen');screen?.classList.add('hidden');screen?.setAttribute('aria-hidden','true')}initLoginGate();
 restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFirebase();initWelcomeJourney();initSyncChoiceLayout();updateBackgroundAvailability();if(vault.state!=='locked'&&isWelcomeVisible())window.setTimeout(focusWelcomeEntry,140);
 </script>
 <script>
