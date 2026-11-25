@@ -3577,7 +3577,26 @@ window.addEventListener('online',()=>maybeAutoRetrySync());
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')maybeAutoRetrySync()});
 window.addEventListener('pageshow',event=>{if(event.persisted)maybeAutoRetrySync()});
 /* Jarvis tours: ~30 s auto-playing walk-through, once per person per section (see jarvis-tour.mjs). */
-const jarvisTour=createTour({doc:document,win:window,storage:localStorage,sound:()=>window.NorthstarSound,
+/* Jarvis speaks each caption out loud (browser voice, free). Muting sound mutes him too. */
+let tourVoices=[];
+function loadTourVoices(){try{tourVoices=window.speechSynthesis.getVoices()||[]}catch(e){tourVoices=[]}}
+if('speechSynthesis' in window){loadTourVoices();try{window.speechSynthesis.addEventListener('voiceschanged',loadTourVoices)}catch(e){}}
+function soundMuted(){try{return JSON.parse(localStorage.getItem('northstar-fx-v3')||'{}').muted===true}catch(e){return false}}
+function speakTour(text,rate){
+ if(!('speechSynthesis' in window)||soundMuted())return;
+ try{
+  const synth=window.speechSynthesis;synth.cancel();
+  const u=new SpeechSynthesisUtterance(String(text||''));
+  const v=tourVoices.find(x=>/Daniel|Arthur|George|Oliver|UK English Male/i.test(x.name))||tourVoices.find(x=>/^en[-_]GB/i.test(x.lang))||tourVoices.find(x=>/^en/i.test(x.lang));
+  if(v)u.voice=v;u.lang=(v&&v.lang)||'en-US';u.rate=rate||1;u.pitch=.92;u.volume=1;
+  if(synth.paused)synth.resume();
+  synth.speak(u);
+ }catch(e){}
+}
+function cancelTourSpeech(){try{window.speechSynthesis.cancel()}catch(e){}}
+/* Browsers only allow speech after a tap: say nothing, silently, from the sign-in button. */
+function primeSpeech(){try{if('speechSynthesis' in window){const u=new SpeechSynthesisUtterance(' ');u.volume=0;window.speechSynthesis.speak(u)}}catch(e){}}
+const jarvisTour=createTour({doc:document,win:window,storage:localStorage,sound:()=>window.NorthstarSound,speak:speakTour,cancelSpeech:cancelTourSpeech,
  shouldStop:key=>window.NorthstarGated||window.NorthstarVaultLocked||(key!=='Intro'&&tourKeyForPage()!==key)});
 const tourKeyForPage=()=>page==='Northstar Guide'?'Guide':page;
 let tourTimer=0;
@@ -3607,7 +3626,7 @@ function setGate(state){
 function gateFail(message){const text=$('loginErrorText');if(text&&message)text.textContent=message;setGate('error')}
 function initLoginGate(){
  const gate=$('loginGate');if(!gate)return;
- $('loginGoogle')?.addEventListener('click',async()=>{try{window.NorthstarSound?.tap?.()}catch(e){}const b=$('loginGoogle'),st=$('loginStatus');b.disabled=true;st.textContent='Opening Google sign-in…';try{await handleGoogleSignIn()}finally{b.disabled=false;if($('loginGate').dataset.state==='login')st.textContent=''}});
+ $('loginGoogle')?.addEventListener('click',async()=>{try{window.NorthstarSound?.tap?.()}catch(e){}primeSpeech();const b=$('loginGoogle'),st=$('loginStatus');b.disabled=true;st.textContent='Opening Google sign-in…';try{await handleGoogleSignIn()}finally{b.disabled=false;if($('loginGate').dataset.state==='login')st.textContent=''}});
  $('loginRetry')?.addEventListener('click',()=>window.location.reload());
  gate.addEventListener('keydown',e=>{if(e.key!=='Tab')return;const items=[...gate.querySelectorAll('button')].filter(b=>b.offsetParent!==null&&!b.disabled);if(!items.length){e.preventDefault();return}const first=items[0],last=items[items.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}});
  // If Firebase never answers, do not leave the person on a spinner forever.

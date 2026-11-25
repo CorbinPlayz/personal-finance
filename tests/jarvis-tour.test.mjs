@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TOURS, TOUR_TOTAL_MS, planDurations, placeGuide, hasSeen, markSeen, seenKey, tourKeyFor, createTour, TOUR_VERSION } from '../jarvis-tour.mjs';
+import { speechRate, TOURS, TOUR_TOTAL_MS, planDurations, placeGuide, hasSeen, markSeen, seenKey, tourKeyFor, createTour, TOUR_VERSION } from '../jarvis-tour.mjs';
 
 const PAGES = ['Overview', 'Transactions', 'Accounts', 'Budgets', 'Goals', 'Purchases', 'Stocks', 'Guide', 'Settings'];
 const memory = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) }; };
@@ -48,4 +48,13 @@ test('the first visit plays Intro once, then each section once, and nothing with
   assert.equal(t.maybeStart('Goals', 'u1'), false);
   assert.equal(t.maybeStart('Goals', 'u2'), true, 'another person sees it too');
   assert.ok(played.includes('tap'));
+});
+
+test('speech rate fits each caption inside its step and stays natural', () => {
+  for (const key of ['Intro', 'Overview', 'Goals', 'Stocks', 'Settings']) {
+    const ms = planDurations(TOURS[key].steps);
+    TOURS[key].steps.forEach((st, i) => { const r = speechRate(st.text, ms[i]); assert.ok(r >= 0.9 && r <= 1.3, key + ' ' + i + ' rate ' + r); });
+  }
+  assert.equal(speechRate('hi', 5000), 0.9);
+  assert.equal(speechRate('one two three four five six seven eight nine ten eleven twelve thirteen fourteen', 3000), 1.3);
 });

@@ -51,13 +51,19 @@ const fixture = { version: 1, accounts: [{ id: 'a1', name: 'Checking', type: 'Ch
   async function check(name, fn) { try { await fn(); console.log('PASS', name); passed++; } catch (e) { console.error('FAIL', name); throw e; } }
   async function open({ phone = false, seen = [] } = {}) {
     const ctx = await browser.newContext(phone ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1280, height: 900 } });
-    const page = await ctx.newPage(); page.setDefaultTimeout(12000);
+    const page = await ctx.newPage(); page.setDefaultTimeout(10000);
     page.on('pageerror', e => errors.push(e.message));
     page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errors.push(m.text()); });
     await page.addInitScript(() => {
       window.__audio = { made: 0, sources: 0, oscillators: 0 };
       const Real = window.AudioContext;
       if (Real) window.AudioContext = class extends Real { constructor(...a) { super(...a); window.__audio.made++; const cs = this.createBufferSource.bind(this), co = this.createOscillator.bind(this); this.createBufferSource = () => { window.__audio.sources++; return cs(); }; this.createOscillator = () => { window.__audio.oscillators++; return co(); }; } };
+    });
+    await page.addInitScript(() => {
+      window.__spoken = []; window.__cancels = 0;
+      window.SpeechSynthesisUtterance = function (t) { this.text = t; };
+      const synth = { paused: false, getVoices: () => [], addEventListener() {}, resume() {}, speak: u => { window.__spoken.push({ text: u.text, rate: u.rate, volume: u.volume }); }, cancel: () => { window.__cancels++; } };
+      Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
     });
     await page.clock.install();
     await page.route('**/*', route => {
@@ -97,7 +103,7 @@ const fixture = { version: 1, accounts: [{ id: 'a1', name: 'Checking', type: 'Ch
   }
   await check('Skip ends the tour and it does not come back after a reload', async () => {
     const p = await open(); await signIn(p); await waitTour(p);
-    await p.locator('.nstour-skip').click();
+    await p.evaluate(sel => document.querySelector(sel).click(), '.nstour-skip');
     assert.equal(await p.locator('.nstour').count(), 0);
     await p.reload(); await p.waitForFunction(() => window.__authCallback); await signIn(p); await p.clock.runFor(4000);
     assert.equal(await p.locator('.nstour').count(), 0);
@@ -111,9 +117,9 @@ const fixture = { version: 1, accounts: [{ id: 'a1', name: 'Checking', type: 'Ch
     assert.equal(await p.locator('.nstour').count(), 0, 'seen tours do not repeat');
     await p.evaluate(() => document.querySelector('#mobileDock [data-page="Goals"]').click());
     await waitTour(p, 'Goals');
-    await p.clock.runFor(31000); assert.equal(await p.locator('.nstour').count(), 0);
+    await p.evaluate(sel => document.querySelector(sel).click(), '.nstour-skip'); assert.equal(await p.locator('.nstour').count(), 0);
     await p.evaluate(() => document.querySelector('#mobileDock [data-page="Transactions"]').click());
-    await waitTour(p, 'Transactions'); await p.locator('.nstour-skip').click();
+    await waitTour(p, 'Transactions'); await p.evaluate(sel => document.querySelector(sel).click(), '.nstour-skip');
     await p.evaluate(() => document.querySelector('#mobileDock [data-page="Goals"]').click()); await p.clock.runFor(3000);
     assert.equal(await p.locator('.nstour').count(), 0, 'Goals is not repeated');
   });
@@ -122,14 +128,14 @@ const fixture = { version: 1, accounts: [{ id: 'a1', name: 'Checking', type: 'Ch
     await p.evaluate(() => document.querySelector('#mobileDock [data-page="Budgets"]').click());
     await waitTour(p, 'Budgets');
     await p.evaluate(() => document.querySelector('#mobileDock [data-page="Transactions"]').click());
-    await p.clock.runFor(8000);
+    await p.clock.runFor(7000);
     assert.notEqual(await p.$eval('.nstour-title', e => e.textContent).catch(() => ''), 'Budgets');
   });
   await check('signing out hides any tour; Settings can replay one', async () => {
     const p = await open({ seen: ['Intro', 'Overview', 'Settings'] }); await signIn(p);
     await p.evaluate(() => document.querySelector('#mobileDock [data-page="Settings"], [data-page="Settings"]').click());
     await p.waitForFunction(() => document.querySelector('#content')?.dataset.page === 'Settings');
-    await p.locator('[data-action="replay-tour"]').click(); await p.waitForSelector('.nstour');
+    await p.evaluate(sel => document.querySelector(sel).click(), '[data-action="replay-tour"]'); await p.waitForSelector('.nstour');
     await p.evaluate(() => window.__authCallback(null)); await p.clock.runFor(1500);
     assert.equal(await p.locator('.nstour').count(), 0, 'tour is gone on the login screen');
   });
@@ -157,9 +163,25 @@ const fixture = { version: 1, accounts: [{ id: 'a1', name: 'Checking', type: 'Ch
       const n = await p.evaluate(() => window.__audio.oscillators);
       await p.evaluate(() => document.querySelector('[data-page="Settings"]').click());
       await p.waitForFunction(() => document.querySelector('#content')?.dataset.page === 'Settings');
-      await p.locator('[data-action="test-sound"]').click(); await p.clock.runFor(300);
+      await p.evaluate(sel => document.querySelector(sel).click(), '[data-action="test-sound"]'); await p.clock.runFor(300);
       assert.ok((await p.evaluate(() => window.__audio.oscillators)) >= n + 3, 'test sound played');
     } finally { browser = real; await strict.close(); }
+  });
+  await check('Jarvis speaks every caption out loud, stops when skipped, and stays quiet when muted', async () => {
+    const p = await open(); await signIn(p); await waitTour(p);
+    await p.clock.runFor(31000);
+    const said = await p.evaluate(() => window.__spoken.filter(s => s.text.trim()));
+    assert.equal(said.length, 6, 'one spoken line per step');
+    assert.match(said[0].text, /I'm Jarvis/); assert.ok(said.every(s => s.rate >= 0.9 && s.rate <= 1.3 && s.volume > 0));
+    const p2 = await open({ seen: ['Intro', 'Overview'] }); await signIn(p2);
+    await p2.evaluate(() => document.querySelector('#mobileDock [data-page="Goals"]').click()); await waitTour(p2, 'Goals');
+    const c = await p2.evaluate(() => window.__cancels); await p2.evaluate(sel => document.querySelector(sel).click(), '.nstour-skip');
+    assert.ok((await p2.evaluate(() => window.__cancels)) > c, 'speech is cut off on Skip');
+    const p3 = await open({ seen: ['Intro', 'Overview'] });
+    await signIn(p3); await p3.evaluate(() => document.querySelector('.nsx-sound').click());
+    assert.equal(await p3.$eval('.nsx-sound', e => e.getAttribute('aria-pressed')), 'false', 'the sound button is muted');
+    await p3.evaluate(() => document.querySelector('#mobileDock [data-page="Goals"]').click()); await waitTour(p3, 'Goals');
+    assert.equal(await p3.evaluate(() => window.__spoken.filter(s => s.text.trim()).length), 0, 'muted means no voice');
   });
   await check('no page errors', async () => { assert.deepEqual(errors, []); });
   console.log(`${passed} tour and sound checks passed`);

@@ -95,6 +95,13 @@ export const TOURS = {
   ] },
 };
 
+/* Speaking rate so a caption finishes inside its step: about 2.6 words a second at normal speed. */
+export function speechRate(text, ms) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean).length;
+  const needed = words / 2.6, available = Math.max(1, (ms - 700) / 1000);
+  return Math.max(0.9, Math.min(1.3, Math.round((needed / available) * 100) / 100));
+}
+
 export const tourKeyFor = page => (page === 'Northstar Guide' ? 'Guide' : page);
 
 /* Weights become whole milliseconds that add up to exactly `total`. */
@@ -136,6 +143,8 @@ export function resolveTarget(doc, targets) {
 export function createTour(env) {
   const { doc = document, win = window, storage = win.localStorage, sound = () => win.NorthstarSound, total = TOUR_TOTAL_MS } = env;
   let root = null, timer = 0, running = null, startedAt = 0;
+  const speak = text_ => { try { env.speak && env.speak(text_.text, text_.rate); } catch (e) { /* speech is a bonus */ } };
+  const hush = () => { try { env.cancelSpeech && env.cancelSpeech(); } catch (e) { /* ignore */ } };
   const reduce = () => !!(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const say = fn => { try { const s = sound(); s && s[fn] && s[fn](); } catch (e) { /* sound is a bonus */ } };
 
@@ -162,6 +171,7 @@ export function createTour(env) {
     win.clearTimeout(timer); timer = 0;
     doc.removeEventListener('keydown', onKey, true); win.removeEventListener('resize', onResize);
     if (root) { root.remove(); root = null; }
+    hush();
     const was = running; running = null;
     if (was && why === 'done') say('success');
     return was;
@@ -188,6 +198,7 @@ export function createTour(env) {
       const step = running.steps[running.index];
       root.querySelector('.nstour-text').textContent = step.text;
       place(step); say(running.index === 0 ? 'tap' : 'whoosh');
+      speak({ text: step.text, rate: speechRate(step.text, running.durations[running.index]) });
       timer = win.setTimeout(next, running.durations[running.index]);
     };
     next();
