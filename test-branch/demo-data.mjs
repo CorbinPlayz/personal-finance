@@ -90,6 +90,6 @@ export function buildDemoLedger(now = new Date()) {
       { id: 'h5', symbol: 'AAPL', shares: 4, buyPrice: 171.2, buyDate: iso(new Date(today.getFullYear() - 1, 5, 14)) },
     ],
     portfolioHistory: [],
-    settings: { currency: 'USD', goalSounds: true, stockWatchlist: null, profile: { monthlyIncome: '5300', essentialBills: '2100', cushion: '1000', payFrequency: 'biweekly', payDay: '1', goalFocus: 'Emergency fund first, then the Tokyo trip', notes: 'Demo data for the test branch.' }, guideMemory: null },
+    settings: { currency: 'USD', goalSounds: true, stockWatchlist: ['AAPL', 'MSFT', 'NVDA', 'VOO', 'AMZN', 'GOOGL', 'TSLA'], profile: { monthlyIncome: '5300', essentialBills: '2100', cushion: '1000', payFrequency: 'biweekly', payDay: '1', goalFocus: 'Emergency fund first, then the Tokyo trip', notes: 'Demo data for the test branch.' }, guideMemory: null },
   };
 }
