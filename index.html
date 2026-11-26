@@ -2480,7 +2480,7 @@ window.NorthstarMarketBrief=()=>{try{
  return {portfolio,watchlist,pricesAvailable:watchlist.length>0||sum.priced>0}
 }catch(e){return null}};
 function isoToday(){const t=new Date();return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`}
-function fxVolumePercent(){try{const v=JSON.parse(localStorage.getItem('northstar-fx-v3')||'{}').vol;return Math.round((typeof v==='number'&&v>=0&&v<=1?v:.85)*100)}catch(e){return 85}}
+function fxVolumePercent(){try{const v=JSON.parse(localStorage.getItem('northstar-fx-v4')||'{}').vol;return Math.round((typeof v==='number'&&v>=0&&v<=1?v:.85)*100)}catch(e){return 85}}
 function renderSplitPanel(){
  const split=cleanSplit(data.settings?.split),ids=data.accounts.map(a=>a.id),byId=Object.fromEntries(split.parts.map(p=>[p.accountId,p.percent]));
  if(data.accounts.length<2)return `<section class="panel split-panel"><div class="panel-head"><div><h2>Money split</h2><p>Automatically divide new income between your accounts.</p></div></div><p class="form-hint">Create at least two accounts first, then come back to set up a split.</p></section>`;
@@ -3581,7 +3581,7 @@ window.addEventListener('pageshow',event=>{if(event.persisted)maybeAutoRetrySync
 let tourVoices=[];
 function loadTourVoices(){try{tourVoices=window.speechSynthesis.getVoices()||[]}catch(e){tourVoices=[]}}
 if('speechSynthesis' in window){loadTourVoices();try{window.speechSynthesis.addEventListener('voiceschanged',loadTourVoices)}catch(e){}}
-function soundMuted(){try{return JSON.parse(localStorage.getItem('northstar-fx-v3')||'{}').muted===true}catch(e){return false}}
+function soundMuted(){try{return JSON.parse(localStorage.getItem('northstar-fx-v4')||'{}').muted===true}catch(e){return false}}
 function speakTour(text,rate){
  if(!('speechSynthesis' in window)||soundMuted())return;
  try{
@@ -3742,13 +3742,13 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
 (function () {
   'use strict';
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var FX_KEY = 'northstar-fx-v3'; /* v3: everyone starts with louder sound and the soft ambience on again */
+  var FX_KEY = 'northstar-fx-v4'; /* v4: background hum removed for everyone */
 
   function read(key, fallback) {
     try { var raw = localStorage.getItem(key); return raw ? Object.assign({}, fallback, JSON.parse(raw)) : fallback; }
     catch (e) { return fallback; }
   }
-  var fx = read(FX_KEY, { muted: false, vol: 0.85, ambience: true, grain: true });
+  var fx = read(FX_KEY, { muted: false, vol: 0.85, ambience: false, grain: true });
   function save() { try { localStorage.setItem(FX_KEY, JSON.stringify(fx)); } catch (e) {} }
 
   /* ---------------- sound engine ---------------- */
@@ -3826,8 +3826,9 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     },
     toggle: function () { Sound.setMuted(!fx.muted); },
     setAmbience: function (on) {
-      fx.ambience = !!on; save();
-      if (!on) { if (ambienceNode) { try { ambienceNode.stop(); } catch (e) {} ambienceNode = null; } return; }
+      /* The looping background noise was removed: it sounded like a hum. Stop anything that is running and never start it. */
+      fx.ambience = false; save();
+      if (true) { if (ambienceNode) { try { ambienceNode.stop(); } catch (e) {} ambienceNode = null; } return; }
       if (ambienceNode || !gate()) return;
       var src = actx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
       var lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
@@ -3858,7 +3859,6 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
     unlocked = true;
     if (pendingChime) { pendingChime = false; Sound.welcome(); }
     ['pointerdown', 'keydown', 'touchstart', 'click'].forEach(function (evt) { window.removeEventListener(evt, unlock, true); });
-    if (fx.ambience && !fx.muted) Sound.setAmbience(true);
   }
   ['pointerdown', 'keydown', 'touchstart', 'click'].forEach(function (evt) {
     window.addEventListener(evt, unlock, { capture: true, passive: true });
