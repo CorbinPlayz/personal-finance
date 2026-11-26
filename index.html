@@ -2396,9 +2396,9 @@ function removeStock(raw){
 }
 async function resetStocks(){
  if(!canEditStocks())return;const workspace=data;
- const result=await showNorthstarDialog({title:'Reset the stock watchlist?',message:'Replace your current list with the 100 starter stocks?',detail:'Your custom tickers will be removed from this list. Accounts, transactions, goals, purchases and saved Guide data will not change.',icon:'↺',confirmText:'Reset watchlist',cancelText:'Keep my list',danger:true,label:'STOCK WATCHLIST'});
+ const result=await showNorthstarDialog({title:'Clear the stock watchlist?',message:'Remove every ticker from your watchlist?',detail:'Accounts, transactions, goals, purchases, holdings and saved Guide data will not change.',icon:'↺',confirmText:'Clear watchlist',cancelText:'Keep my list',danger:true,label:'STOCK WATCHLIST'});
  if(result!==true||data!==workspace||!canEditStocks())return;
- stockQuery='';saveStockSymbols(starterSymbols(),'Starter watchlist restored','#stockSearch');
+ stockQuery='';saveStockSymbols([],'Watchlist cleared','#stockSearch');
 }
 function refreshStocks(){
  if(!canEditStocks())return;

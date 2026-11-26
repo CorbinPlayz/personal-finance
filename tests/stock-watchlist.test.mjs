@@ -57,16 +57,18 @@ function start(h, symbols = ['AAPL', 'MSFT']) {
   return h.sockets.at(-1);
 }
 
-test('starter list contains exactly 100 distinct curated U.S.-listed symbols, not finance records', () => {
+const ALL_SYMBOLS = STARTER_STOCKS.map(stock => stock.symbol);
+test('nothing is pre-loaded: the watchlist starts empty and the name list only supplies company names', () => {
+  assert.deepEqual(starterSymbols(), []);
   assert.equal(STARTER_STOCKS.length, 100);
-  assert.equal(new Set(starterSymbols()).size, 100);
-  assert.deepEqual(starterSymbols().slice(0, 6), ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META']);
+  assert.equal(new Set(ALL_SYMBOLS).size, 100);
+  assert.deepEqual(ALL_SYMBOLS.slice(0, 6), ['AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META']);
   assert.ok(STARTER_STOCKS.every(({ symbol, name }) => normalizeSymbol(symbol) === symbol && typeof name === 'string' && name.length > 0));
-  assert.equal(stockName('AAPL'), 'Apple'); assert.equal(stockName('SYNTH'), 'Custom ticker');
+  assert.equal(stockName('AAPL'), 'Apple'); assert.equal(stockName('SYNTH'), 'U.S.-listed stock');
 });
 
 test('missing and intentionally empty watchlists are distinct; imported data is not mutated', () => {
-  assert.equal(watchlistSymbols({}).length, 100);
+  assert.deepEqual(watchlistSymbols({}), []);
   assert.deepEqual(watchlistSymbols({ stockWatchlist: [] }), []);
   const input = { stockWatchlist: [' aapl ', 'AAPL', '<script>', 3, 'brk.b', 'T', 'bad space', 'B-A'] };
   const original = structuredClone(input);
@@ -165,15 +167,15 @@ test('snapshots are serialized and spaced; each is refreshed after about 15 minu
 });
 
 test('a single stream rotates through all 100 symbols without exceeding 50 simultaneous subscriptions', async () => {
-  const h = harness(), socket = start(h, starterSymbols()); socket.open();
-  assert.equal(socket.subscriptions.size, 50); assert.deepEqual([...socket.subscriptions], starterSymbols().slice(0, 50));
+  const h = harness(), socket = start(h, ALL_SYMBOLS); socket.open();
+  assert.equal(socket.subscriptions.size, 50); assert.deepEqual([...socket.subscriptions], ALL_SYMBOLS.slice(0, 50));
   assert.equal(h.feed.getState().batchIndex, 0);
   await h.clock.tick(60_000);
-  assert.deepEqual([...socket.subscriptions], starterSymbols().slice(50, 100)); assert.equal(h.feed.getState().batchIndex, 1);
+  assert.deepEqual([...socket.subscriptions], ALL_SYMBOLS.slice(50, 100)); assert.equal(h.feed.getState().batchIndex, 1);
   assert.equal(socket.sent.slice(50, 100).every(event => event.type === 'unsubscribe'), true);
   assert.equal(socket.sent.slice(100, 150).every(event => event.type === 'subscribe'), true);
   await h.clock.tick(60_000);
-  assert.deepEqual([...socket.subscriptions], starterSymbols().slice(0, 50));
+  assert.deepEqual([...socket.subscriptions], ALL_SYMBOLS.slice(0, 50));
   assert.equal(socket.maximum, 50); assert.equal(h.sockets.length, 1);
   h.feed.disconnect();
 });
@@ -304,10 +306,10 @@ test('the save line only claims the account copy when sync is confirmed and noth
   assert.equal(stockSaveStatus({ ...confirmed, saving: true }).tone, 'neutral');
 });
 
-test('the save line says an untouched starter list is not a saved custom list', () => {
+test('the save line says an untouched, empty watchlist has not been saved yet', () => {
   const status = stockSaveStatus({ signedIn: true, synced: true, custom: false });
   assert.equal(status.tone, 'neutral');
-  assert.match(status.message, /^Showing the starter list\. Your first add or remove saves your own list to your Google account\.$/);
+  assert.match(status.message, /^Your watchlist is empty\. Add a ticker to begin; it saves to your Google account\.$/);
   // A paused sync still wins: the starter-list wording must not hide a problem.
   assert.equal(stockSaveStatus({ signedIn: true, synced: false, custom: false, code: 'permission-denied' }).tone, 'warn');
 });
