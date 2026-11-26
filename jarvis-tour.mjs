@@ -184,6 +184,7 @@ export function createTour(env) {
     stop('replaced'); markSeen(storage, uid, key);
     const durations = planDurations(tour.steps, total);
     running = { key, uid, steps: tour.steps, durations, index: -1 };
+    try { env.prefetch && env.prefetch(tour.steps.map(s => s.text)); } catch (e) { /* voice warm-up is optional */ }
     build(); startedAt = Date.now();
     root.querySelector('.nstour-title').textContent = tour.title;
     const bar = root.querySelector('.nstour-bar i');

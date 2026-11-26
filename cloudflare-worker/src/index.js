@@ -1,5 +1,6 @@
 import { lookupPrice, searchPrice } from "./price.js";
 import { fetchHistory } from "./history.js";
+import { speakText } from "./tts.js";
 const ALLOWED_ORIGIN = "https://corbinplayz.github.io";
 const MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 const MAX_MESSAGE_CHARS = 2000;
@@ -83,6 +84,21 @@ export default {
     if (body && body.mode === "history") {
       const found = await fetchHistory(typeof body.symbol === "string" ? body.symbol : "");
       return json(found, found.error ? 422 : 200);
+    }
+    if (body && body.mode === "tts") {
+      const spoken = await speakText(env, user.uid, body.text, body.voice);
+      if (!spoken.audio) return json({ error: spoken.error, code: spoken.code }, spoken.status);
+      return new Response(spoken.audio, {
+        status: 200,
+        headers: {
+          "content-type": "audio/mpeg",
+          "cache-control": "private, max-age=86400",
+          "x-voice-cached": spoken.cached ? "1" : "0",
+          "access-control-allow-origin": ALLOWED_ORIGIN,
+          "access-control-expose-headers": "x-voice-cached",
+          "vary": "Origin"
+        }
+      });
     }
     if (body && body.mode === "search") {
       const found = await searchPrice(typeof body.query === "string" ? body.query : "");
