@@ -2413,9 +2413,9 @@ function renderOverview(){
  const income=thisMonthTx('Income').reduce((s,t)=>s+t.amount,0),spending=thisMonthTx('Expense').reduce((s,t)=>s+t.amount,0),rate=income>0?Math.round((income-spending)/income*100):null;
  const recent=sortedTransactions().slice(0,5),reminders=getReminders().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).slice(0,3),upcoming=data.purchases.filter(p=>!['Purchased','Cancelled','Postponed'].includes(p.status)).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))).slice(0,3);
  return `${pageHeading('Overview',`<button class="primary-btn" data-action="add-transaction">＋ New transaction</button>`)}
- <div class="welcome-strip"><div class="welcome-icon">↗</div><div><strong>Build your financial picture, one entry at a time.</strong><span>Add accounts and record transactions to turn your activity into useful insights.</span></div><button class="text-btn" data-action="page" data-page="Settings">Data & privacy ↗</button></div>
+ ${data.accounts.length||data.transactions.length?'':'<div class="welcome-strip"><div class="welcome-icon">↗</div><div><strong>Build your financial picture, one entry at a time.</strong><span>Add an account and record transactions to see your numbers here.</span></div></div>'}
  ${renderRecurringBanner()}
- <div class="metric-grid">${metric('Total tracked balance',money(totalBalance()),ICON.card,`${data.accounts.length} accounts tracked`,'navy')}${metric('Income this month',money(income),ICON.arrowDown,monthName(monthNow()),'green')}${metric('Spending this month',money(spending),ICON.arrowUp,monthName(monthNow()),'orange')}${metric('Savings rate',rate===null?'—':`${rate}%`,ICON.percent,income>0?'Based on recorded income and expenses':'Add income to calculate','purple')}</div>
+ <section class="ns-lead"><div class="ns-lead-main"><span class="ns-lead-label">Total balance</span><strong class="ns-lead-value metric-value">${esc(money(totalBalance()))}</strong><span class="ns-lead-net ${income-spending<0?'down':'up'}">${income-spending<0?'↓':'↑'} ${esc(money(Math.abs(income-spending)))} net in ${esc(monthName(monthNow()))}</span><span class="metric-note">${data.accounts.length} ${data.accounts.length===1?'account':'accounts'} tracked</span></div><div class="ns-lead-stats"><div><span>Income</span><strong class="metric-value">${esc(money(income))}</strong></div><div><span>Spending</span><strong class="metric-value">${esc(money(spending))}</strong></div><div><span>Savings rate</span><strong class="metric-value">${rate===null?'—':rate+'%'}</strong></div></div></section>
  ${renderCashFlowGraph(data.transactions,monthNow(),money,esc)}
  ${renderAccountBalanceBreakdown()}
  <div class="overview-grid"><section class="panel"><div class="panel-head"><div><h2>Recent transactions</h2><p>Your latest recorded activity</p></div><button class="text-btn" data-action="page" data-page="Transactions">View all ↗</button></div>${recent.length?`<div class="recent-list">${recent.map(t=>`<div class="recent-item"><div class="tx-icon ${t.type.toLowerCase()}">${t.type==='Income'?ICON.arrowDown:t.type==='Transfer'?ICON.transfer:ICON.arrowUp}</div><div class="recent-description"><strong>${esc(t.description)}</strong><span>${esc(t.category)} · ${esc(accountName(t.accountId))}</span></div><div class="recent-amount"><strong class="${t.type==='Income'?'positive':t.type==='Expense'?'negative':''}">${t.type==='Expense'?'−':t.type==='Income'?'+':''}${esc(money(t.amount))}</strong><span>${esc(fmtDate(t.date))}</span></div></div>`).join('')}</div>`:emptyState('Your activity starts here','Transactions you enter will show up here.','Add transaction','add-transaction')}</section>
@@ -2487,7 +2487,8 @@ function renderSplitPanel(){
  if(data.accounts.length<2)return `<section class="panel split-panel"><div class="panel-head"><div><h2>Money split</h2><p>Automatically divide new income between your accounts.</p></div></div><p class="form-hint">Create at least two accounts first, then come back to set up a split.</p></section>`;
  const paused=split.enabled&&validateSplit(split.parts,ids);
  const total=Math.round(split.parts.reduce((n,p)=>n+p.percent*100,0))/100;
- return `<section class="panel split-panel"><div class="panel-head"><div><h2>Money split</h2><p>Automatically divide new income between the accounts you choose. You are asked before anything is split.</p></div></div><form id="splitForm" novalidate><label class="checkbox-line"><input id="splitEnabled" type="checkbox" ${split.enabled?'checked':''}> Ask me to split new income</label>${paused?`<p class="split-warning" role="alert">Your split is paused: ${esc(paused)}</p>`:''}<div class="split-rows">${data.accounts.map(a=>`<div class="split-row" data-account-id="${esc(a.id)}"><label class="checkbox-line"><input type="checkbox" class="split-pick" ${byId[a.id]!=null?'checked':''}> ${esc(a.name)}</label><label class="split-percent"><input class="split-input" type="number" min="0.01" max="100" step="0.01" inputmode="decimal" value="${byId[a.id]!=null?esc(byId[a.id]):''}" aria-label="Percent for ${esc(a.name)}"> %</label></div>`).join('')}</div><p id="splitTotal" class="split-total" aria-live="polite">Total: ${total}% of 100%</p><p id="splitError" class="split-warning hidden" role="alert"></p><button class="primary-btn" type="submit">Save split</button><p class="form-hint">Applies only when you add new income. Edits, expenses and transfers are never split.</p></form></section>`;
+ const summary=split.enabled&&!paused?split.parts.map(p=>esc(accountName(p.accountId))+' '+p.percent+'%').join(' · '):'Off';
+ return `<section class="panel split-panel"><details class="split-details"${paused?' open':''}><summary><span><strong>Money split</strong><em>${summary}</em></span><i>Edit</i></summary><p class="form-hint">Divide new income between the accounts you choose. You are asked before anything is split.</p><form id="splitForm" novalidate><label class="checkbox-line"><input id="splitEnabled" type="checkbox" ${split.enabled?'checked':''}> Ask me to split new income</label>${paused?`<p class="split-warning" role="alert">Your split is paused: ${esc(paused)}</p>`:''}<div class="split-rows">${data.accounts.map(a=>`<div class="split-row" data-account-id="${esc(a.id)}"><label class="checkbox-line"><input type="checkbox" class="split-pick" ${byId[a.id]!=null?'checked':''}> ${esc(a.name)}</label><label class="split-percent"><input class="split-input" type="number" min="0.01" max="100" step="0.01" inputmode="decimal" value="${byId[a.id]!=null?esc(byId[a.id]):''}" aria-label="Percent for ${esc(a.name)}"> %</label></div>`).join('')}</div><p id="splitTotal" class="split-total" aria-live="polite">Total: ${total}% of 100%</p><p id="splitError" class="split-warning hidden" role="alert"></p><button class="primary-btn" type="submit">Save split</button><p class="form-hint">Applies only when you add new income. Edits, expenses and transfers are never split.</p></form></details></section>`;
 }
 function splitFormParts(form){return [...form.querySelectorAll('.split-row')].filter(r=>r.querySelector('.split-pick')?.checked).map(r=>({accountId:r.dataset.accountId,percent:Number(r.querySelector('.split-input').value)}))}
 function saveSplit(e){
@@ -4156,12 +4157,26 @@ restoreSyncIssue();render();if(vault.state==='locked')showVaultUnlock();initFire
   /* Page entrances run on navigation only. Financial figures always show their
      real value immediately instead of counting through invented amounts. */
   var lastAnimatedPage = null;
+  /* Short count-up on the headline balance only; it always lands on the exact real figure. */
+  function countUp(el) {
+    if (!el) return;
+    var final = el.textContent, m = final.match(/^(\D*)([\d,]+)(\.\d+)?(.*)$/);
+    if (!m) return;
+    var target = parseFloat(m[2].replace(/,/g, '') + (m[3] || '')), dec = m[3] ? m[3].length - 1 : 0, t0 = performance.now(), dur = 900;
+    el.setAttribute('aria-label', final);
+    (function step(now) {
+      var p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = p >= 1 ? final : m[1] + (target * e).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + m[4];
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
+  }
   function animateContent() {
     var content = document.getElementById('content');
     if (!content || content.dataset.page === lastAnimatedPage) return;
     var ae = document.activeElement;
     if (ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
     lastAnimatedPage = content.dataset.page;
+    if (!reduce && content.dataset.page === 'Overview') countUp(content.querySelector('.ns-lead-value'));
     if (!reduce) {
       [].slice.call(content.children).forEach(function (el, i) {
         // Graphs use their own single visible-entry animation, without scaling data marks.
