@@ -145,8 +145,8 @@ const fixture = { version: 1, accounts: [{ id: 'a1', name: 'Checking', type: 'Ch
     await p.mouse.click(200, 200);
     await p.waitForFunction(() => window.__audio.made >= 1);
     await p.clock.runFor(200);
-    const a = await p.evaluate(() => ({ ...window.__audio, fx: JSON.parse(localStorage.getItem('northstar-fx-v3') || '{}') }));
-    assert.ok(a.sources >= 1, 'the soft ambience started');
+    const a = await p.evaluate(() => ({ ...window.__audio, fx: JSON.parse(localStorage.getItem('northstar-fx-v4') || '{}') }));
+    assert.equal(a.sources, 0, 'no looping background noise is ever started'); assert.equal(a.fx.ambience === true, false);
     await signIn(p); await p.clock.runFor(500);
     assert.equal(await p.evaluate(() => window.__chimes), 1, 'welcome chime played once');
     assert.ok((await p.evaluate(() => window.__audio.oscillators)) >= 3, 'chime notes were scheduled');
