@@ -66,7 +66,7 @@ test('the Stocks save line is derived from the live sync variables', async () =>
     ['Firebase could not load', { fb: null, lastSyncError: Object.assign(new Error('x'), { name: 'TypeError' }) }, /^Saved on this device only\. Cloud sync is unavailable because Firebase did not load \(TypeError\)\. Open sync diagnostics$/],
     ['still loading the cloud copy', { user: signedIn, syncLoading: true }, /^Checking your cloud copy…$/],
     ['a save is in flight', { user: signedIn, cloudLoaded: true, cloudSaving: true, data: custom }, /^Saving to your Google account…$/],
-    ['confirmed, untouched starter list', { user: signedIn, cloudLoaded: true }, /^Showing the starter list\. Your first add or remove saves your own list to your Google account\.$/],
+    ['confirmed, empty untouched watchlist', { user: signedIn, cloudLoaded: true }, /^Your watchlist is empty\. Add a ticker to begin; it saves to your Google account\.$/],
     ['confirmed, custom list', { user: signedIn, cloudLoaded: true, data: custom, cloudSavedAt: Date.UTC(2026, 10, 16, 21, 46) }, /^Saved to your Google account · confirmed \d{1,2}:\d{2}/],
     ['confirmed, protected workspace', { user: signedIn, cloudLoaded: true, data: custom, vault: { state: 'unlocked' } }, /^Saved to your Google account, encrypted with your passphrase\.$/],
     ['paused with a recorded issue', { user: signedIn, syncIssue: { code: 'permission-denied' } }, /^Saved on this device only\. Cloud sync is paused \(permission-denied\)\. Open sync diagnostics$/],
