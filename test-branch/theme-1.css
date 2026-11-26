@@ -42,13 +42,13 @@ html,html body{background:#050506!important;color:var(--text)}
 body::before{
   content:"";position:fixed;inset:-45%;z-index:0;pointer-events:none;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1400' height='1000'%3E%3Cfilter id='i' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.0032 .0075' numOctaves='4' seed='11'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 4.2 -2.6 0 0 -.55'/%3E%3CfeGaussianBlur stdDeviation='1.6'/%3E%3C/filter%3E%3Crect width='1400' height='1000' filter='url(%23i)'/%3E%3C/svg%3E") center/cover no-repeat;
-  opacity:.17;mix-blend-mode:screen;will-change:transform;
+  opacity:.36;mix-blend-mode:screen;will-change:transform;
   animation:ns1Flow 170s linear infinite;
 }
 html::before{
   content:"";position:fixed;inset:-45%;z-index:0;pointer-events:none;
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1400' height='1000'%3E%3Cfilter id='i' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.0052 .0042' numOctaves='4' seed='47'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 4.2 -2.6 0 0 -.55'/%3E%3CfeGaussianBlur stdDeviation='1.6'/%3E%3C/filter%3E%3Crect width='1400' height='1000' filter='url(%23i)'/%3E%3C/svg%3E") center/cover no-repeat;
-  opacity:.13;mix-blend-mode:screen;will-change:transform;
+  opacity:.28;mix-blend-mode:screen;will-change:transform;
   animation:ns1FlowBack 230s linear infinite;
 }
 .nsx-ink{display:none!important}
@@ -228,3 +228,30 @@ html body .ns-data-composition .data-counts>*{background:rgba(255,255,255,.05)!i
 html body .ns-data-composition .data-counts strong,html body .ns-data-composition .data-counts b{color:#fff!important}
 html body .ns-data-composition .data-counts span{color:rgba(255,255,255,.65)!important}
 html body .ns-mix-track{background:rgba(255,255,255,.08)!important}
+
+/* ---------- Overview hero ---------- */
+html body .ns-lead{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px;align-items:end;padding:36px 38px;margin:0 0 20px;border-radius:30px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(135deg,rgba(255,255,255,.10),rgba(255,255,255,.02) 60%),rgba(8,8,10,.55);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 30px 70px rgba(0,0,0,.45)}
+html body .ns-lead::after{content:"";position:absolute;right:-90px;top:-90px;width:340px;height:340px;border-radius:50%;pointer-events:none;background:repeating-radial-gradient(circle,rgba(255,255,255,.08) 0 1px,transparent 1px 7px);-webkit-mask-image:radial-gradient(circle,#000 20%,transparent 70%);mask-image:radial-gradient(circle,#000 20%,transparent 70%)}
+html body .ns-lead-main{display:grid;gap:8px;position:relative;z-index:1}
+html body .ns-lead-label{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.55);font-weight:600}
+html body .ns-lead-value{font-size:clamp(44px,7vw,84px);line-height:1;letter-spacing:-.045em;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+html body .ns-lead-net{font-size:15px;font-weight:600;color:#fff}
+html body .ns-lead-net.down{color:rgba(255,255,255,.7)}
+html body .ns-lead .metric-note{color:rgba(255,255,255,.5)}
+html body .ns-lead-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;position:relative;z-index:1;border-left:1px solid rgba(255,255,255,.12)}
+html body .ns-lead-stats>div{display:grid;gap:6px;padding:4px 0 4px 20px}
+html body .ns-lead-stats span{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.5);font-weight:600}
+html body .ns-lead-stats strong{font-size:clamp(18px,2.2vw,26px);letter-spacing:-.02em;color:#fff;font-variant-numeric:tabular-nums}
+@media(max-width:820px){html body .ns-lead{grid-template-columns:1fr;padding:26px 22px;gap:22px}html body .ns-lead-stats{border-left:0;border-top:1px solid rgba(255,255,255,.12);padding-top:16px}html body .ns-lead-stats>div{padding-left:0}}
+
+/* ---------- Money split: compact accordion ---------- */
+html body .split-details>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px}
+html body .split-details>summary::-webkit-details-marker{display:none}
+html body .split-details>summary span{display:grid;gap:3px}
+html body .split-details>summary strong{font-size:16px;color:#fff}
+html body .split-details>summary em{font-style:normal;font-size:13px;color:rgba(255,255,255,.55)}
+html body .split-details>summary i{font-style:normal;font-size:13px;font-weight:600;padding:7px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.2);color:#fff}
+html body .split-details[open]>summary{margin-bottom:12px}
+html body .split-panel{padding-top:18px;padding-bottom:18px}
+/* keep headings readable over the ink */
+html body .page-heading,html body .page-header,html body h1{text-shadow:0 2px 24px rgba(0,0,0,.85)}
