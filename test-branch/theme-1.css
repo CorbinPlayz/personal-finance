@@ -203,3 +203,22 @@ html body .money-in,html body .pos,html body .amount-in{color:#8fd6ab!important}
 
 .preview-ribbon{position:fixed;z-index:100001;left:50%;bottom:6px;transform:translateX(-50%);padding:4px 12px;border-radius:99px;background:#fff;color:#050506;font:700 9px/1 'DM Sans',system-ui,sans-serif;letter-spacing:.14em;pointer-events:none;box-shadow:0 6px 24px rgba(0,0,0,.5)}
 @media(max-width:600px){.preview-ribbon{bottom:auto;top:4px}}
+
+/* Settings → Your data → Advanced (file backups, diagnostics, danger zone) */
+html body .settings-advanced{margin-top:18px;border-top:1px solid rgba(255,255,255,.10);padding-top:6px}
+html body .settings-advanced>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:10px 0;font-weight:600;color:rgba(255,255,255,.72);font-size:13px;letter-spacing:.02em}
+html body .settings-advanced>summary::-webkit-details-marker{display:none}
+html body .settings-advanced>summary::after{content:"+";margin-left:auto;font-weight:400;font-size:18px;opacity:.6}
+html body .settings-advanced[open]>summary::after{content:"–"}
+html body .settings-advanced-body{display:grid;gap:18px;padding-top:6px}
+html body .settings-advanced-body>.panel{margin:0;box-shadow:none;background:rgba(255,255,255,.03)}
+html body .settings-advanced-group h3{margin:0 0 4px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);font-weight:600}
+
+/* Record mix (Settings) on the dark theme */
+html body .ns-data-composition{border-top-color:rgba(255,255,255,.10)}
+html body .ns-data-head h3{color:#fff}
+html body .ns-data-head p,html body .ns-data-empty{color:rgba(255,255,255,.55)}
+html body .ns-data-composition .data-counts>*{background:rgba(255,255,255,.05)!important;border:1px solid rgba(255,255,255,.10)!important;color:#fff!important;box-shadow:none!important}
+html body .ns-data-composition .data-counts strong,html body .ns-data-composition .data-counts b{color:#fff!important}
+html body .ns-data-composition .data-counts span{color:rgba(255,255,255,.65)!important}
+html body .ns-mix-track{background:rgba(255,255,255,.08)!important}

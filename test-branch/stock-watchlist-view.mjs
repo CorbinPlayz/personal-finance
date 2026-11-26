@@ -79,14 +79,14 @@ export function stockSaveStatus({
   synced = false, custom = true, code = '', protectedCloud = false, confirmedAt = 0, needsChoice = false,
 } = {}) {
   const reason = typeof code === 'string' && code ? ` (${code})` : '';
-  if (unavailable) return { tone: 'warn', message: `Saved on this device only. Cloud sync is unavailable because Firebase did not load${reason}.`, action: 'Open sync diagnostics' };
+  if (unavailable) return { tone: 'warn', message: `Saved here, not synced yet. Cloud sync is unavailable because Firebase did not load${reason}.`, action: 'Open sync diagnostics' };
   if (initializing) return { tone: 'neutral', message: 'Checking whether you are signed in…' };
-  if (!signedIn) return { tone: 'neutral', message: 'Saved on this device only. Sign in with Google to save your list to your account too.' };
-  if (loading) return { tone: 'neutral', message: 'Checking your cloud copy…' };
+  if (!signedIn) return { tone: 'neutral', message: 'Saved here, not synced yet. Sign in with Google to save your list to your account too.' };
+  if (loading) return { tone: 'neutral', message: 'Checking your cloud data…' };
   if (saving) return { tone: 'neutral', message: 'Saving to your Google account…' };
   // Two copies differ and nobody has chosen one: the fix is one tap, so the line offers that tap instead of a trip to Settings.
-  if (!synced && needsChoice) return { tone: 'warn', message: `Saved on this device only. Cloud sync is waiting for you to choose which data to keep${reason}.`, action: 'Choose which data to keep', command: 'choose-sync-data' };
-  if (!synced) return { tone: 'warn', message: `Saved on this device only. Cloud sync is paused${reason}.`, action: 'Open sync diagnostics' };
+  if (!synced && needsChoice) return { tone: 'warn', message: `Saved here, not synced yet. Cloud sync is waiting for you to choose which data to keep${reason}.`, action: 'Choose which data to keep', command: 'choose-sync-data' };
+  if (!synced) return { tone: 'warn', message: `Saved here, not synced yet. Cloud sync is paused${reason}.`, action: 'Open sync diagnostics' };
   if (!custom) return { tone: 'neutral', message: 'Your watchlist is empty. Add a ticker to begin; it saves to your Google account.' };
   let when = '';
   if (Number.isFinite(confirmedAt) && confirmedAt > 0) {
