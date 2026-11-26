@@ -208,6 +208,8 @@ export function createHistoryLoader({ url, getToken, fetchImpl = (...a) => fetch
     try { res = await fetchImpl(url, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }, body: JSON.stringify({ mode: 'history', symbol }) }); }
     catch { throw new Error('Could not reach the Northstar Worker. Check your connection.'); }
     const j = await res.json().catch(() => ({}));
+    /* An older deployed Worker does not know the "history" mode and answers like a chat message with this exact complaint. */
+    if (!res.ok && res.status === 400 && /Enter a question/i.test(j.error || '')) throw new Error('Your Northstar AI Worker is out of date, so it cannot send stock history yet. Redeploy it from the cloudflare-worker folder, then tap Try again.');
     if (!res.ok) throw new Error(j.error || `History request failed (${res.status}).`);
     const series = toSeries(j.points);
     if (series.t.length < 2) throw new Error(`No price history came back for ${symbol}.`);
