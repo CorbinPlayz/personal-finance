@@ -48,8 +48,9 @@ export function normalizeSymbol(value) {
   const symbol = value.trim().toUpperCase();
   return /^[A-Z][A-Z0-9]{0,9}(?:[.-][A-Z0-9]{1,4})?$/.test(symbol) ? symbol : '';
 }
-export function stockName(symbol) { return names.get(symbol) || 'Custom ticker'; }
-export function starterSymbols() { return STARTER_STOCKS.map(stock => stock.symbol); }
+export function stockName(symbol) { return names.get(symbol) || 'U.S.-listed stock'; }
+/* Nothing is pre-loaded: every ticker on a watchlist was added by its owner. (STARTER_STOCKS now only supplies friendly company names.) */
+export function starterSymbols() { return []; }
 
 // A missing field means the starter list; an explicitly empty list stays empty.
 // Ignore malformed imported entries for display without rewriting the backup.
