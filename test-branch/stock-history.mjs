@@ -52,7 +52,7 @@ export function portfolioSeries(lots, histories, todayIso) {
   const list = (Array.isArray(lots) ? lots : []).filter(l => l && l.symbol && l.shares > 0 && l.buyPrice > 0);
   const dated = list.filter(l => !Number.isNaN(dayToTime(l.buyDate)));
   const undated = list.length - dated.length;
-  const empty = { points: [], buys: [], undated, missing: [], reason: dated.length ? 'no-history' : 'no-dates' };
+  const empty = { points: [], buys: [], undated, missing: [], earlier: 0, firstT: 0, reason: dated.length ? 'no-history' : 'no-dates' };
   if (!dated.length) return empty;
 
   const hist = new Map();
@@ -94,7 +94,8 @@ export function portfolioSeries(lots, histories, todayIso) {
     points.push({ t, value: round2(value), cost: round2(cost) });
     prev = t;
   }
-  return { points, buys, undated, missing, reason: '' };
+  const earlier = list.filter(l => joinOf(l) < first).length;
+  return { points, buys, undated, missing, earlier, firstT: first, reason: '' };
 }
 const round2 = n => Math.round(n * 100) / 100;
 const trimNum = n => String(Math.round(n * 1e4) / 1e4);

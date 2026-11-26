@@ -115,6 +115,8 @@ test('loader: one request per ticker, parallel limit, failures are retried, clea
   await assert.rejects(offline.load('A'), /Could not reach/);
   const signedOut = createHistoryLoader({ url: 'https://w/', getToken: async () => { throw new Error('Sign in with Google to use the hosted AI.'); }, fetchImpl });
   await assert.rejects(signedOut.load('A'), /Sign in/);
+  const stale = createHistoryLoader({ url: 'https://w/', getToken: async () => 't', fetchImpl: async () => new Response(JSON.stringify({ error: 'Enter a question up to 2,000 characters.' }), { status: 400 }) });
+  await assert.rejects(stale.load('A'), /Worker is out of date.*Redeploy/);
 });
 
 test('purchases older than the 5-year history are counted from day one and reported', () => {
