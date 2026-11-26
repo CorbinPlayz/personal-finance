@@ -255,3 +255,28 @@ html body .split-details[open]>summary{margin-bottom:12px}
 html body .split-panel{padding-top:18px;padding-bottom:18px}
 /* keep headings readable over the ink */
 html body .page-heading,html body .page-header,html body h1{text-shadow:0 2px 24px rgba(0,0,0,.85)}
+
+/* ---------- Group 3 finish: contrast, calmer pages ---------- */
+html body #content:not([data-page="Overview"]) .welcome-strip{display:none}
+html body .welcome-strip span{color:rgba(255,255,255,.62)!important}
+html body .welcome-strip strong{color:#fff!important}
+html body .account-card h2,html body .account-card h3,html body .account-card>strong:not(.account-balance),html body .account-card-title,html body .goal-card h3,html body .goal-card h2,html body .purchase-card h3{color:#fff!important}
+html body .account-card .muted,html body .goal-card .muted,html body .purchase-card .muted{color:rgba(255,255,255,.62)!important}
+html body .page-sub,html body .page-heading p,html body .page-header p{color:rgba(255,255,255,.66)}
+html body .panel-head p,html body .metric-note,html body .form-hint{color:rgba(255,255,255,.6)}
+html body .show-more-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 4px 4px;color:rgba(255,255,255,.6);font-size:13px}
+
+/* Tables and pills on dark */
+html body td,html body .tx-table td{color:rgba(255,255,255,.82)!important}
+html body th,html body .tx-table th{color:rgba(255,255,255,.5)!important;font-weight:600;letter-spacing:.1em}
+html body .tx-table tbody tr{border-color:rgba(255,255,255,.07)}
+html body .tx-table tbody tr:hover{background:rgba(255,255,255,.04)}
+html body .type-pill,html body .category-pill,html body .status-pill{background:rgba(255,255,255,.08)!important;color:rgba(255,255,255,.85)!important;border:1px solid rgba(255,255,255,.14);padding:5px 10px;border-radius:999px;font-size:10px;letter-spacing:.06em}
+html body .type-pill.income{background:rgba(255,255,255,.92)!important;color:#080808!important;border-color:transparent}
+html body .type-pill.transfer{background:transparent!important}
+html body td .positive,html body .positive{color:#fff!important}
+html body td .negative,html body .negative{color:rgba(255,255,255,.62)!important}
+html body td.descript,html body td strong{color:#fff!important}
+html body .budget-row h3{color:#fff!important}
+html body .budget-row h3 small{color:rgba(255,255,255,.62)!important}
+html body .budget-foot,html body .budget-foot span{color:rgba(255,255,255,.62)}
