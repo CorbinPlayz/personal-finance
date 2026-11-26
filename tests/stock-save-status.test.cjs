@@ -61,20 +61,20 @@ const flush = async () => { for (let i = 0; i < 6; i++) await Promise.resolve();
 test('the Stocks save line is derived from the live sync variables', async () => {
   const custom = { settings: { stockWatchlist: ['AAPL'] } };
   const cases = [
-    ['signed out', {}, /^Saved on this device only\. Sign in with Google to save your list to your account too\.$/],
+    ['signed out', {}, /^Saved here, not synced yet\. Sign in with Google to save your list to your account too\.$/],
     ['sign-in state not reported yet', { authResolved: false }, /^Checking whether you are signed in…$/],
-    ['Firebase could not load', { fb: null, lastSyncError: Object.assign(new Error('x'), { name: 'TypeError' }) }, /^Saved on this device only\. Cloud sync is unavailable because Firebase did not load \(TypeError\)\. Open sync diagnostics$/],
-    ['still loading the cloud copy', { user: signedIn, syncLoading: true }, /^Checking your cloud copy…$/],
+    ['Firebase could not load', { fb: null, lastSyncError: Object.assign(new Error('x'), { name: 'TypeError' }) }, /^Saved here, not synced yet\. Cloud sync is unavailable because Firebase did not load \(TypeError\)\. Open sync diagnostics$/],
+    ['still loading the cloud data', { user: signedIn, syncLoading: true }, /^Checking your cloud data…$/],
     ['a save is in flight', { user: signedIn, cloudLoaded: true, cloudSaving: true, data: custom }, /^Saving to your Google account…$/],
     ['confirmed, empty untouched watchlist', { user: signedIn, cloudLoaded: true }, /^Your watchlist is empty\. Add a ticker to begin; it saves to your Google account\.$/],
     ['confirmed, custom list', { user: signedIn, cloudLoaded: true, data: custom, cloudSavedAt: Date.UTC(2026, 10, 16, 21, 46) }, /^Saved to your Google account · confirmed \d{1,2}:\d{2}/],
     ['confirmed, protected workspace', { user: signedIn, cloudLoaded: true, data: custom, vault: { state: 'unlocked' } }, /^Saved to your Google account, encrypted with your passphrase\.$/],
-    ['paused with a recorded issue', { user: signedIn, syncIssue: { code: 'permission-denied' } }, /^Saved on this device only\. Cloud sync is paused \(permission-denied\)\. Open sync diagnostics$/],
+    ['paused with a recorded issue', { user: signedIn, syncIssue: { code: 'permission-denied' } }, /^Saved here, not synced yet\. Cloud sync is paused \(permission-denied\)\. Open sync diagnostics$/],
     ['paused with only an error object', { user: signedIn, lastSyncError: { code: 'unavailable' } }, /paused \(unavailable\)\./],
     ['loaded earlier but an error is still held', { user: signedIn, cloudLoaded: true, data: custom, lastSyncError: { code: 'unavailable' } }, /paused \(unavailable\)\./],
-    ['waiting on a conflict choice without a code', { user: signedIn }, /^Saved on this device only\. Cloud sync is paused\. Open sync diagnostics$/],
-    ['waiting for the visitor to choose between two copies', { user: signedIn, syncIssue: { code: 'northstar/conflict', message: 'Choose which data to keep to resume cloud sync.' } }, /^Saved on this device only\. Cloud sync is waiting for you to choose which data to keep \(northstar\/conflict\)\. Choose which data to keep$/],
-    ['a write conflict is not a pending choice', { user: signedIn, syncIssue: { code: 'northstar/conflict', message: 'The cloud copy changed on another device. Review the conflict before saving.' } }, /^Saved on this device only\. Cloud sync is paused \(northstar\/conflict\)\. Open sync diagnostics$/],
+    ['waiting on a conflict choice without a code', { user: signedIn }, /^Saved here, not synced yet\. Cloud sync is paused\. Open sync diagnostics$/],
+    ['waiting for the visitor to choose between two copies', { user: signedIn, syncIssue: { code: 'northstar/conflict', message: 'Choose which data to keep to resume cloud sync.' } }, /^Saved here, not synced yet\. Cloud sync is waiting for you to choose which data to keep \(northstar\/conflict\)\. Choose which data to keep$/],
+    ['a write conflict is not a pending choice', { user: signedIn, syncIssue: { code: 'northstar/conflict', message: 'The cloud data changed on another device. Review the conflict before saving.' } }, /^Saved here, not synced yet\. Cloud sync is paused \(northstar\/conflict\)\. Open sync diagnostics$/],
   ];
   for (const [name, overrides, expected] of cases) {
     const h = await harness(overrides);
@@ -104,10 +104,10 @@ test('the one-tap choice button goes to the in-page question, while other pauses
 
 test('every edit toast says where the edit went', async () => {
   const cases = [
-    [{}, ' · saved on this device only'],
+    [{}, ' · not synced yet'],
     [{ user: signedIn, cloudLoaded: true }, ' · saving to your account…'],
-    [{ user: signedIn, cloudLoaded: false }, ' · saved on this device only; cloud sync is paused'],
-    [{ user: signedIn, cloudLoaded: true, lastSyncError: new Error('x') }, ' · saved on this device only; cloud sync is paused'],
+    [{ user: signedIn, cloudLoaded: false }, ' · not synced yet; cloud sync is paused'],
+    [{ user: signedIn, cloudLoaded: true, lastSyncError: new Error('x') }, ' · not synced yet; cloud sync is paused'],
   ];
   for (const [overrides, expected] of cases) assert.equal((await harness(overrides)).context.stockSaveSuffix(), expected, JSON.stringify(overrides));
 });
@@ -140,7 +140,7 @@ test('a save is shown as in flight until the cloud confirms it, and a failed wri
   h.context.queueCloudSave(); const failing = h.fire(); await flush();
   h.writes[1].reject(Object.assign(new Error('offline'), { code: 'unavailable' })); await failing;
   assert.equal(h.context.cloudSaving, false); assert.equal(h.context.cloudLoaded, false);
-  assert.equal(h.line.dataset.tone, 'warn'); assert.match(h.text(), /^Saved on this device only\. Cloud sync is paused \(unavailable\)\. Open sync diagnostics$/);
+  assert.equal(h.line.dataset.tone, 'warn'); assert.match(h.text(), /^Saved here, not synced yet\. Cloud sync is paused \(unavailable\)\. Open sync diagnostics$/);
   assert.deepEqual(h.renders, []); assert.equal(h.toasts.length, 1);
 });
 

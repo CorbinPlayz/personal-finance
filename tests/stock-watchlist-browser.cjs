@@ -506,7 +506,7 @@ const server = http.createServer((req, res) => {
       await page.close();
     });
 
-    await check('clearing a signed-in workspace clears its stock list and key locally and in the merged cloud copy', async () => {
+    await check('clearing a signed-in workspace clears its stock list and key locally and in the merged cloud data', async () => {
       const initial = structuredClone(fixture); initial.settings.stockWatchlist = ['AAPL'];
       const page = await newPage({ data: initial });
       await page.evaluate(initial => { window.__mockCloud = { data: initial, updatedAt: 1 }; void window.__authCallback({ uid: 'alice' }); }, initial);
@@ -616,10 +616,10 @@ const server = http.createServer((req, res) => {
     await check('signed out, the Stocks page and toast say the list is only on this device', async () => {
       const page = await newPage(); await nav(page, 'Stocks');
       const line = await saveLine(page);
-      assert.equal(line.text, 'Saved on this device only. Sign in with Google to save your list to your account too.');
+      assert.equal(line.text, 'Saved here, not synced yet. Sign in with Google to save your list to your account too.');
       assert.equal(line.tone, 'neutral'); assert.equal(line.link, false);
       await addTicker(page, 'synt');
-      assert.match(await toastText(page), /^SYNT added to your watchlist · saved on this device only$/);
+      assert.match(await toastText(page), /^SYNT added to your watchlist · not synced yet$/);
       assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
       await page.close();
     });
@@ -658,10 +658,10 @@ const server = http.createServer((req, res) => {
       await page.evaluate(() => { window.__mockReadError = 'permission-denied'; });
       await signIn(page); await waitForSaveTone(page, 'warn');
       let line = await saveLine(page);
-      assert.equal(line.text, 'Saved on this device only. Cloud sync is paused (permission-denied). Open sync diagnostics');
+      assert.equal(line.text, 'Saved here, not synced yet. Cloud sync is paused (permission-denied). Open sync diagnostics');
       assert.equal(line.link, true);
       await addTicker(page, 'synt');
-      assert.match(await toastText(page), /^SYNT added to your watchlist · saved on this device only; cloud sync is paused$/);
+      assert.match(await toastText(page), /^SYNT added to your watchlist · not synced yet; cloud sync is paused$/);
       assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0);
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:alice')).settings.stockWatchlist.at(-1)), 'SYNT');
       line = await saveLine(page); assert.equal(line.tone, 'warn');
@@ -669,7 +669,7 @@ const server = http.createServer((req, res) => {
       await page.$eval('.stock-save-link', el => el.click());
       await page.waitForFunction(() => document.querySelector('#content')?.dataset.page === 'Settings');
       assert.match(await text(page, '#syncDiagnosticsPanel'), /permission-denied/);
-      // Once the cause is fixed, Retry loads the cloud copy and uploads the edit that was waiting on the device.
+      // Once the cause is fixed, Retry loads the cloud data and uploads the edit that was waiting on the device.
       await page.evaluate(() => { window.__mockReadError = null; });
       await page.$eval('[data-action="retry-sync"]', el => el.click());
       await page.waitForFunction(() => window.__cloudWrites?.length >= 1 && !document.querySelector('.app-shell').inert);
@@ -687,10 +687,10 @@ const server = http.createServer((req, res) => {
       await addTicker(page, 'synt');
       await waitForSaveTone(page, 'warn');
       const line = await saveLine(page);
-      assert.match(line.text, /^Saved on this device only\. Cloud sync is paused \(unavailable\)\./); assert.equal(line.link, true);
+      assert.match(line.text, /^Saved here, not synced yet\. Cloud sync is paused \(unavailable\)\./); assert.equal(line.link, true);
       assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), writesBefore, 'the failed write stored nothing');
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:alice')).settings.stockWatchlist.at(-1)), 'SYNT');
-      assert.equal(await page.evaluate(() => window.__mockCloud.data.settings.stockWatchlist), null, 'the cloud copy is untouched, not half-written');
+      assert.equal(await page.evaluate(() => window.__mockCloud.data.settings.stockWatchlist), null, 'the cloud data is untouched, not half-written');
       await page.close();
     });
 
@@ -730,10 +730,10 @@ const server = http.createServer((req, res) => {
       const page = await newPage({ blockFirebase: true }); await nav(page, 'Stocks');
       await waitForSaveTone(page, 'warn');
       const line = await saveLine(page);
-      assert.match(line.text, /^Saved on this device only\. Cloud sync is unavailable because Firebase did not load( \(\S+\))?\. Open sync diagnostics$/);
+      assert.match(line.text, /^Saved here, not synced yet\. Cloud sync is unavailable because Firebase did not load( \(\S+\))?\. Open sync diagnostics$/);
       assert.equal(line.link, true);
       await addTicker(page, 'synt');
-      assert.match(await toastText(page), /^SYNT added to your watchlist · saved on this device only$/);
+      assert.match(await toastText(page), /^SYNT added to your watchlist · not synced yet$/);
       assert.equal(await page.evaluate(() => window.NorthstarLedger().settings.stockWatchlist.at(-1)), 'SYNT');
       await page.close();
     });
@@ -753,11 +753,11 @@ const server = http.createServer((req, res) => {
       return { page, uid, raw };
     }
 
-    await check('a protected workspace with no protected cloud copy is reported as paused, never as saved to the account', async () => {
+    await check('a protected workspace with no protected cloud data is reported as paused, never as saved to the account', async () => {
       const { page, uid } = await openProtectedWorkspace();
       await signIn(page, { uid }); await waitForSaveTone(page, 'warn');
       const line = await saveLine(page);
-      assert.match(line.text, /^Saved on this device only\. Cloud sync is paused \(northstar\/conflict\)\. Open sync diagnostics$/); assert.equal(line.link, true);
+      assert.match(line.text, /^Saved here, not synced yet\. Cloud sync is paused \(northstar\/conflict\)\. Open sync diagnostics$/); assert.equal(line.link, true);
       await addTicker(page, 'synt');
       assert.match(await toastText(page), /^SYNT added to your watchlist · saving protected device copy…$/); // the encrypted path keeps its own wording
       await waitForSaveTone(page, 'warn'); assert.match((await saveLine(page)).text, /\(northstar\/conflict\)/);
@@ -778,12 +778,12 @@ const server = http.createServer((req, res) => {
       await page.evaluate(() => { window.__mockWriteError = 'unavailable'; });
       await page.$eval('[data-action="stock-remove"][data-symbol="SYNT"]', el => el.click());
       await waitForSaveTone(page, 'warn');
-      assert.match((await saveLine(page)).text, /^Saved on this device only\. Cloud sync is paused \(unavailable\)\./);
+      assert.match((await saveLine(page)).text, /^Saved here, not synced yet\. Cloud sync is paused \(unavailable\)\./);
       await page.close();
     });
 
-    await check('a protected workspace and a different protected cloud copy ask in the bar, upload only what is chosen, and never apply a stale answer', async () => {
-      // The cloud copy is encrypted with this workspace's own passphrase key but holds other data, so the only thing in the way is the choice.
+    await check('a protected workspace and a different protected cloud data ask in the bar, upload only what is chosen, and never apply a stale answer', async () => {
+      // The cloud data is encrypted with this workspace's own passphrase key but holds other data, so the only thing in the way is the choice.
       const otherEnvelope = (page, raw) => page.evaluate(async ({ raw, other }) => {
         const { deriveVaultKey, encryptLedger } = await import('/personal-finance/vault-crypto.mjs');
         const kdf = JSON.parse(raw).kdf; return encryptLedger(other, await deriveVaultKey('stock-test-passphrase', kdf), kdf);
@@ -801,15 +801,15 @@ const server = http.createServer((req, res) => {
       assert.match(bar, /This device and your cloud contain different protected data\./);
       assert.match(bar, /Neither copy changes until you choose\. Export a backup first if you might need both\. Nothing changes until you tap a button\./);
       assert.doesNotMatch(bar, /Synthetic|Cloud payee|Cloud checking|stock-test-user/, 'a protected question shows nothing from either copy');
-      assert.deepEqual(await first.page.$$eval('#syncChoiceBar [data-action="answer-sync-choice"]', els => els.map(el => el.innerText)), ['Use cloud copy', 'Keep this device']);
+      assert.deepEqual(await first.page.$$eval('#syncChoiceBar [data-action="answer-sync-choice"]', els => els.map(el => el.innerText)), ['Use my account’s data', 'Keep this device']);
       assert.match(await first.page.$eval('#syncStatus', el => el.innerText), /^Protected sync conflict/);
       assert.equal(await first.page.evaluate(() => window.__cloudWrites?.length || 0), 0);
       assert.equal(await first.page.evaluate(uid => localStorage.getItem('northstar-vault-v1:' + uid), first.uid), first.raw, 'the protected device copy is untouched while the question waits');
-      // "Use cloud copy" puts the protected cloud copy on this device and uploads nothing.
+      // "Use my account’s data" puts the protected cloud data on this device and uploads nothing.
       await pick(first.page, 'cloud');
       await first.page.waitForFunction(() => document.querySelector('#syncStatus')?.innerText === 'Protected cloud sync on' && !document.querySelector('.app-shell').inert);
-      assert.equal(await first.page.evaluate(() => window.NorthstarLedger().transactions.length), 3, 'the device now shows the cloud copy');
-      assert.equal(await first.page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'choosing the cloud copy uploads nothing');
+      assert.equal(await first.page.evaluate(() => window.NorthstarLedger().transactions.length), 3, 'the device now shows the cloud data');
+      assert.equal(await first.page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'choosing the cloud data uploads nothing');
       assert.notEqual(await first.page.evaluate(uid => localStorage.getItem('northstar-vault-v1:' + uid), first.uid), first.raw, 'the device copy is now the cloud one');
       assert.equal(await first.page.$('#syncChoiceBar'), null, 'answered, so the bar is gone');
       await first.page.close();
@@ -850,7 +850,7 @@ const server = http.createServer((req, res) => {
       }
     });
 
-    await check('a different cloud copy asks which data to keep in a bar on the screen, describing both; early taps are ignored; Later and Open only change how it is shown; each choice does what it says', async () => {
+    await check('a different cloud data asks which data to keep in a bar on the screen, describing both; early taps are ignored; Later and Open only change how it is shown; each choice does what it says', async () => {
       const page = await newPage(); await nav(page, 'Stocks'); // the device holds the synthetic fixture
       await signIn(page, { cloud: differentCloudCopy() });
       await page.waitForSelector('#syncChoiceBar');
@@ -860,20 +860,20 @@ const server = http.createServer((req, res) => {
       // A tap meant for something else cannot land on a choice that replaces data in the moments after the bar appears.
       assert.equal(await page.evaluate(() => { document.querySelector('#syncChoiceBar [data-value="cloud"]').click(); return !!document.querySelector('#syncChoiceBar'); }), true, 'an immediate tap on a choice is ignored');
       assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('northstar-finance-v1:local')).transactions.length), 1, 'the device copy was not replaced by it');
-      assert.equal(await page.evaluate(() => (window.__cloudWrites?.length || 0) + (window.__mockCloud.data.transactions.length === 3 ? 0 : 1)), 0, 'the cloud copy was not replaced by it');
+      assert.equal(await page.evaluate(() => (window.__cloudWrites?.length || 0) + (window.__mockCloud.data.transactions.length === 3 ? 0 : 1)), 0, 'the cloud data was not replaced by it');
       const bar = await text(page, '#syncChoiceBar');
       assert.match(bar, /Which copy should Northstar keep\?/);
       assert.match(bar, /The two copies differ\. This browser has 1 transaction, 1 account, 1 budget, 1 goal, 1 planned purchase\./);
       assert.match(bar, /Your Google account has 3 transactions, 2 accounts \(last saved [^)]*\d[^)]*\)\./);
       assert.doesNotMatch(bar, /Synthetic|Cloud payee|Cloud checking|432/, 'the bar shows counts only, never names or amounts');
-      assert.match(bar, /Use cloud copy replaces this device’s data with your account’s\. Keep this device replaces your account’s data with this device’s\. Not sure\? Tap Later, then use Export backup in Settings\./);
+      assert.match(bar, /Use my account’s data replaces this device’s data with your account’s\. Keep this device replaces your account’s data with this device’s\. Not sure\? Tap Later, then use Export backup in Settings\./);
       assert.match(bar, /Nothing changes until you tap a button\./);
       assert.doesNotMatch(bar, /Decide later/, 'there is no pop-up to dismiss, so nothing is called Decide later');
-      assert.deepEqual(await page.$$eval('#syncChoiceBar [data-action="answer-sync-choice"]', els => els.map(el => el.innerText)), ['Use cloud copy', 'Keep this device']);
+      assert.deepEqual(await page.$$eval('#syncChoiceBar [data-action="answer-sync-choice"]', els => els.map(el => el.innerText)), ['Use my account’s data', 'Keep this device']);
       await screenshot(page, 'bar-open-390');
       // The header, the notice and the Stocks line say the same thing; no toast pretends the visitor deferred anything.
       let line = await saveLine(page);
-      assert.equal(line.text, 'Saved on this device only. Cloud sync is waiting for you to choose which data to keep (northstar/conflict). Choose which data to keep');
+      assert.equal(line.text, 'Saved here, not synced yet. Cloud sync is waiting for you to choose which data to keep (northstar/conflict). Choose which data to keep');
       assert.equal(line.link, true);
       assert.equal(await page.$('#toastRoot .toast'), null, 'no toast');
       const header = await page.$eval('#syncStatus', el => ({ text: el.innerText, err: el.classList.contains('err') }));
@@ -919,12 +919,12 @@ const server = http.createServer((req, res) => {
       assert.match(await text(page, '#syncIssueRoot'), /northstar\/conflict/, 'the access check did not clear the conflict');
       assert.equal(await page.evaluate(() => (window.__cloudWrites?.length || 0)), 0);
 
-      // "Use cloud copy" resolves it without uploading, through the same code a pop-up would have used, and without opening any dialog.
+      // "Use my account’s data" resolves it without uploading, through the same code a pop-up would have used, and without opening any dialog.
       await page.evaluate(() => { window.__dialogsOpened = 0; new MutationObserver(records => { for (const record of records) for (const node of record.addedNodes) if (node.querySelector?.('.confirm-dialog')) window.__dialogsOpened++; }).observe(document.querySelector('#confirmRoot'), { childList: true, subtree: true }); });
       await pick(page, 'cloud');
       await page.waitForFunction(() => document.querySelector('#syncStatus')?.innerText === 'Cloud sync on' && !document.querySelector('.app-shell').inert);
-      assert.equal(await page.evaluate(() => window.NorthstarLedger().transactions.length), 3, 'the device now shows the cloud copy');
-      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'choosing the cloud copy uploads nothing');
+      assert.equal(await page.evaluate(() => window.NorthstarLedger().transactions.length), 3, 'the device now shows the cloud data');
+      assert.equal(await page.evaluate(() => window.__cloudWrites?.length || 0), 0, 'choosing the cloud data uploads nothing');
       assert.equal(await page.evaluate(() => window.__dialogsOpened), 0, 'no dialog was needed');
       assert.equal(await page.$('#syncChoiceBar'), null, 'the question is gone once it is answered');
       assert.equal(await page.evaluate(() => document.body.classList.contains('has-sync-choice-bar')), false, 'and the page, the toast and the assistant button take their room back');
@@ -1049,7 +1049,7 @@ const server = http.createServer((req, res) => {
       await page.close();
     });
 
-    await check('an answer given on the bar is not applied if the cloud copy changed since you looked, even when no count changed', async () => {
+    await check('an answer given on the bar is not applied if the cloud data changed since you looked, even when no count changed', async () => {
       const page = await newPage(); await nav(page, 'Settings');
       await signIn(page, { cloud: differentCloudCopy() }); await page.waitForSelector('#syncChoiceBar');
       // Another device saves in the meantime: the account now holds 4 transactions.

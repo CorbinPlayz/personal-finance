@@ -49,7 +49,7 @@ test('project notes link to the release overview', () => {
 test('Settings renders the major-update link with safe external-link attributes', () => {
   const context = vm.createContext({
     data: { accounts: [], transactions: [], budgets: [], goals: [], purchases: [], settings: {} },
-    user: null, cloudLoaded: false, lastSyncError: null, vault: { state: 'off' },
+    user: null, cloudLoaded: false, lastSyncError: null, syncIssue: null, vault: { state: 'off' },
     pageHeading: title => `<h1>${title}</h1>`,
     renderVaultPanel: () => '',
     renderSyncIssuePanel: () => '',

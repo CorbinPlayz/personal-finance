@@ -48,7 +48,7 @@ function harness({ signedIn = true, online = true, stored = null } = {}) {
   return { context, store, root, read, run: statement => vm.runInContext(statement, context) };
 }
 const conflict = () => {
-  const error = new Error('The cloud copy changed on another device. Review the conflict before saving.');
+  const error = new Error('The cloud data changed on another device. Review the conflict before saving.');
   error.code = 'northstar/conflict';
   return error;
 };
@@ -136,7 +136,7 @@ test('copied diagnostics explain the state without leaking the account or record
   assert.match(text, /Stage: Cloud load/);
   assert.match(text, /Reason: Failed to get document because the client is offline\./);
   assert.match(text, /Connection: offline/);
-  assert.match(text, /Cloud copy loaded: no/);
+  assert.match(text, /Cloud data loaded: no/);
   assert.match(text, /Protection: off/);
   assert.doesNotMatch(text, /private@example\.com/);
   assert.doesNotMatch(text, /user-1/);
@@ -191,7 +191,7 @@ test('a load that ends unconfirmed is never left without a code', () => {
   assert.equal(h.context.confirmSyncOutcome('Cloud load'), true);
   assert.equal(h.read('syncIssue.code'), 'northstar/app');
   assert.equal(h.read('syncIssue.stage'), 'Cloud load');
-  assert.match(h.read('syncIssue.message'), /could not confirm the cloud copy/i);
+  assert.match(h.read('syncIssue.message'), /could not confirm the cloud data/i);
   assert.match(h.read('syncIssue.message'), /Nothing was uploaded or overwritten/i);
   assert.match(h.context.syncFailureStatus('Cloud load', new Error('x')), /needs attention · northstar\/app/);
 
@@ -227,7 +227,7 @@ test('check cloud access names the Firestore failure on a phone', async () => {
   assert.equal(ok.store.has('northstar-sync-issue-v1'), false);
   assert.equal(ok.statuses.at(-1).text, 'Cloud access confirmed');
 
-  const conflict = cloudHarness({ rejection: Object.assign(new Error('The cloud copy changed on another device.'), { code: 'northstar/conflict' }) });
+  const conflict = cloudHarness({ rejection: Object.assign(new Error('The cloud data changed on another device.'), { code: 'northstar/conflict' }) });
   await conflict.context.checkCloudAccess();
   assert.equal(conflict.read('cloudCheck').code, 'northstar/conflict');
   assert.match(conflict.toasts.at(-1), /\[northstar\/conflict\]/);
@@ -375,9 +375,9 @@ function choiceHarness({ user = { uid: 'alice' }, issueMessage = 'Choose which d
 const question = (overrides = {}) => ({
   title: 'Choose which data to keep',
   message: 'Northstar found different finance data. This browser has 1 transaction. Your Google account has 3 transactions (last saved Nov 15, 9:12 PM).',
-  cardNote: 'Use cloud copy replaces what this device shows.',
+  cardNote: 'Use my account’s data replaces what this device shows.',
   signature: 'device-copy\ncloud-copy',
-  choices: [{ value: 'cloud', label: 'Use cloud copy' }, { value: 'local', label: 'Keep this device' }, { value: 'cancel', label: 'Decide later', focus: true }],
+  choices: [{ value: 'cloud', label: 'Use my account’s data' }, { value: 'local', label: 'Keep this device' }, { value: 'cancel', label: 'Decide later', focus: true }],
   ...overrides,
 });
 
@@ -386,8 +386,8 @@ test('askSyncChoice remembers the question and says "not decided yet" at once, w
   for (let again = 0; again < 2; again++) {
     assert.equal(await h.context.askSyncChoice(question()), null);
     assert.deepEqual(JSON.parse(JSON.stringify(h.read('pendingChoice'))), {
-      uid: 'alice', title: 'Choose which data to keep', message: question().message, cardNote: 'Use cloud copy replaces what this device shows.', signature: 'device-copy\ncloud-copy',
-      choices: [{ value: 'cloud', label: 'Use cloud copy' }, { value: 'local', label: 'Keep this device' }]
+      uid: 'alice', title: 'Choose which data to keep', message: question().message, cardNote: 'Use my account’s data replaces what this device shows.', signature: 'device-copy\ncloud-copy',
+      choices: [{ value: 'cloud', label: 'Use my account’s data' }, { value: 'local', label: 'Keep this device' }]
     });
     assert.ok(h.read('syncChoiceGuardUntil') > Date.now(), 'the bar ignores an immediate tap when it appears');
     assert.equal(h.read('syncChoiceCollapsed'), false, 'a new question starts open');
@@ -417,7 +417,7 @@ test('an answer given from the bar applies to an identical question once, and ne
     ['the counts changed', { message: question().message.replace('3 transactions', '40 transactions') }],
     ['another question came first', { title: 'Choose a device workspace' }],
     ['a value in this device\'s copy was edited while the question waited', { signature: 'edited-device-copy\ncloud-copy' }],
-    ['the cloud copy was changed by another device', { signature: 'device-copy\nnewer-cloud-copy' }],
+    ['the cloud data was changed by another device', { signature: 'device-copy\nnewer-cloud-copy' }],
     ['the answer is no longer one of the choices', { choices: [{ value: 'account', label: 'Use account device copy' }, { value: 'local', label: 'Use local workspace' }] }],
   ]) {
     const g = choiceHarness(); await g.context.askSyncChoice(question());
@@ -466,10 +466,10 @@ test('the bar shows the remembered question, escapes it, offers no Decide later,
   assert.match(open, /id="syncChoiceBar"[^>]*role="group"/);
   assert.match(open, /<h2 id="syncChoiceTitle">Which copy should Northstar keep\?<\/h2>/);
   assert.match(open, /This browser has &lt;b&gt;1&lt;\/b&gt; transaction &amp; &quot;more&quot;\./);
-  assert.match(open, /data-action="answer-sync-choice" data-value="cloud">Use cloud copy<\/button>/);
+  assert.match(open, /data-action="answer-sync-choice" data-value="cloud">Use my account’s data<\/button>/);
   assert.match(open, /data-action="answer-sync-choice" data-value="local">Keep this device<\/button>/);
   assert.doesNotMatch(open, /cancel|Decide later/);
-  assert.match(open, /Use cloud copy replaces what this device shows\./);
+  assert.match(open, /Use my account’s data replaces what this device shows\./);
   assert.match(open, /Nothing changes until you tap a button\./);
   assert.match(open, /data-action="minimize-sync-choice"[^>]*>Later<\/button>/);
   assert.doesNotMatch(open, /Open<\/button>/);
@@ -479,7 +479,7 @@ test('the bar shows the remembered question, escapes it, offers no Decide later,
   const strip = h.root.innerHTML;
   assert.match(strip, /class="sync-choice-bar is-collapsed" id="syncChoiceBar"/);
   assert.match(strip, /<strong>Choose which data to keep<\/strong><button type="button" class="primary-btn small" data-action="expand-sync-choice">Open<\/button>/);
-  assert.doesNotMatch(strip, /answer-sync-choice|Use cloud copy|Keep this device/, 'a strip cannot answer anything');
+  assert.doesNotMatch(strip, /answer-sync-choice|Use my account’s data|Keep this device/, 'a strip cannot answer anything');
   assert.deepEqual(JSON.parse(JSON.stringify(h.log.focused.at(-1))), ['open', { preventScroll: true }], 'focus follows the button that replaced Later');
   h.run('syncChoiceGuardUntil = 0'); h.context.expandSyncChoice();
   assert.equal(h.root.innerHTML, open, 'opening shows the same question again');
@@ -555,6 +555,6 @@ test('the diagnostics offer a direct Firestore check and name the project', () =
   assert.match(html, /data-action="check-cloud-access"/);
   assert.match(moduleScript, /confirmSyncOutcome\('Cloud load'\)/);
   assert.match(moduleScript, /confirmSyncOutcome\('Protected sync'\)/);
-  assert.match(moduleScript, /Sync diagnostics below shows the code, and Check cloud access tests Firestore directly\./);
+  assert.match(moduleScript, /Open Advanced below to see the code, or use Check cloud access to test the connection\./);
   assert.match(moduleScript, /firebaseConfig\.projectId/);
 });

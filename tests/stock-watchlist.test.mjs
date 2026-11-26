@@ -300,9 +300,9 @@ test('the save line only claims the account copy when sync is confirmed and noth
   assert.equal(stockSaveStatus(confirmed).message, 'Saved to your Google account.', 'no invented time when none was confirmed');
   assert.equal(stockSaveStatus({ ...confirmed, confirmedAt: Number.NaN }).message, 'Saved to your Google account.');
   assert.equal(stockSaveStatus({ ...confirmed, protectedCloud: true }).message, 'Saved to your Google account, encrypted with your passphrase.');
-  // A save in flight or a cloud copy still loading is never reported as saved.
+  // A save in flight or a cloud data still loading is never reported as saved.
   assert.equal(stockSaveStatus({ ...confirmed, saving: true }).message, 'Saving to your Google account…');
-  assert.equal(stockSaveStatus({ ...confirmed, loading: true, saving: true }).message, 'Checking your cloud copy…');
+  assert.equal(stockSaveStatus({ ...confirmed, loading: true, saving: true }).message, 'Checking your cloud data…');
   assert.equal(stockSaveStatus({ ...confirmed, saving: true }).tone, 'neutral');
 });
 
@@ -315,14 +315,14 @@ test('the save line says an untouched, empty watchlist has not been saved yet', 
 });
 
 test('the save line names the device-only cases, the recorded code, and links to diagnostics', () => {
-  assert.equal(stockSaveStatus({}).message, 'Saved on this device only. Sign in with Google to save your list to your account too.');
+  assert.equal(stockSaveStatus({}).message, 'Saved here, not synced yet. Sign in with Google to save your list to your account too.');
   assert.equal(stockSaveStatus({}).tone, 'neutral'); assert.equal(stockSaveStatus({}).action, undefined);
   assert.equal(stockSaveStatus({ initializing: true }).message, 'Checking whether you are signed in…');
   const paused = stockSaveStatus({ signedIn: true, synced: false, code: 'permission-denied' });
   assert.equal(paused.tone, 'warn'); assert.equal(paused.action, 'Open sync diagnostics');
-  assert.equal(paused.message, 'Saved on this device only. Cloud sync is paused (permission-denied).');
-  assert.equal(stockSaveStatus({ signedIn: true, synced: false }).message, 'Saved on this device only. Cloud sync is paused.', 'no empty parentheses without a code');
-  assert.equal(stockSaveStatus({ signedIn: true, synced: false, code: 42 }).message, 'Saved on this device only. Cloud sync is paused.', 'a non-string code is ignored');
+  assert.equal(paused.message, 'Saved here, not synced yet. Cloud sync is paused (permission-denied).');
+  assert.equal(stockSaveStatus({ signedIn: true, synced: false }).message, 'Saved here, not synced yet. Cloud sync is paused.', 'no empty parentheses without a code');
+  assert.equal(stockSaveStatus({ signedIn: true, synced: false, code: 42 }).message, 'Saved here, not synced yet. Cloud sync is paused.', 'a non-string code is ignored');
   const unavailable = stockSaveStatus({ unavailable: true, code: 'TypeError', signedIn: true, synced: true });
   assert.equal(unavailable.tone, 'warn'); assert.match(unavailable.message, /Firebase did not load \(TypeError\)\.$/); assert.equal(unavailable.action, 'Open sync diagnostics');
   // Signed in but not confirmed is never worded as saved to the account, whatever else is true.
