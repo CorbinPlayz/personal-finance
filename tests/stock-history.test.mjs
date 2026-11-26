@@ -116,3 +116,16 @@ test('loader: one request per ticker, parallel limit, failures are retried, clea
   const signedOut = createHistoryLoader({ url: 'https://w/', getToken: async () => { throw new Error('Sign in with Google to use the hosted AI.'); }, fetchImpl });
   await assert.rejects(signedOut.load('A'), /Sign in/);
 });
+
+test('purchases older than the 5-year history are counted from day one and reported', () => {
+  const day = i => new Date(Date.UTC(2021, 10, 25) + i * 864e5).toISOString().slice(0, 10);
+  const pts = []; for (let i = 0; i < 1260; i++) pts.push([day(i), 100 + i * 0.05]);
+  const lots = [{ symbol: 'AAPL', shares: 12, buyPrice: 58.4, buyDate: '2019-03-11' }, { symbol: 'AAPL', shares: 4, buyPrice: 171, buyDate: '2025-06-14' }];
+  const r = portfolioSeries(lots, new Map([['AAPL', pts]]), '2026-11-25');
+  assert.equal(r.earlier, 1);
+  assert.equal(r.points[0].value, 1200); // 12 old shares are already held on the first chart day
+  assert.equal(r.points[0].cost, 700.8);
+  assert.equal(r.buys.length, 1); assert.match(r.buys[0].label, /\+4 AAPL/);
+  assert.ok(r.points.every(p => Number.isFinite(p.value) && Number.isFinite(p.cost)));
+  assert.equal(portfolioSeries([{ symbol: 'AAPL', shares: 1, buyPrice: 10, buyDate: '2024-01-02' }], new Map([['AAPL', pts]]), '2026-11-25').earlier, 0);
+});

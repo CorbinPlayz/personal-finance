@@ -252,6 +252,15 @@ const fixture = {
     await down.waitForSelector('#pfChartBody [data-action="pf-chart-retry"]');
     assert.match(await down.innerText('#pfChartBody'), /No price history for FAIL|Stooq/);
   });
+  const old = await open({ phone: false, data: { ...fixture, holdings: [{ id: 'o1', symbol: 'AAPL', shares: 12, buyPrice: 58.4, buyDate: '2019-03-11' }, { id: 'o2', symbol: 'MSFT', shares: 6, buyPrice: 142.1, buyDate: '2018-09-03' }, { id: 'o3', symbol: 'AAPL', shares: 2, buyPrice: 150, buyDate: '2024-03-01' }] } });
+  await check('desktop: stocks bought more than 5 years ago still chart without an error', async () => {
+    await old.waitForSelector('#pfChartBody svg'); const body = await old.innerText('#pfChartBody');
+    assert.doesNotMatch(body, /error|could not|No price history|Add a purchase date/i, body);
+    assert.match(await old.innerText('#pfChartBody'), /2 purchases were made before .*last 5 years/i);
+    await old.evaluate(() => document.querySelector('[data-action="stock-chart"][data-symbol="AAPL"]').click());
+    await old.waitForSelector('.stk-dialog .stk-plot svg'); assert.doesNotMatch(await old.innerText('.stk-dialog'), /error|could not load/i);
+    await old.evaluate(() => document.querySelector('.stk-close').click());
+  });
   const empty = await open({ phone: false, data: { ...fixture, holdings: [] } });
   await check('desktop: with no purchases the chart area says how to get a chart', async () => {
     assert.match(await empty.innerText('#pfChartBody'), /Add a stock you bought/);
