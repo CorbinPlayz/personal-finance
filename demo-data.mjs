@@ -39,6 +39,7 @@ export function buildDemoLedger(now = new Date()) {
     const dom = d.getDate(), dow = d.getDay();
     if (dom === 1 || dom === 15) add(d, 'Income', 2650 + (dom === 15 ? 40 : 0), 'acc-checking', 'Income', 'Paycheck — Brightline Studio');
     if (dom === 1) add(d, 'Expense', 1480, 'acc-checking', 'Housing', 'Rent');
+    if (dom === 2 || dom === 17) add(d, 'Transfer', 160, 'acc-checking', 'Other', 'ATM cash withdrawal', { toAccountId: 'acc-cash' });
     if (dom === 3) add(d, 'Transfer', 600, 'acc-checking', 'Other', 'Monthly savings transfer', { toAccountId: 'acc-savings' });
     if (dom === 5) add(d, 'Expense', 14.99, 'acc-card', 'Entertainment', 'Netflix');
     if (dom === 6) add(d, 'Expense', 10.99, 'acc-card', 'Entertainment', 'Spotify');
@@ -53,7 +54,7 @@ export function buildDemoLedger(now = new Date()) {
     for (let i = 0; i < extras; i++) {
       const cat = pick(['Food', 'Food', 'Food', 'Transport', 'Transport', 'Shopping', 'Entertainment', 'Health', 'Education', 'Bills']);
       const [lo, hi] = RANGE[cat], big = cat === 'Shopping' && rand() < 0.08;
-      add(d, 'Expense', big ? 180 + rand() * 340 : lo + rand() * (hi - lo), pick(['acc-card', 'acc-card', 'acc-checking', 'acc-cash']), cat, pick(SHOPS[cat]));
+      add(d, 'Expense', big ? 180 + rand() * 340 : lo + rand() * (hi - lo), pick(['acc-card', 'acc-card', 'acc-checking', 'acc-checking', 'acc-cash']), cat, pick(SHOPS[cat]));
     }
     if (dom === 25) { const owed = Math.max(0, -bal['acc-card']); if (owed > 50) add(d, 'Transfer', Math.min(owed, 900), 'acc-checking', 'Bills', 'Credit card payment', { toAccountId: 'acc-card' }); }
   }
@@ -62,7 +63,7 @@ export function buildDemoLedger(now = new Date()) {
   const nextOn = (dom) => { let d = new Date(today.getFullYear(), today.getMonth(), dom); if (d <= today) d = new Date(today.getFullYear(), today.getMonth() + 1, dom); return iso(d); };
   return {
     version: 1, accounts, transactions: txs,
-    budgets: [['Food', 450], ['Transport', 180], ['Shopping', 260], ['Entertainment', 140], ['Bills', 330], ['Health', 120], ['Education', 80]].map(([category, limit], i) => ({ id: 'bud' + i, category, limit })),
+    budgets: [['Food', 650], ['Transport', 260], ['Shopping', 380], ['Entertainment', 180], ['Bills', 460], ['Health', 160], ['Education', 160]].map(([category, limit], i) => ({ id: 'bud' + i, category, limit })),
     goals: [
       { id: 'goal-ef', name: 'Emergency fund', saved: 6200, target: 10000, dueDate: day(220) },
       { id: 'goal-trip', name: 'Tokyo trip', saved: 1850, target: 3500, dueDate: day(150) },
