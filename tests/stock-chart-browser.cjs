@@ -9,7 +9,7 @@ const path = require('node:path');
 const { chromium } = require('playwright');
 
 const root = path.join(__dirname, '..'), ledgerKey = 'northstar-finance-v1:local';
-const assets = new Set(['index.html', 'vault-crypto.mjs', 'csv-export.mjs', 'split.mjs', 'portfolio.mjs', 'recurring.mjs', 'finance-graphs.mjs', 'financial-graphs-view.mjs', 'financial-graphs.css', 'stock-watchlist.mjs', 'stock-watchlist-view.mjs', 'stock-history.mjs', 'stock-chart-view.mjs', 'jarvis-tour.mjs', 'jarvis-voice.mjs', 'theme-1.css', 'demo-data.mjs', 'stock-watchlist.css']);
+const assets = new Set(['index.html', 'vault-crypto.mjs', 'csv-export.mjs', 'split.mjs', 'portfolio.mjs', 'recurring.mjs', 'finance-graphs.mjs', 'financial-graphs-view.mjs', 'financial-graphs.css', 'stock-watchlist.mjs', 'stock-watchlist-view.mjs', 'stock-history.mjs', 'stock-chart-view.mjs', 'jarvis-tour.mjs', 'jarvis-voice.mjs', 'jarvis-orb.mjs', 'theme-1.css', 'demo-data.mjs', 'stock-watchlist.css']);
 const WORKER = 'https://northstar-finance-ai.camc-cf76.workers.dev/';
 const firebase = {
   'firebase-app.js': 'export function getApps(){return []} export function initializeApp(){return {}}',
@@ -89,7 +89,7 @@ const fixture = {
       return route.abort();
     });
     await page.goto(base + '/blank');
-    await page.evaluate(({ ledgerKey, data }) => { localStorage.clear(); localStorage.setItem('northstar-welcome-seen-v1', '1'); localStorage.setItem(ledgerKey, JSON.stringify(data)); }, { ledgerKey, data });
+    await page.evaluate(({ ledgerKey, data }) => { localStorage.clear(); localStorage.setItem('northstar-welcome-seen-v1', '1'); ['Intro','Overview','Stocks','Goals'].forEach(k => localStorage.setItem('northstar-tour-v1:alice:' + k, '1')); localStorage.setItem(ledgerKey, JSON.stringify(data)); }, { ledgerKey, data });
     await page.goto(base + '/personal-finance/', { waitUntil: 'domcontentloaded' });
     await page.waitForFunction(() => typeof window.NorthstarLedger === 'function' && window.NorthstarLedger() && window.__authCallback);
     if (!signedOut) await page.evaluate(async () => { window.__mockCloud = null; await window.__authCallback({ uid: 'alice', displayName: 'Synthetic user' }); window.__mockCurrentUser = { uid: 'alice', getIdToken: async () => 'test-token' }; });
@@ -124,7 +124,7 @@ const fixture = {
   });
   await check('desktop: the portfolio chart is read-only (wheel does nothing) but hovering reads a day', async () => {
     const before = await d.$eval('#pfChartBody .stk-line', el => el.getAttribute('d'));
-    const box = await d.locator('#pfChartBody .stk-plot').boundingBox();
+    await d.locator('#pfChartBody .stk-plot').scrollIntoViewIfNeeded(); const box = await d.locator('#pfChartBody .stk-plot').boundingBox();
     await d.mouse.move(box.x + box.width * 0.6, box.y + 100); await d.mouse.wheel(0, -600);
     assert.equal(await d.$eval('#pfChartBody .stk-line', el => el.getAttribute('d')), before);
     assert.equal(await d.$eval('#pfChartBody .stk-plot', el => getComputedStyle(el).touchAction), 'pan-y', 'page can still scroll by touch');

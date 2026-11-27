@@ -9,7 +9,7 @@ const puppeteer = require('puppeteer-core');
 const axePath = require.resolve('axe-core/axe.min.js');
 
 const root = path.join(__dirname, '..'), ledgerKey = 'northstar-finance-v1:local';
-const assets = new Set(['index.html', 'vault-crypto.mjs', 'csv-export.mjs', 'split.mjs', 'portfolio.mjs', 'recurring.mjs', 'finance-graphs.mjs', 'financial-graphs-view.mjs', 'financial-graphs.css', 'stock-watchlist.mjs', 'stock-watchlist-view.mjs', 'stock-history.mjs', 'stock-chart-view.mjs', 'jarvis-tour.mjs', 'jarvis-voice.mjs', 'theme-1.css', 'demo-data.mjs', 'stock-watchlist.css']);
+const assets = new Set(['index.html', 'vault-crypto.mjs', 'csv-export.mjs', 'split.mjs', 'portfolio.mjs', 'recurring.mjs', 'finance-graphs.mjs', 'financial-graphs-view.mjs', 'financial-graphs.css', 'stock-watchlist.mjs', 'stock-watchlist-view.mjs', 'stock-history.mjs', 'stock-chart-view.mjs', 'jarvis-tour.mjs', 'jarvis-voice.mjs', 'jarvis-orb.mjs', 'theme-1.css', 'demo-data.mjs', 'stock-watchlist.css']);
 const fixture = {
   version: 1,
   accounts: [{ id: 'checking', name: 'Synthetic checking', type: 'Checking', balance: 432.10 }],
