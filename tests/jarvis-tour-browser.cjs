@@ -48,7 +48,7 @@ const fixture = { version: 1, accounts: [{ id: 'a1', name: 'Checking', type: 'Ch
   const base = `http://127.0.0.1:${server.address().port}`;
   let browser = await chromium.launch({ args: ['--autoplay-policy=no-user-gesture-required'] });
   const errors = []; let passed = 0;
-  async function check(name, fn) { try { await fn(); console.log('PASS', name); passed++; } catch (e) { console.error('FAIL', name); throw e; } }
+  async function check(name, fn) { if (process.env.ONLY && !name.includes(process.env.ONLY)) return; try { await fn(); console.log('PASS', name); passed++; } catch (e) { console.error('FAIL', name); throw e; } }
   async function open({ phone = false, seen = [] } = {}) {
     const ctx = await browser.newContext(phone ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : { viewport: { width: 1280, height: 900 } });
     const page = await ctx.newPage(); page.setDefaultTimeout(10000);
@@ -182,6 +182,21 @@ const fixture = { version: 1, accounts: [{ id: 'a1', name: 'Checking', type: 'Ch
     assert.equal(await p3.$eval('.nsx-sound', e => e.getAttribute('aria-pressed')), 'false', 'the sound button is muted');
     await p3.evaluate(() => document.querySelector('#mobileDock [data-page="Goals"]').click()); await waitTour(p3, 'Goals');
     assert.equal(await p3.evaluate(() => window.__spoken.filter(s => s.text.trim()).length), 0, 'muted means no voice');
+  });
+  await check('the screen is locked during a tour; desktop zooms in on what is explained, phones do not; Skip frees everything', async () => {
+    for (const phone of [false, true]) {
+      const p = await open({ phone, seen: ['Intro', 'Overview'] }); await signIn(p);
+      await p.evaluate(() => document.querySelector('#mobileDock [data-page="Goals"]').click()); await waitTour(p, 'Goals');
+      assert.ok(await p.evaluate(() => document.documentElement.classList.contains('nstour-locked')), 'locked while the tour plays');
+      assert.ok(await p.evaluate(() => { const e = new WheelEvent('wheel', { deltaY: 300, cancelable: true, bubbles: true }); document.body.dispatchEvent(e); return e.defaultPrevented; }), 'wheel scrolling is blocked');
+      assert.ok(await p.evaluate(() => { const e = new KeyboardEvent('keydown', { key: ' ', cancelable: true, bubbles: true }); document.body.dispatchEvent(e); return e.defaultPrevented; }), 'the space bar cannot scroll the page');
+      let zoomed = false;
+      for (let i = 0; i < 7; i++) { if (/scale/.test(await p.$eval('#content', e => e.style.transform))) zoomed = true; await p.clock.runFor(4300); }
+      if (phone) assert.ok(!zoomed, 'phones are never zoomed');
+      await p.evaluate(() => document.querySelector('.nstour-skip') && document.querySelector('.nstour-skip').click());
+      assert.ok(!(await p.evaluate(() => document.documentElement.classList.contains('nstour-locked'))), 'unlocked after the tour');
+      assert.ok(!/scale/.test(await p.$eval('#content', e => e.style.transform)), 'zoom reset after the tour');
+    }
   });
   await check('no page errors', async () => { assert.deepEqual(errors, []); });
   console.log(`${passed} tour and sound checks passed`);

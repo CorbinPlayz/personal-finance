@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { speechRate, TOURS, TOUR_TOTAL_MS, planDurations, placeGuide, hasSeen, markSeen, seenKey, tourKeyFor, createTour, TOUR_VERSION } from '../jarvis-tour.mjs';
+import { zoomScale, MAX_ZOOM, speechRate, TOURS, TOUR_TOTAL_MS, planDurations, placeGuide, hasSeen, markSeen, seenKey, tourKeyFor, createTour, TOUR_VERSION } from '../jarvis-tour.mjs';
 
 const PAGES = ['Overview', 'Transactions', 'Accounts', 'Budgets', 'Goals', 'Purchases', 'Stocks', 'Guide', 'Settings'];
 const memory = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)) }; };
@@ -57,4 +57,15 @@ test('speech rate fits each caption inside its step and stays natural', () => {
   }
   assert.equal(speechRate('hi', 5000), 0.9);
   assert.equal(speechRate('one two three four five six seven eight nine ten eleven twelve thirteen fourteen', 3000), 1.3);
+});
+
+test('zoom: small things zoom in, wide things are left alone, phones and reduced motion never zoom', () => {
+  const box = (w, h) => ({ width: w, height: h });
+  assert.equal(zoomScale(box(300, 200), 1280, 900), MAX_ZOOM);
+  assert.ok(zoomScale(box(1100, 300), 1280, 900) > 1 && zoomScale(box(1100, 300), 1280, 900) < MAX_ZOOM, 'wide targets zoom less so they stay on screen');
+  assert.equal(zoomScale(box(1198, 75), 1280, 900), 1, 'a full-width section has nothing to zoom into');
+  assert.equal(zoomScale(box(300, 200), 390, 844, { phone: true }), 1);
+  assert.equal(zoomScale(box(300, 200), 1280, 900, { reduce: true }), 1);
+  assert.equal(zoomScale(null, 1280, 900), 1);
+  assert.ok(zoomScale(box(600, 700), 1280, 900) * 700 <= 900 * 0.8 + 1, 'never taller than the screen');
 });
