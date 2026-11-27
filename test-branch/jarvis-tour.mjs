@@ -116,6 +116,15 @@ export const seenKey = (uid, key) => `northstar-tour-${TOUR_VERSION}:${uid || 'a
 export function hasSeen(storage, uid, key) { try { return storage.getItem(seenKey(uid, key)) === '1'; } catch (e) { return false; } }
 export function markSeen(storage, uid, key) { try { storage.setItem(seenKey(uid, key), '1'); } catch (e) { /* private mode: it may repeat */ } }
 
+/* How far to zoom in on a target: up to 1.18x, but never so far that it spills off the screen.
+   Returns 1 (no zoom) on phones, with reduced motion, or when the target is already nearly full width. */
+export const MAX_ZOOM = 1.18;
+export function zoomScale(rect, vw, vh, { phone = false, reduce = false } = {}) {
+  if (phone || reduce || !rect || rect.width <= 0 || rect.height <= 0) return 1;
+  const fit = Math.min(MAX_ZOOM, (vw * 0.94) / rect.width, (vh * 0.8) / rect.height);
+  return fit >= 1.04 ? Math.round(fit * 100) / 100 : 1;
+}
+
 /* Where Jarvis and the caption go. All pure so it can be tested. rect may be null (centre of screen). */
 export function placeGuide(rect, vw, vh, card = { w: 300, h: 130 }, orb = 46) {
   const pad = 12, clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
@@ -151,16 +160,46 @@ export function createTour(env) {
   function build() {
     root = doc.createElement('div');
     root.className = 'nstour'; root.setAttribute('role', 'region'); root.setAttribute('aria-label', 'Jarvis tour');
-    root.innerHTML = '<div class="nstour-ring"></div><div class="nstour-orb" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 3.4 13.6 8.6 18.8 10.2 13.6 11.8 12 17 10.4 11.8 5.2 10.2 10.4 8.6z"/></svg></div>' +
+    root.innerHTML = '<div class="nstour-shield"></div><div class="nstour-ring"></div><div class="nstour-orb" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M12 3.4 13.6 8.6 18.8 10.2 13.6 11.8 12 17 10.4 11.8 5.2 10.2 10.4 8.6z"/></svg></div>' +
       '<div class="nstour-card"><div class="nstour-head"><strong>Jarvis</strong><span class="nstour-title"></span><button type="button" class="nstour-skip">Skip tour</button></div><p class="nstour-text" aria-live="polite"></p><div class="nstour-bar" aria-hidden="true"><i></i></div></div>';
     doc.body.appendChild(root);
     root.querySelector('.nstour-skip').addEventListener('click', () => stop('skipped'));
   }
+  /* While a tour plays the screen is locked: no scrolling, tapping or pinching the page, so the tour stays the centre of attention. */
+  const SCROLL_KEYS = [' ', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'];
+  const block = e => { if (running) e.preventDefault(); };
+  const blockKey = e => { if (running && SCROLL_KEYS.includes(e.key) && !(e.target && e.target.closest && e.target.closest('.nstour-skip'))) e.preventDefault(); };
+  function lock(on) {
+    const h = doc.documentElement;
+    if (h && h.classList) h.classList.toggle('nstour-locked', on);
+    const m = on ? 'addEventListener' : 'removeEventListener';
+    for (const ev of ['wheel', 'touchmove', 'gesturestart', 'gesturechange']) doc[m](ev, block, { passive: false, capture: true });
+    doc[m]('keydown', blockKey, true);
+  }
+  const isPhone = () => !!(win.matchMedia && win.matchMedia('(max-width: 820px), (pointer: coarse) and (max-width: 1000px)').matches);
+  /* Desktop and iPad: the page eases in on whatever Jarvis is explaining. Phones are already zoomed in, so they only get the highlight. */
+  function zoomTo(el) {
+    const area = doc.getElementById && doc.getElementById('content');
+    if (!area) return null;
+    const prev = area.style.transform;
+    area.style.transition = 'none'; area.style.transform = 'none';
+    const a = area.getBoundingClientRect(), r = el ? el.getBoundingClientRect() : null;
+    const k = r && area.contains(el) ? zoomScale(r, win.innerWidth, win.innerHeight, { phone: isPhone(), reduce: reduce() }) : 1;
+    area.style.transform = prev; void area.offsetWidth;
+    area.style.transition = 'transform .8s cubic-bezier(.3,.7,.2,1)';
+    if (k === 1) { area.style.transform = 'none'; return r; }
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    area.style.transformOrigin = Math.round(cx - a.left) + 'px ' + Math.round(cy - a.top) + 'px';
+    area.style.transform = 'scale(' + k + ')';
+    const w = r.width * k, h = r.height * k;
+    return { left: cx - w / 2, top: cy - h / 2, right: cx + w / 2, bottom: cy + h / 2, width: w, height: h };
+  }
+  function unzoom() { const area = doc.getElementById && doc.getElementById('content'); if (area) { area.style.transition = 'transform .6s ease'; area.style.transform = 'none'; } }
   function place(step) {
     const el = resolveTarget(doc, step.targets);
-    if (el && el.scrollIntoView) { const r0 = el.getBoundingClientRect(); if (r0.top < 56 || r0.bottom > win.innerHeight - 8) el.scrollIntoView({ block: 'center', behavior: reduce() ? 'auto' : 'smooth' }); }
+    if (el && el.scrollIntoView) { const r0 = el.getBoundingClientRect(); if (r0.top < 56 || r0.bottom > win.innerHeight - 8) el.scrollIntoView({ block: 'center', behavior: 'auto' }); }
     const card = root.querySelector('.nstour-card'), h = card.offsetHeight || 130;
-    const p = placeGuide(el ? el.getBoundingClientRect() : null, win.innerWidth, win.innerHeight, { w: 320, h }, 46);
+    const p = placeGuide(zoomTo(el), win.innerWidth, win.innerHeight, { w: 320, h }, 46);
     root.querySelector('.nstour-orb').style.transform = `translate(${Math.round(p.orb.x)}px,${Math.round(p.orb.y)}px)`;
     card.style.transform = `translate(${Math.round(p.card.x)}px,${Math.round(p.card.y)}px)`; card.style.width = Math.round(p.card.w) + 'px';
     const ring = root.querySelector('.nstour-ring');
@@ -171,6 +210,7 @@ export function createTour(env) {
     win.clearTimeout(timer); timer = 0;
     doc.removeEventListener('keydown', onKey, true); win.removeEventListener('resize', onResize);
     if (root) { root.remove(); root = null; }
+    lock(false); unzoom();
     hush();
     const was = running; running = null;
     if (was && why === 'done') say('success');
@@ -185,7 +225,7 @@ export function createTour(env) {
     const durations = planDurations(tour.steps, total);
     running = { key, uid, steps: tour.steps, durations, index: -1 };
     try { env.prefetch && env.prefetch(tour.steps.map(s => s.text)); } catch (e) { /* voice warm-up is optional */ }
-    build(); startedAt = Date.now();
+    build(); lock(true); startedAt = Date.now();
     root.querySelector('.nstour-title').textContent = tour.title;
     const bar = root.querySelector('.nstour-bar i');
     bar.style.transition = 'none'; bar.style.width = '0%';
